@@ -3,7 +3,7 @@ const path = require('path');
 
 window.fs = fs;
 window.path = path;
-// window.process = process;
+window.process = process;
 
 // Mode Handling
 let currentMode = 'typing';

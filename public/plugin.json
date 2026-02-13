@@ -1,6 +1,7 @@
 {
   "version": "3.0.0",
   "logo": "logo.png",
+  "main": "index.html",
   "preload": "preload.js",
   "description": "为键盘工作者设计的单词记忆与英语肌肉记忆锻炼工具",
   "development": {

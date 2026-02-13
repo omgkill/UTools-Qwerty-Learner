@@ -5,7 +5,6 @@ import { isOpenDarkModeAtom } from '@/store'
 import { processPayment, setConcealFeature } from '@/utils/utools'
 import { useAtomValue } from 'jotai'
 import mixpanel from 'mixpanel-browser'
-import process from 'process'
 import React, { Suspense, lazy, useEffect } from 'react'
 import 'react-app-polyfill/stable'
 import { createRoot } from 'react-dom/client'
@@ -16,7 +15,7 @@ import 'react-toastify/dist/ReactToastify.css'
 const AnalysisPage = lazy(() => import('./pages/Analysis'))
 const GalleryPage = lazy(() => import('./pages/Gallery-N'))
 
-if (process.env.NODE_ENV !== 'production' || (window.utools && window.utools.isDev())) {
+if (import.meta.env.DEV || (window.utools && window.utools.isDev())) {
   // for dev
   const devKey = import.meta.env.VITE_MIXPANEL_KEY_DEV
   if (devKey) {
