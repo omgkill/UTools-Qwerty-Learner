@@ -25,7 +25,6 @@ const options: LanguageTabOption[] = [
   { id: 'mistake', name: '错题集', flag: mistakeFlag },
   { id: 'custom', name: '自定义', flag: customFlag },
 ]
-if (!window.utools) options.pop()
 export function LanguageTabSwitcher() {
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const { state, setState } = useContext(GalleryContext)!

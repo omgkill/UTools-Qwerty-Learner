@@ -53,9 +53,7 @@ const App: React.FC = () => {
     }
 
     // Initial check
-    if (window.utools) {
-      handleModeChange()
-    }
+    handleModeChange()
 
     // Listen for custom event from preload
     window.addEventListener('utools-mode-change', handleModeChange)
@@ -137,11 +135,9 @@ const App: React.FC = () => {
 
       addErrorWordList(currentDictId, wordList)
 
-      if (window.utools) {
-        window.exportDatabase2UTools()
-        window.exportTypingMistakeDB2UTools()
-        window.migrateLocalStorageToUtools()
-      }
+      window.exportDatabase2UTools()
+      window.exportTypingMistakeDB2UTools()
+      window.migrateLocalStorageToUtools()
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps

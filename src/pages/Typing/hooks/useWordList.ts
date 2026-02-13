@@ -48,11 +48,9 @@ export function useWordList(): UseWordListResult {
 }
 
 async function wordListFetcher(url: string): Promise<Word[]> {
-  const URL_PREFIX: string = REACT_APP_DEPLOY_ENV === 'pages' ? '/qwerty-learner' : ''
-
   let words: Word[] = []
   try {
-    const response = await fetch('.' + URL_PREFIX + url)
+    const response = await fetch('.' + url)
     words = await response.json()
   } catch (err) {
     console.log(err)

@@ -14,7 +14,6 @@ function RefreshMistakeDict({ onRefresh }) {
 
       for (const dict of recordingDicts) {
         const { errorDictId, jsonData } = await exportErrorDictToJson(dict.id)
-        if (!window.utools) return
 
         // 生成错题词典
         if (jsonData.length >= 0) {
@@ -38,7 +37,6 @@ function RefreshMistakeDict({ onRefresh }) {
 
     for (const dict of recordingDicts) {
       const { errorDictId, jsonData } = await exportErrorDictToJson(dict.id)
-      if (!window.utools) return
 
       // 生成错题词典
       if (jsonData.length >= 0) {

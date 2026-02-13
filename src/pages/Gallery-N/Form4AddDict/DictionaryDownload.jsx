@@ -6,9 +6,8 @@ const DictionaryDownload = () => {
   const handleToggle = () => setIsExpanded(!isExpanded)
 
   const handleDownload = (filename) => {
-    const URL_PREFIX = REACT_APP_DEPLOY_ENV === 'pages' ? '/qwerty-learner' : ''
     const url = `/template-dicts/${filename}`
-    fetch('.' + URL_PREFIX + url)
+    fetch('.' + url)
       .then((response) => response.blob())
       .then((blob) => {
         const url = URL.createObjectURL(blob)
