@@ -49,8 +49,8 @@
     "lint": "eslint .",
     "prettier": "prettier --write .",
     "prepare": "husky install",
-    "utools": "cp ./public/preload.js ./public/plugin.json ./build/",
-    "utools-dev": "cp ./public/plugin-dev.json ./build/plugin.json && cp ./public/preload.js ./build/"
+    "utools": "copy public\\preload\\services.js build\\preload.js /Y && copy public\\plugin.json build\\ /Y",
+    "utools-dev": "copy public\\plugin-dev.json build\\plugin.json /Y && copy public\\preload\\services.js build\\preload.js /Y"
   },
   "lint-staged": {
     "src/**/*.{js,jsx,ts,tsx,json,css,scss,md}": [

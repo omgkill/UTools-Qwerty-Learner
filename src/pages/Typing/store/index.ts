@@ -91,7 +91,7 @@ export type TypingStateAction =
   | { type: TypingStateActionType.SET_IS_SKIP; payload: boolean }
   | { type: TypingStateActionType.SET_IS_TYPING; payload: boolean }
   | { type: TypingStateActionType.TOGGLE_IS_TYPING }
-  | { type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE }
+  | { type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE; payload?: boolean }
   | { type: TypingStateActionType.REPORT_WRONG_WORD }
   | { type: TypingStateActionType.REPORT_CORRECT_WORD }
   | { type: TypingStateActionType.NEXT_WORD }
@@ -128,7 +128,11 @@ export const typingReducer = (state: TypingState, action: TypingStateAction) => 
       state.isTyping = !state.isTyping
       break
     case TypingStateActionType.TOGGLE_IMMERSIVE_MODE: {
-      state.isImmersiveMode = !state.isImmersiveMode
+      if (typeof action.payload === 'boolean') {
+        state.isImmersiveMode = action.payload
+      } else {
+        state.isImmersiveMode = !state.isImmersiveMode
+      }
       break
     }
     case TypingStateActionType.REPORT_WRONG_WORD: {

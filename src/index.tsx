@@ -18,10 +18,21 @@ const GalleryPage = lazy(() => import('./pages/Gallery-N'))
 
 if (process.env.NODE_ENV !== 'production' || (window.utools && window.utools.isDev())) {
   // for dev
-  mixpanel.init(import.meta.env.VITE_MIXPANEL_KEY_DEV, { debug: true })
+  const devKey = import.meta.env.VITE_MIXPANEL_KEY_DEV
+  if (devKey) {
+    mixpanel.init(devKey, { debug: true })
+  } else {
+    // @ts-ignore
+    mixpanel.track = () => {}
+  }
 } else {
-  // for prod
-  mixpanel.init(import.meta.env.VITE_MIXPANEL_KEY)
+  const devKey = import.meta.env.VITE_MIXPANEL_KEY_DEV
+  if (devKey) {
+    mixpanel.init(devKey, { debug: true })
+  } else {
+    // @ts-ignore
+    mixpanel.track = () => {}
+  }
 }
 
 const container = document.getElementById('root')
@@ -33,22 +44,12 @@ function Root() {
   }, [darkMode])
 
   useEffect(() => {
-    const fetchPayment = async () => {
-      try {
-        const ret = await utools.fetchUserPayments()
-        // 获取用户订单， 设定VIP状态
-        processPayment(ret)
-
-        // 设定摸鱼模式
-        setConcealFeature()
-      } catch (error) {
-        alert(error)
-        console.error(error)
-      }
-    }
+    // 强制设置VIP状态
+    localStorage.setItem('x-vipState', 'c')
+    
     if (window.utools) {
-      fetchPayment()
-
+      // 设定摸鱼模式
+      setConcealFeature()
       mixpanel.track('Open', { mode: window.getMode() })
     }
   }, [])

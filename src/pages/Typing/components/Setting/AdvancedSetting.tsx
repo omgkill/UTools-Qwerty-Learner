@@ -15,15 +15,15 @@ export default function AdvancedSetting() {
 
   const onToggleRandom = useCallback(
     (checked: boolean) => {
-      const vipState = localStorage.getItem('x-vipState')
-      if (vipState === 'b' || vipState === 'c') {
-        setRandomConfig((prev) => ({
-          ...prev,
-          isOpen: checked,
-        }))
-      } else {
-        toast.info('“章节乱序” 为订阅用户专属功能，开通订阅后可使用')
-      }
+      // const vipState = localStorage.getItem('x-vipState')
+      // if (vipState === 'b' || vipState === 'c') {
+      setRandomConfig((prev) => ({
+        ...prev,
+        isOpen: checked,
+      }))
+      // } else {
+      //   toast.info('“章节乱序” 为订阅用户专属功能，开通订阅后可使用')
+      // }
     },
     [setRandomConfig],
   )

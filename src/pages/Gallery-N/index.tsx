@@ -117,9 +117,9 @@ export default function GalleryPage() {
                 </ScrollArea.Root>
               </InnerContext.Provider>
             </div>
-            {!['b', 'c'].includes(galleryState.vipState) && ['mistake', 'custom'].includes(galleryState.currentLanguageTab) && (
+            {/* {!['b', 'c'].includes(galleryState.vipState) && ['mistake', 'custom'].includes(galleryState.currentLanguageTab) && (
               <SubscriptionOverlay setGalleryState={setGalleryState} refreshPage={refreshPage} />
-            )}
+            )} */}
             {galleryState.currentLanguageTab === 'mistake' && <ErrorRecordingStatus />}
           </div>
           {galleryState.currentLanguageTab === 'custom' ? <Form4AddDict onSaveDictSuccess={refreshPage} /> : ''}

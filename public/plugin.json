@@ -3,14 +3,26 @@
   "logo": "logo.png",
   "preload": "preload.js",
   "description": "为键盘工作者设计的单词记忆与英语肌肉记忆锻炼工具",
+  "development": {
+    "main": "http://localhost:8080"
+  },
   "features": [
     {
       "code": "typing",
       "explain": "⌨正常英语记忆模式",
       "cmds": ["English", "typing", "tp", "英语单词"]
+    },
+    {
+      "code": "conceal",
+      "explain": "🐟背单词打字摸鱼模式，摸鱼一时爽,一直摸鱼一直爽~~",
+      "cmds": ["moyu", "moyv", "typing-摸鱼模式"]
     }
   ],
   "pluginSetting": {
     "single": true
+  },
+  "window": {
+    "background": "#00000000",
+    "opacity": 0
   }
 }

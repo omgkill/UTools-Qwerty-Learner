@@ -43,19 +43,27 @@ const App: React.FC = () => {
   const saveChapterRecord = useSaveChapterRecord()
 
   useEffect(() => {
-    if (window.utools && 'moyu' === window.getMode()) {
-      toast('按下 Alt + M 可进入沉浸模式🤞', {
-        position: 'top-center',
-        autoClose: 2000,
-        hideProgressBar: true,
-        closeOnClick: false,
-        pauseOnHover: true,
-        draggable: false,
-        progress: undefined,
-        theme: 'light',
-      })
+    const handleModeChange = () => {
+      const mode = window.getMode()
+      if (mode === 'conceal' || mode === 'moyu') {
+        dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE, payload: true }) // Ensure payload is handled or modify reducer
+      } else {
+        dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE, payload: false })
+      }
     }
-  }, [])
+
+    // Initial check
+    if (window.utools) {
+      handleModeChange()
+    }
+
+    // Listen for custom event from preload
+    window.addEventListener('utools-mode-change', handleModeChange)
+
+    return () => {
+      window.removeEventListener('utools-mode-change', handleModeChange)
+    }
+  }, [dispatch])
 
   // 在组件挂载和currentDictId改变时，检查当前字典是否存在，如果不存在，则将其重置为默认值
   useEffect(() => {
