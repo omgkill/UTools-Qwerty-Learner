@@ -10,17 +10,45 @@ let currentMode = 'typing';
 if (typeof utools !== 'undefined') {
   utools.onPluginEnter(({ code }) => {
     currentMode = code;
-    // Dispatch a custom event to notify React app
     window.dispatchEvent(new CustomEvent('utools-mode-change', { detail: code }));
   });
 }
 window.getMode = () => currentMode;
 
+// Dev Mock - 必须在其他函数之前初始化
+if (typeof utools === 'undefined') {
+  console.log('uTools environment not detected. Using mock.');
+  
+  let mockDb = {};
+  
+  window.utools = {
+    isDev: () => true,
+    getFeatures: () => [],
+    setFeature: () => {},
+    removeFeature: () => {},
+    fetchUserPayments: () => Promise.resolve([]),
+    db: {
+      get: (id) => mockDb[id] || null,
+      put: (doc) => {
+        mockDb[doc._id] = doc;
+        console.log('mockDb put:', doc._id, doc.data?.length || 'no length');
+        return { ok: true };
+      },
+      remove: (id) => {
+        delete mockDb[id];
+        return { ok: true };
+      }
+    }
+  };
+  
+  // 暴露 mockDb 供调试
+  window.mockDb = mockDb;
+}
+
 // Database Helpers
 window.postDB = (id, data) => {
   if (typeof utools === 'undefined') return;
   const doc = utools.db.get(id);
-  // Support Uint8Array by converting to regular Array for storage
   const payload = data instanceof Uint8Array ? Array.from(data) : data;
   return utools.db.put({
     _id: id,
@@ -32,10 +60,8 @@ window.postDB = (id, data) => {
 window.getDB = (id) => {
   if (typeof utools === 'undefined') return null;
   const doc = utools.db.get(id);
-  // Convert Array back to Uint8Array if it looks like one (simple heuristic or context dependent)
-  // For 'user-data' and 'x-typing-mistake', the app expects Uint8Array.
   if (doc && doc.data) {
-    if (Array.isArray(doc.data) && (id === 'user-data' || id === 'x-typing-mistake')) {
+    if (Array.isArray(doc.data) && id === 'user-data') {
        return new Uint8Array(doc.data);
     }
     return doc.data;
@@ -43,19 +69,18 @@ window.getDB = (id) => {
   return null;
 };
 
-// User Data & Mistake DB (Alias to generic DB)
+// User Data & Mistake DB
 window.postUToolsUserData = (data) => window.postDB('user-data', data);
 window.getUToolsUserData = () => window.getDB('user-data');
 
 // Local Dictionary Management
 window.readLocalDictConfig = () => {
-  if (typeof utools === 'undefined') return [];
   const doc = utools.db.get('local-dict-config');
+  console.log('readLocalDictConfig:', doc);
   return doc ? doc.data : [];
 };
 
 window.writeLocalDictConfig = (config) => {
-  if (typeof utools === 'undefined') return;
   const doc = utools.db.get('local-dict-config');
   utools.db.put({
     _id: 'local-dict-config',
@@ -65,8 +90,7 @@ window.writeLocalDictConfig = (config) => {
 };
 
 window.newLocalDictFromJson = (jsonData, dictMeta) => {
-  if (typeof utools === 'undefined') return;
-  // 1. Save dictionary content
+  // Save dictionary content
   const contentDoc = utools.db.get(dictMeta.id);
   utools.db.put({
     _id: dictMeta.id,
@@ -74,28 +98,33 @@ window.newLocalDictFromJson = (jsonData, dictMeta) => {
     _rev: contentDoc ? contentDoc._rev : undefined
   });
   
-  // 2. Update config
+  // Check if dict already exists in config
   const config = window.readLocalDictConfig();
-  config.push(dictMeta);
+  const existingIndex = config.findIndex(d => d.id === dictMeta.id);
+  
+  if (existingIndex >= 0) {
+    // Update existing dict
+    config[existingIndex] = dictMeta;
+  } else {
+    // Add new dict
+    config.push(dictMeta);
+  }
+  
   window.writeLocalDictConfig(config);
 };
 
 window.readLocalDict = (id) => {
-  if (typeof utools === 'undefined') return [];
   const doc = utools.db.get(id);
   return doc ? doc.data : [];
 };
 
 window.delLocalDict = (id) => {
-  if (typeof utools === 'undefined') return false;
-  // 1. Remove from config
   const config = window.readLocalDictConfig();
   const newConfig = config.filter(d => d.id !== id);
   if (newConfig.length !== config.length) {
     window.writeLocalDictConfig(newConfig);
   }
   
-  // 2. Remove content
   const doc = utools.db.get(id);
   if (doc) {
     return utools.db.remove(id).ok;
@@ -103,24 +132,18 @@ window.delLocalDict = (id) => {
   return true;
 };
 
-// Migration Placeholder
-window.migrateLocalStorageToUtools = () => {
-  // Logic to migrate from web localStorage to uTools DB if needed
+// Initialize Local Dictionaries
+window.initLocalDictionries = () => {
+  const config = window.readLocalDictConfig();
+  if (typeof window.updateLocalDictionaries === 'function') {
+    window.updateLocalDictionaries(config);
+  }
 };
 
-// Dev Mock
-if (typeof utools === 'undefined') {
-  console.log('uTools environment not detected. Using mock.');
-  window.utools = {
-    isDev: () => true,
-    getFeatures: () => [],
-    setFeature: () => {},
-    removeFeature: () => {},
-    fetchUserPayments: () => Promise.resolve([]),
-    db: {
-        get: () => null,
-        put: () => ({ok: true}),
-        remove: () => ({ok: true})
-    }
-  };
-}
+// Export Database
+window.exportDatabase2UTools = () => {
+};
+
+// Migration
+window.migrateLocalStorageToUtools = () => {
+};

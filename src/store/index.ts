@@ -1,6 +1,5 @@
 import atomForConfig from './atomForConfig'
 import { DISMISS_START_CARD_DATE_KEY } from '@/constants'
-import { idDictionaryMap } from '@/resources/dictionary'
 import type {
   Dictionary,
   InfoPanelState,
@@ -10,14 +9,19 @@ import type {
 import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 
-export const currentDictIdAtom = atomWithStorage('currentDict', 'cet4')
-export const currentDictInfoAtom = atom<Dictionary>((get) => {
+export const dictionariesAtom = atom<Dictionary[]>([])
+
+export const idDictionaryMapAtom = atom<Record<string, Dictionary>>((get) => {
+  const dictionaries = get(dictionariesAtom)
+  return Object.fromEntries(dictionaries.map((dict) => [dict.id, dict]))
+})
+
+export const currentDictIdAtom = atomWithStorage('currentDict', '')
+export const currentDictInfoAtom = atom<Dictionary | null>((get) => {
   const id = get(currentDictIdAtom)
-  let dict = idDictionaryMap[id]
-  if (!dict) {
-    dict = idDictionaryMap.cet4
-  }
-  return dict
+  if (!id) return null
+  const map = get(idDictionaryMapAtom)
+  return map[id] || null
 })
 
 export const currentChapterAtom = atomWithStorage('currentChapter', 0)

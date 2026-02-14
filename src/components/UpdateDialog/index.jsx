@@ -44,7 +44,7 @@ function UpdateDialog() {
                   </p>
                   <p className="my-4 indent-8 leading-6">
                     我们深知很多用户对于插件的免费使用非常依赖，但是为了保证插件的更新和稳定，我们不得不尝试部分功能收费
-                    <strong className="text-indigo-400">（摸鱼功能，错题本，自定义词库..）</strong>
+                    <strong className="text-indigo-400">（摸鱼功能，自定义词库..）</strong>
                     这些收费功能将会是我们插件的独特优势，可以为用户带来更好的使用体验和更高的效率。同时，我们也会保证免费的功能仍然可以满足大多数用户的需求。
                   </p>
                   <p className="my-4 indent-8 leading-6">

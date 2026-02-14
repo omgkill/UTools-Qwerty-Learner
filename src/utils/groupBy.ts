@@ -14,7 +14,8 @@ export default function groupBy<T>(elements: T[], iteratee: (value: T) => string
 
 export function groupByDictTags(dicts: Dictionary[]) {
   return dicts.reduce<Record<string, Dictionary[]>>((result, dict) => {
-    dict.tags.forEach((tag) => {
+    const uniqueTags = [...new Set(dict.tags)]
+    uniqueTags.forEach((tag) => {
       if (Object.prototype.hasOwnProperty.call(result, tag)) {
         result[tag].push(dict)
       } else {

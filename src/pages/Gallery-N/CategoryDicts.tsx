@@ -8,7 +8,6 @@ import { useAtomValue } from 'jotai'
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 export default function DictionaryGroup({ groupedDictsByTag }: { groupedDictsByTag: Record<string, Dictionary[]> }) {
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const { setState } = useContext(GalleryContext)!
   const tagList = useMemo(() => Object.keys(groupedDictsByTag), [groupedDictsByTag])
   const [currentTag, setCurrentTag] = useState(tagList[0])
@@ -28,30 +27,21 @@ export default function DictionaryGroup({ groupedDictsByTag }: { groupedDictsByT
   )
 
   useEffect(() => {
-    const commonTags = findCommonValues(tagList, currentDictInfo.tags)
-    if (commonTags.length > 0) {
-      setCurrentTag(commonTags[0])
+    if (currentDictInfo && currentDictInfo.tags) {
+      const commonTags = findCommonValues(tagList, currentDictInfo.tags)
+      if (commonTags.length > 0) {
+        setCurrentTag(commonTags[0])
+      }
     }
-  }, [currentDictInfo.tags, tagList])
+  }, [currentDictInfo, tagList])
 
   return (
     <div>
       <DictTagSwitcher tagList={tagList} currentTag={currentTag} onChangeCurrentTag={onChangeCurrentTag} />
       <div className="mt-8 grid gap-x-5 gap-y-10 px-1 pb-4 sm:grid-cols-1 md:grid-cols-2 dic3:grid-cols-3 dic4:grid-cols-4">
-        {groupedDictsByTag[currentTag].map((dict) => {
+        {groupedDictsByTag[currentTag]?.map((dict) => {
           return <DictionaryComponent key={dict.id} dictionary={dict} onClick={() => onClickDict(dict)} />
         })}
-        {/* <div
-          className="w-full"
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            height: 'calc(100% - 170px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 20,
-          }}
-        ></div> */}
       </div>
     </div>
   )

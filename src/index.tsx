@@ -47,7 +47,7 @@ function Root() {
   }, [])
   return (
     <React.StrictMode>
-      <HashRouter basename="">
+      <HashRouter basename="" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Suspense fallback={<Loading />}>
           <Routes>
             <Route index element={<TypingPage />} />

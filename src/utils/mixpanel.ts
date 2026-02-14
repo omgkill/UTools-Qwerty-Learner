@@ -79,18 +79,19 @@ export type ChapterLogUpload = ModeInfo & {
 
 export function useMixPanelWordLogUploader(typingState: TypingState) {
   const currentChapter = useAtomValue(currentChapterAtom)
-  const { name: dictName } = useAtomValue(currentDictInfoAtom)
+  const currentDictInfo = useAtomValue(currentDictInfoAtom)
   const phoneticConfig = useAtomValue(phoneticConfigAtom)
   const pronunciationConfig = useAtomValue(pronunciationConfigAtom)
   const randomConfig = useAtomValue(randomConfigAtom)
 
   const wordLogUploader = useCallback(
     (wordLog: { headword: string; timeStart: string; timeEnd: string; countInput: number; countCorrect: number; countTypo: number }) => {
+      if (!currentDictInfo) return
       const props: WordLogUpload = {
         ...wordLog,
         order: typingState.chapterData.index + 1,
         chapter: (currentChapter + 1).toString(),
-        wordlist: dictName,
+        wordlist: currentDictInfo.name,
         modeDictation: false,
         modeDark: true,
         modeShuffle: randomConfig.isOpen,
@@ -103,7 +104,7 @@ export function useMixPanelWordLogUploader(typingState: TypingState) {
     [
       typingState,
       currentChapter,
-      dictName,
+      currentDictInfo,
       phoneticConfig.isOpen,
       pronunciationConfig.isOpen,
       pronunciationConfig.type,
@@ -116,12 +117,13 @@ export function useMixPanelWordLogUploader(typingState: TypingState) {
 
 export function useMixPanelChapterLogUploader(typingState: TypingState) {
   const currentChapter = useAtomValue(currentChapterAtom)
-  const { name: dictName } = useAtomValue(currentDictInfoAtom)
+  const currentDictInfo = useAtomValue(currentDictInfoAtom)
   const phoneticConfig = useAtomValue(phoneticConfigAtom)
   const pronunciationConfig = useAtomValue(pronunciationConfigAtom)
   const randomConfig = useAtomValue(randomConfigAtom)
 
   const chapterLogUploader = useCallback(() => {
+    if (!currentDictInfo) return
     const props: ChapterLogUpload = {
       timeEnd: getUtcStringForMixpanel(),
       duration: typingState.timerData.time,
@@ -129,7 +131,7 @@ export function useMixPanelChapterLogUploader(typingState: TypingState) {
       countTypo: typingState.chapterData.wrongCount,
       countCorrect: typingState.chapterData.correctCount,
       chapter: (currentChapter + 1).toString(),
-      wordlist: dictName,
+      wordlist: currentDictInfo.name,
       modeDictation: false,
       modeDark: true,
       modeShuffle: randomConfig.isOpen,
@@ -141,7 +143,7 @@ export function useMixPanelChapterLogUploader(typingState: TypingState) {
   }, [
     typingState,
     currentChapter,
-    dictName,
+    currentDictInfo,
     phoneticConfig.isOpen,
     pronunciationConfig.isOpen,
     pronunciationConfig.type,

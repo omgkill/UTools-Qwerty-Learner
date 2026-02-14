@@ -1,5 +1,5 @@
 import { CHAPTER_LENGTH } from '@/constants'
-import { currentChapterAtom, currentDictInfoAtom } from '@/store'
+import { currentChapterAtom, currentDictInfoAtom, idDictionaryMapAtom } from '@/store'
 import type { Word, WordWithIndex } from '@/typings/index'
 import { useAtom, useAtomValue } from 'jotai'
 import { useMemo } from 'react'
@@ -11,27 +11,26 @@ export type UseWordListResult = {
   error: Error | undefined
 }
 
-/**
- * Use word lists from the current selected dictionary.
- */
 export function useWordList(): UseWordListResult {
   const currentDictInfo = useAtomValue(currentDictInfoAtom)
   const [currentChapter, setCurrentChapter] = useAtom(currentChapterAtom)
 
-  const isFirstChapter = currentDictInfo.id === 'cet4' && currentChapter === 0
+  const isFirstChapter = currentDictInfo?.id === 'cet4' && currentChapter === 0
 
   // Reset current chapter to 0, when currentChapter is greater than chapterCount.
-  if (currentChapter >= currentDictInfo.chapterCount) {
+  if (currentDictInfo && currentChapter >= currentDictInfo.chapterCount) {
     setCurrentChapter(0)
   }
 
-  // console.log('dict info:', currentDictInfo)
-  const isLocalDict = ['custom', 'mistake'].includes(currentDictInfo.languageCategory)
+  const isLocalDict = currentDictInfo ? (currentDictInfo.id.startsWith('x-dict-') || currentDictInfo.languageCategory === 'custom') : false
   const {
     data: wordList,
     error,
     isLoading,
-  } = useSWR(isLocalDict ? currentDictInfo.id : currentDictInfo.url, isLocalDict ? localWordListFetcher : wordListFetcher)
+  } = useSWR(
+    currentDictInfo ? (isLocalDict ? currentDictInfo.id : currentDictInfo.url) : null,
+    isLocalDict ? localWordListFetcher : wordListFetcher
+  )
 
   const words: WordWithIndex[] = useMemo(() => {
     const newWords = isFirstChapter
@@ -40,7 +39,6 @@ export function useWordList(): UseWordListResult {
       ? wordList.slice(currentChapter * CHAPTER_LENGTH, (currentChapter + 1) * CHAPTER_LENGTH)
       : []
 
-    // 记录原始 index
     return newWords.map((word, index) => ({ ...word, index }))
   }, [isFirstChapter, wordList, currentChapter])
 

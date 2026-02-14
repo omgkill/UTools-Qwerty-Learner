@@ -3,8 +3,8 @@ import mixpanel from 'mixpanel-browser'
 import IconCheck from '~icons/gg/check-o'
 
 export default function SubscriptionOverlay({ setGalleryState }) {
-  const featureOneMonth = ['摸鱼模式', '章节乱序', '错题集 \u00A0 \u00A0 \u00A0 （限制4本）', '自定义词典（限制4本）']
-  const featureForver = ['练习进度', '摸鱼模式', '章节乱序', '错题集 \u00A0 \u00A0 \u00A0 （完全版）', '自定义词典（完全版）']
+  const featureOneMonth = ['摸鱼模式', '章节乱序', '自定义词典（限制4本）']
+  const featureForver = ['练习进度', '摸鱼模式', '章节乱序', '自定义词典（完全版）']
   function handleClick(param) {
     const monthGoodsId = import.meta.env.VITE_MONTH_GOODS_ID
     const permanentGoodsId = import.meta.env.VITE_PERMANENT_GOODS_ID

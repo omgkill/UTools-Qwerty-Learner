@@ -16,7 +16,6 @@ interface Props {
   onSaveDictSuccess: () => void
 }
 
-// eslint-disable-next-line react/prop-types
 const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
   const [formData, setFormData] = useState({ name: '', language: 'en' })
   const [fileInfo, setFileInfo] = useState({ name: '', type: '' })
@@ -57,12 +56,12 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
 
   const handleFilesSelected = async (files) => {
     setFileContent({ content: '' })
-    const content = files[0] // 读取文件内容
+    const content = files[0]
 
-    let msg = '' // 提示信息
+    let msg = ''
 
     let isSupportFileType = true
-    let isLessThan2M = true
+    let isLessThan2M = false
     let isExcel = false
 
     if (content.type === 'application/json') {
@@ -78,12 +77,12 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
       isSupportFileType = false
     }
 
-    const limitSize = 2 // 限制2M
+    const limitSize = 2
     if (content.size / 1024 ** 2 <= limitSize) {
       msg = msg + ` 文件大小未超过${limitSize}M ✔`
+      isLessThan2M = true
     } else {
       msg = msg + ` 文件大小超过${limitSize}M ❌`
-      isLessThan2M = false
     }
 
     if (!isSupportFileType) {
@@ -106,14 +105,12 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
         return
       }
 
-      // 解析无误，提示用户
       setAlertMessage({ resolveDictMsg: '', loadDictMsg: '解析完毕' })
       setFileContent({ ...fileContent, content: jsonData })
     }
     const _reject = (error) => {
       setAlertMessage({ ...alertMessage, loadDictMsg: '解析出错：' + error.message })
     }
-    // 导入词典文件合格
     if (isSupportFileType && isLessThan2M) {
       setAlertMessage({ ...alertMessage, loadDictMsg: '解析中' })
       if (isExcel) {
@@ -147,12 +144,18 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
       return false
     }
 
-    /////////////////
+    const config = window.readLocalDictConfig()
+    const isNameExists = config.some((dict) => dict.name.trim() === formData.name.trim())
+    if (isNameExists) {
+      toast.error('词典名称已存在，请使用其他名称')
+      return false
+    }
+
     saveDict(formData, fileContent.content)
     toast.success('自定义词典添加成功')
     mixpanel.track('Import Dict')
 
-    onSaveDictSuccess() // 父组件回调
+    onSaveDictSuccess()
     setIsOpen(false)
   }
 
@@ -164,9 +167,9 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
             <button
               type="button"
               onClick={openModal}
-              className="fixed right-20 top-24 z-10 rounded-lg  bg-indigo-50 px-2 py-2 text-lg hover:bg-indigo-200 focus:outline-none dark:bg-indigo-900 dark:hover:bg-indigo-800"
+              className="fixed right-20 top-24 z-10 rounded-lg bg-indigo-50 px-2 py-2 text-lg hover:bg-indigo-200 focus:outline-none bg-opacity-50 hover:bg-opacity-100"
             >
-              <IconAdd className="h-6 w-6 text-lg text-indigo-500 dark:text-white" />
+              <IconAdd className="h-6 w-6 text-lg text-indigo-500 text-white" />
             </button>
           </Tooltip>
         )}
@@ -196,16 +199,16 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
                 leaveFrom="opacity-100 scale-100"
                 leaveTo="opacity-0 scale-95"
               >
-                <Dialog.Panel className="w-200  transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all dark:bg-gray-800">
+                <Dialog.Panel className="w-200 transform overflow-hidden rounded-2xl bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
                   <button type="button" onClick={closeModal} title="关闭对话框">
                     <IconX className="absolute right-7 top-5 cursor-pointer text-gray-400" />
                   </button>
-                  <Dialog.Title as="h2" className="mb-8 text-center text-xl font-medium leading-6 text-gray-800 dark:text-gray-200">
+                  <Dialog.Title as="h2" className="mb-8 text-center text-xl font-medium leading-6 text-gray-200">
                     新增词典
                   </Dialog.Title>
                   <form onSubmit={handleSubmit} className="p-2">
                     <div className="mb-8 grid grid-cols-[1fr_5fr]">
-                      <label htmlFor="name" className="mb-4 block font-bold text-gray-600 dark:text-gray-200">
+                      <label htmlFor="name" className="mb-4 block font-bold text-gray-200">
                         词典名称:
                       </label>
                       <input
@@ -214,16 +217,16 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full rounded-lg border border-gray-400 p-2"
+                        className="w-full rounded-lg border border-gray-400 bg-gray-700 p-2 text-white"
                       />
                     </div>
                     <div className="mb-8 grid grid-cols-[1fr_5fr]">
-                      <label className="mb-4 block font-bold text-gray-600 dark:text-gray-200">类型:</label>
+                      <label className="mb-4 block font-bold text-gray-200">类型:</label>
                       <select
                         name="language"
                         value={formData.language}
                         onChange={handleChange}
-                        className="w-full rounded-lg border border-gray-400 p-2"
+                        className="w-full rounded-lg border border-gray-400 bg-gray-700 p-2 text-white"
                       >
                         {languageType.map((item) => (
                           <option value={item.type} key={item.type}>
@@ -236,7 +239,7 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
                     <div className="mb-4">
                       <FileDropZone onFilesSelected={handleFilesSelected}>
                         {fileInfo.name.trim() ? (
-                          <div className="flex flex-col items-start justify-center py-4  text-gray-600 dark:text-gray-200">
+                          <div className="flex flex-col items-start justify-center py-4 text-gray-200">
                             <p className="pb-2">
                               <span className="font-mono text-lg font-bold">File: </span>
                               {fileInfo.name}
@@ -251,8 +254,8 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
                             </p>
                           </div>
                         ) : (
-                          <div className="flex flex-col items-center justify-center  text-gray-600 dark:text-gray-200">
-                            <IconAdd className="h-16 w-16 p-2 text-lg text-gray-300 dark:text-gray-200" />
+                          <div className="flex flex-col items-center justify-center text-gray-200">
+                            <IconAdd className="h-16 w-16 p-2 text-lg text-gray-200" />
                             <p className="text-2lg py-4 font-bold">
                               拖拽 词典文件<span className="text-red-400">(支持xls、xlsx格式)</span> 到此处
                             </p>
@@ -270,7 +273,7 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
                     <div className="mt-8 flex justify-between">
                       <div className="mx-2 my-4 text-lg text-red-400 ">{alertMessage.resolveDictMsg}</div>
                       <button
-                        className="text-bold h-15 w-1/4 rounded-lg bg-indigo-400 font-bold text-white hover:bg-indigo-500 dark:text-gray-200"
+                        className="text-bold h-15 w-1/4 rounded-lg bg-indigo-400 font-bold text-white hover:bg-indigo-500 text-gray-200"
                         type="submit"
                       >
                         确定
@@ -317,12 +320,15 @@ const saveDict = (formData, jsonData) => {
       name: name.trim(),
       url: `/dicts/${uuid}.json`,
       language,
-      description: '',
+      description: '自定义词典',
+      category: '自定义',
       tags: ['Default'],
       length: jsonData.length,
+      chapterCount: Math.ceil(jsonData.length / 20),
+      languageCategory: 'custom',
     }
   }
 
-  window.newLocalDictFromJson(jsonData, createDictMeta(formData))
-  window.initLocalDictionries()
+  const dictMeta = createDictMeta(formData)
+  window.newLocalDictFromJson(jsonData, dictMeta)
 }

@@ -24,9 +24,6 @@ const DictionaryDownload = () => {
   const dictionaries = [
     { name: '英文词典(无音标)', filename: 'english_no_pronunciation.xls' },
     { name: '英文词典(有音标)', filename: 'english_with_pronunciation.xls' },
-    { name: '日文词典(无注解)', filename: 'japanese_no_annotation.xls' },
-    { name: '日文词典(有注解)', filename: 'japanese_with_annotation.xls' },
-    { name: '德英词典', filename: 'german_english.xls' },
   ]
 
   return (

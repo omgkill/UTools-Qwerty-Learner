@@ -1,4 +1,3 @@
-import ErrorRecordingToggle from './ErrorRecordingToggle'
 import Form4EditDict from './Form4EditDict'
 import { useDictStats } from './hooks/useDictStats'
 import { GalleryContext } from './index'
@@ -71,7 +70,6 @@ export default function DictionaryComponent({ dictionary, onClick }: Props) {
             </Progress.Root>
           )}
           {['custom'].includes(dictionary.languageCategory) && <Form4EditDict dictId={dictionary.id} />}
-          {!['mistake'].includes(dictionary.languageCategory) && <ErrorRecordingToggle dictInfo={dictionary} />}
           <img src={bookCover} className={`absolute right-3 top-3 w-16 ${isSelected ? 'opacity-50' : 'opacity-20'}`} />
         </div>
         {/* <p className={`${dictionary.languageCategory === 'custom' ? '' : 'hidden'} text-xs text-gray-300 `}>{dictionary.id}</p> */}

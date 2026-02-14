@@ -1,20 +1,15 @@
 import DictionaryGroup from './CategoryDicts'
 import ChapterList from './ChapterList'
-import ErrorRecordingStatus from './ErrorRecordingStatus'
 import Form4AddDict from './Form4AddDict'
 import { LanguageTabSwitcher } from './LanguageTabSwitcher'
-import RefreshMistakeDict from './RefreshMistakeDict'
-import SubscriptionOverlay from './SubscriptionOverlay'
 import Layout from '@/components/Layout'
-import { dictionaries } from '@/resources/dictionary'
-import { currentDictInfoAtom } from '@/store'
+import { builtinDictionaries } from '@/resources/dictionary'
+import { currentDictInfoAtom, dictionariesAtom } from '@/store'
 import type { Dictionary, LanguageCategoryType } from '@/typings'
 import groupBy, { groupByDictTags } from '@/utils/groupBy'
-import { db as typingMistakeDB } from '@/utils/typing-mistake-db'
 import * as ScrollArea from '@radix-ui/react-scroll-area'
-import { useAtomValue } from 'jotai'
-import { createContext, useCallback, useEffect, useMemo } from 'react'
-import { useState } from 'react'
+import { useAtomValue, useSetAtom } from 'jotai'
+import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { useNavigate } from 'react-router-dom'
 import type { Updater } from 'use-immer'
@@ -24,14 +19,12 @@ import IconX from '~icons/tabler/x'
 export type GalleryState = {
   currentLanguageTab: LanguageCategoryType
   chapterListDict: Dictionary | null
-  mistakeRecordingDictIds: string[]
   vipState: string
 }
 
 const initialGalleryState: GalleryState = {
-  currentLanguageTab: 'en',
+  currentLanguageTab: 'custom',
   chapterListDict: null,
-  mistakeRecordingDictIds: [],
   vipState: '',
 }
 
@@ -46,8 +39,25 @@ export default function GalleryPage() {
   const [galleryState, setGalleryState] = useImmer<GalleryState>(initialGalleryState)
   const navigate = useNavigate()
   const currentDictInfo = useAtomValue(currentDictInfoAtom)
+  const dictionaries = useAtomValue(dictionariesAtom)
+  const setDictionaries = useSetAtom(dictionariesAtom)
 
   const [refreshCount, setPageRefresh] = useState(0)
+
+  const loadDictionaries = useCallback(() => {
+    const config = window.readLocalDictConfig()
+    setDictionaries([...config, ...builtinDictionaries])
+  }, [setDictionaries])
+
+  useEffect(() => {
+    loadDictionaries()
+  }, [loadDictionaries])
+
+  useEffect(() => {
+    if (refreshCount > 0) {
+      loadDictionaries()
+    }
+  }, [refreshCount, loadDictionaries])
 
   const { groupedByCategoryAndTag } = useMemo(() => {
     refreshCount
@@ -60,16 +70,13 @@ export default function GalleryPage() {
     return {
       groupedByCategoryAndTag,
     }
-  }, [galleryState.currentLanguageTab, refreshCount])
+  }, [galleryState.currentLanguageTab, refreshCount, dictionaries])
 
   const onBack = useCallback(() => {
     navigate('/')
   }, [navigate])
   const refreshPage = useCallback(() => {
-    // handleRefresh()
-    // function handleRefresh() {
     setPageRefresh(refreshCount + 1)
-    // }
   }, [setPageRefresh, refreshCount])
 
   useHotkeys('enter,esc', onBack, { preventDefault: true })
@@ -82,11 +89,6 @@ export default function GalleryPage() {
     }
     setGalleryState((state) => {
       state.vipState = localStorage.getItem('x-vipState') || ''
-    })
-    typingMistakeDB.dicts.toArray().then((arr) => {
-      setGalleryState((state) => {
-        state.mistakeRecordingDictIds = arr.map((dict) => dict.id)
-      })
     })
   }, [currentDictInfo, setGalleryState])
 
@@ -117,13 +119,8 @@ export default function GalleryPage() {
                 </ScrollArea.Root>
               </InnerContext.Provider>
             </div>
-            {/* {!['b', 'c'].includes(galleryState.vipState) && ['mistake', 'custom'].includes(galleryState.currentLanguageTab) && (
-              <SubscriptionOverlay setGalleryState={setGalleryState} refreshPage={refreshPage} />
-            )} */}
-            {galleryState.currentLanguageTab === 'mistake' && <ErrorRecordingStatus />}
           </div>
-          {galleryState.currentLanguageTab === 'custom' ? <Form4AddDict onSaveDictSuccess={refreshPage} /> : ''}
-          {galleryState.currentLanguageTab === 'mistake' ? <RefreshMistakeDict onRefresh={refreshPage} /> : ''}
+          {galleryState.currentLanguageTab === 'custom' && <Form4AddDict onSaveDictSuccess={refreshPage} />}
         </div>
       </GalleryContext.Provider>
     </Layout>
