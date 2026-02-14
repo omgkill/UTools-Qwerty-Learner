@@ -6,7 +6,6 @@ import type { LetterState } from './Letter'
 import Notation from './Notation'
 import style from './index.module.css'
 import { EXPLICIT_SPACE } from '@/constants'
-import useKeySounds from '@/hooks/useKeySounds'
 import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
 import {
   currentDictInfoAtom,
@@ -29,11 +28,8 @@ type WordState = {
   inputWord: string
   letterStates: LetterState[]
   isFinished: boolean
-  // 是否出现输入错误
   hasWrong: boolean
-  // 记录是否已经出现过输入错误
   hasMadeInputWrong: boolean
-  // 用户输入错误的次数
   wrongCount: number
   startTime: string
   endTime: string
@@ -41,8 +37,6 @@ type WordState = {
   correctCount: number
   letterTimeArray: number[]
   letterMistake: LetterMistakes
-  // 用于随机隐藏字母功能
-  randomLetterVisible: boolean[]
 }
 
 const initialWordState: WordState = {
@@ -59,13 +53,9 @@ const initialWordState: WordState = {
   correctCount: 0,
   letterTimeArray: [],
   letterMistake: {},
-  randomLetterVisible: [],
 }
 
-const vowelLetters = ['A', 'E', 'I', 'O', 'U']
-
 export default function WordComponent({ word, onFinish }: { word: Word; onFinish: () => void }) {
-  // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
   const { state, dispatch } = useContext(TypingContext)!
   const [wordState, setWordState] = useImmer<WordState>(structuredClone(initialWordState))
 
@@ -75,13 +65,11 @@ export default function WordComponent({ word, onFinish }: { word: Word; onFinish
   const isShowAnswerOnHover = useAtomValue(isShowAnswerOnHoverAtom)
   const saveWordRecord = useSaveWordRecord()
   const wordLogUploader = useMixPanelWordLogUploader(state)
-  const [playKeySound, playBeepSound, playHintSound] = useKeySounds()
   const pronunciationIsOpen = useAtomValue(pronunciationIsOpenAtom)
   const [isHoveringWord, setIsHoveringWord] = useState(false)
   const currentLanguage = useAtomValue(currentDictInfoAtom).language
 
   useEffect(() => {
-    // run only when word changes
     let headword = word.name.replace(new RegExp(' ', 'g'), EXPLICIT_SPACE)
     headword = headword.replace(new RegExp('…', 'g'), '..')
 
@@ -89,7 +77,6 @@ export default function WordComponent({ word, onFinish }: { word: Word; onFinish
     newWordState.displayWord = headword
     newWordState.letterStates = new Array(headword.length).fill('normal')
     newWordState.startTime = getUtcStringForMixpanel()
-    newWordState.randomLetterVisible = headword.split('').map(() => Math.random() > 0.4)
     setWordState(newWordState)
   }, [word, setWordState])
 
@@ -127,30 +114,11 @@ export default function WordComponent({ word, onFinish }: { word: Word; onFinish
       if (wordState.letterStates[index] === 'correct' || (isShowAnswerOnHover && isHoveringWord)) return true
 
       if (wordDictationConfig.isOpen) {
-        if (wordDictationConfig.type === 'hideAll') return false
-
-        const letter = wordState.displayWord[index]
-        if (wordDictationConfig.type === 'hideVowel') {
-          return vowelLetters.includes(letter.toUpperCase()) ? false : true
-        }
-        if (wordDictationConfig.type === 'hideConsonant') {
-          return vowelLetters.includes(letter.toUpperCase()) ? true : false
-        }
-        if (wordDictationConfig.type === 'randomHide') {
-          return wordState.randomLetterVisible[index]
-        }
+        return false
       }
       return true
     },
-    [
-      isHoveringWord,
-      isShowAnswerOnHover,
-      wordDictationConfig.isOpen,
-      wordDictationConfig.type,
-      wordState.displayWord,
-      wordState.letterStates,
-      wordState.randomLetterVisible,
-    ],
+    [isHoveringWord, isShowAnswerOnHover, wordDictationConfig.isOpen, wordState.letterStates],
   )
 
   useEffect(() => {
@@ -168,32 +136,25 @@ export default function WordComponent({ word, onFinish }: { word: Word; onFinish
     }
 
     if (isEqual) {
-      // 输入正确时
       setWordState((state) => {
         state.letterTimeArray.push(Date.now())
         state.correctCount += 1
       })
 
       if (inputLength >= wordState.displayWord.length) {
-        // 完成输入时
         setWordState((state) => {
           state.letterStates[inputLength - 1] = 'correct'
           state.isFinished = true
           state.endTime = getUtcStringForMixpanel()
         })
-        playHintSound()
       } else {
         setWordState((state) => {
           state.letterStates[inputLength - 1] = 'correct'
         })
-        playKeySound()
       }
 
       dispatch({ type: TypingStateActionType.INCREASE_CORRECT_COUNT })
     } else {
-      // 出错时
-      playBeepSound()
-
       setWordState((state) => {
         state.letterStates[inputLength - 1] = 'wrong'
         state.hasWrong = true
@@ -210,8 +171,7 @@ export default function WordComponent({ word, onFinish }: { word: Word; onFinish
       dispatch({ type: TypingStateActionType.INCREASE_WRONG_COUNT })
       dispatch({ type: TypingStateActionType.REPORT_WRONG_WORD })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wordState.inputWord])
+  }, [wordState.inputWord, wordState.hasWrong, wordState.displayWord.length, isIgnoreCase, setWordState, dispatch])
 
   useEffect(() => {
     if (wordState.hasWrong) {
@@ -254,8 +214,7 @@ export default function WordComponent({ word, onFinish }: { word: Word; onFinish
 
       onFinish()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wordState.isFinished])
+  }, [wordState.isFinished, wordState.hasMadeInputWrong, wordState.startTime, wordState.endTime, wordState.correctCount, wordState.wrongCount, wordState.letterTimeArray, wordState.letterMistake, word.name, dispatch, wordLogUploader, saveWordRecord, onFinish])
 
   useEffect(() => {
     if (wordState.wrongCount >= 4) {

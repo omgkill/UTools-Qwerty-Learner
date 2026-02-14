@@ -2,10 +2,9 @@ import { pronunciationConfigAtom } from '@/store'
 import type { PronunciationType } from '@/typings'
 import { addHowlListener } from '@/utils'
 import { romajiToHiragana } from '@/utils/kana'
-import noop from '@/utils/noop'
 import type { Howl } from 'howler'
 import { useAtomValue } from 'jotai'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import useSound from 'use-sound'
 import type { HookOptions } from 'use-sound/dist/types'
 
@@ -27,24 +26,17 @@ export function generateWordSoundSrc(word: string, pronunciation: Exclude<Pronun
   }
 }
 
-export default function usePronunciationSound(word: string, isLoop?: boolean) {
+export default function usePronunciationSound(word: string) {
   const pronunciationConfig = useAtomValue(pronunciationConfigAtom)
-  const loop = useMemo(() => (typeof isLoop === 'boolean' ? isLoop : pronunciationConfig.isLoop), [isLoop, pronunciationConfig.isLoop])
   const [isPlaying, setIsPlaying] = useState(false)
 
   const [play, { stop, sound }] = useSound(generateWordSoundSrc(word, pronunciationConfig.type), {
     html5: true,
     format: ['mp3'],
-    loop,
+    loop: false,
     volume: pronunciationConfig.volume,
     rate: pronunciationConfig.rate,
   } as HookOptions)
-
-  useEffect(() => {
-    if (!sound) return
-    sound.loop(loop)
-    return noop
-  }, [loop, sound])
 
   useEffect(() => {
     if (!sound) return

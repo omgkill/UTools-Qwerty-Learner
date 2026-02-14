@@ -71,37 +71,20 @@ const ResultScreen = () => {
   }, [state.timerData.time])
 
   const repeatButtonHandler = useCallback(() => {
-    setWordDictationConfig((old) => {
-      if (old.isOpen) {
-        if (old.openBy === 'auto') {
-          return { ...old, isOpen: false }
-        }
-      }
-      return old
-    })
     dispatch({ type: TypingStateActionType.REPEAT_CHAPTER, shouldShuffle: randomConfig.isOpen })
-  }, [dispatch, randomConfig.isOpen, setWordDictationConfig])
+  }, [dispatch, randomConfig.isOpen])
 
   const dictationButtonHandler = useCallback(() => {
-    setWordDictationConfig((old) => ({ ...old, isOpen: true, openBy: 'auto' }))
-
+    setWordDictationConfig((old) => ({ ...old, isOpen: true }))
     dispatch({ type: TypingStateActionType.REPEAT_CHAPTER, shouldShuffle: randomConfig.isOpen })
   }, [dispatch, randomConfig.isOpen, setWordDictationConfig])
 
   const nextButtonHandler = useCallback(() => {
-    setWordDictationConfig((old) => {
-      if (old.isOpen) {
-        if (old.openBy === 'auto') {
-          return { ...old, isOpen: false }
-        }
-      }
-      return old
-    })
     if (!isLastChapter) {
       setCurrentChapter((old) => old + 1)
       dispatch({ type: TypingStateActionType.NEXT_CHAPTER })
     }
-  }, [dispatch, isLastChapter, setCurrentChapter, setWordDictationConfig])
+  }, [dispatch, isLastChapter, setCurrentChapter])
 
   const exitButtonHandler = useCallback(() => {
     dispatch({ type: TypingStateActionType.REPEAT_CHAPTER, shouldShuffle: false })

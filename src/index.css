@@ -8,13 +8,8 @@ body {
     'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #faf9ff;
-  @apply transition-colors duration-300;
+  @apply bg-gray-900 transition-colors duration-300;
   user-select: none;
-}
-
-html.dark body {
-  @apply bg-gray-900;
 }
 
 code {
@@ -33,7 +28,7 @@ body,
     0px 6.6501px 5.32008px rgba(50, 46, 129, 0.0282725), 0px 2.76726px 2.21381px rgba(50, 46, 129, 0.0196802);
 }
 
-/* Well, TailwindCSS does’t have `text-shadow` classes. */
+/* Well, TailwindCSS does't have `text-shadow` classes. */
 .text-shadow {
   text-shadow: 0 4px 8px rgba(0, 0, 0, 0.16), 0 2px 4px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
 }
@@ -64,52 +59,51 @@ body,
     @apply flex h-10 w-auto cursor-pointer
       flex-row items-center
     justify-center rounded-md border-2
-      border-solid border-indigo-400 bg-white px-2 py-0.5 transition-colors duration-100 hover:bg-indigo-100 dark:border-slate-800
-      dark:bg-slate-700 dark:hover:bg-slate-600 md:h-12
+      border-solid border-slate-800 bg-slate-700 px-2 py-0.5 transition-colors duration-100 hover:bg-slate-600
+      md:h-12
       md:px-5 md:py-1;
   }
 
   .word-chip > span {
-    @apply font-mono text-2xl font-light text-gray-600 dark:text-gray-300 md:text-3xl;
+    @apply font-mono text-2xl font-light text-gray-300 md:text-3xl;
   }
 
   .word-chip-tooltip {
     @apply pointer-events-none flex items-center justify-center whitespace-nowrap rounded-lg
-      bg-white px-2 py-1 text-xs text-gray-500
-      shadow-md dark:bg-gray-800 dark:text-gray-300;
+      bg-gray-800 px-2 py-1 text-xs text-gray-300
+      shadow-md;
   }
 
   .mini-word-chip {
     @apply flex h-8 w-auto cursor-pointer
       flex-row items-center
     justify-center rounded-md border-2
-      border-solid border-[#9d48d289] bg-gray-50 px-2 py-0.5 transition-colors duration-100 hover:bg-indigo-100 dark:border-slate-800
-      dark:bg-slate-700 dark:hover:bg-slate-600;
+      border-solid border-slate-800 bg-slate-700 px-2 py-0.5 transition-colors duration-100 hover:bg-slate-600;
   }
 
   .mini-word-chip > span {
-    @apply font-mono text-[.8rem] font-light text-gray-600 dark:text-gray-300;
+    @apply font-mono text-[.8rem] font-light text-gray-300;
   }
 
   .mini-word-chip-tooltip {
     @apply pointer-events-none flex items-center justify-center whitespace-nowrap rounded-lg
-      bg-white px-2 py-1 text-xs text-gray-500
-      shadow-md dark:bg-gray-800 dark:text-gray-300;
+      bg-gray-800 px-2 py-1 text-xs text-gray-300
+      shadow-md;
   }
 
   .btn-primary {
-    @apply flex items-center justify-center rounded-lg bg-indigo-400 px-6 py-1 text-lg text-white hover:opacity-90 focus:outline-none dark:text-opacity-80;
+    @apply flex items-center justify-center rounded-lg bg-indigo-400 px-6 py-1 text-lg text-white hover:opacity-90 focus:outline-none text-opacity-80;
   }
 
   .btn-info-panel {
     @apply mt-3 inline-flex w-full justify-center rounded-md px-3 py-2 text-sm
       font-semibold text-white shadow-sm transition-colors focus:outline-none
-      dark:bg-opacity-70 dark:text-opacity-80 sm:ml-3 sm:mt-0 sm:w-auto
+      bg-opacity-70 text-opacity-80 sm:ml-3 sm:mt-0 sm:w-auto
       sm:text-sm;
   }
 
   .tooltip {
-    @apply whitespace-nowrap rounded-lg bg-white px-2 py-1 text-xs text-gray-500 shadow-md dark:bg-gray-700 dark:text-gray-300;
+    @apply whitespace-nowrap rounded-lg bg-gray-700 px-2 py-1 text-xs text-gray-300 shadow-md;
   }
 
   .switch-root {
@@ -126,25 +120,25 @@ body,
   }
 
   .listbox-button {
-    @apply relative w-40 cursor-pointer rounded-lg bg-white py-2 pl-3 pr-10 text-left shadow-md focus:outline-none;
+    @apply relative w-40 cursor-pointer rounded-lg bg-gray-700 py-2 pl-3 pr-10 text-left shadow-md focus:outline-none;
   }
   .listbox-button span:nth-of-type(1) {
-    @apply block truncate text-gray-900;
+    @apply block truncate text-gray-100;
   }
   .listbox-button span:nth-of-type(2) {
     @apply pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 focus:outline-none;
   }
   .listbox-options {
-    @apply absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg  focus:outline-none;
+    @apply absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-700 py-1 text-base shadow-lg  focus:outline-none;
   }
   .listbox-options > li {
-    @apply relative cursor-pointer select-none py-2 pl-10 pr-4 text-gray-900 ui-active:bg-indigo-100 ui-active:text-indigo-900;
+    @apply relative cursor-pointer select-none py-2 pl-10 pr-4 text-gray-100 ui-active:bg-indigo-600 ui-active:text-indigo-100;
   }
   .listbox-options > li > span:first-child {
     @apply block truncate font-normal  ui-selected:font-medium;
   }
   .listbox-options-icon {
-    @apply absolute inset-y-0 left-0 flex items-center pl-3 text-indigo-600;
+    @apply absolute inset-y-0 left-0 flex items-center pl-3 text-indigo-400;
   }
 
   .slider {
@@ -154,12 +148,12 @@ body,
     @apply pointer-events-none opacity-50;
   }
   .slider > span:nth-child(1) {
-    @apply relative h-[5px] flex-grow rounded-full bg-gray-200;
+    @apply relative h-[5px] flex-grow rounded-full bg-gray-600;
   }
   .slider > span:nth-child(1) > span:nth-child(1) {
     @apply absolute h-full rounded-full bg-indigo-400;
   }
   .slider > span:nth-child(2) {
-    @apply block h-4 w-4 cursor-pointer rounded-full border border-gray-200 bg-white drop-shadow-md;
+    @apply block h-4 w-4 cursor-pointer rounded-full border border-gray-500 bg-gray-300 drop-shadow-md;
   }
 }

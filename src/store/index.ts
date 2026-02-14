@@ -1,15 +1,11 @@
 import atomForConfig from './atomForConfig'
 import { DISMISS_START_CARD_DATE_KEY } from '@/constants'
 import { idDictionaryMap } from '@/resources/dictionary'
-import { correctSoundResources, keySoundResources, wrongSoundResources } from '@/resources/soundResource'
 import type {
   Dictionary,
   InfoPanelState,
-  LoopWordTimesOption,
   PhoneticType,
   PronunciationType,
-  WordDictationOpenBy,
-  WordDictationType,
 } from '@/typings'
 import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
@@ -18,7 +14,6 @@ export const currentDictIdAtom = atomWithStorage('currentDict', 'cet4')
 export const currentDictInfoAtom = atom<Dictionary>((get) => {
   const id = get(currentDictIdAtom)
   let dict = idDictionaryMap[id]
-  // 如果 dict 不存在，则返回 cet4. Typing 中会检查 DictId 是否存在，如果不存在则会重置为 cet4
   if (!dict) {
     dict = idDictionaryMap.cet4
   }
@@ -27,32 +22,11 @@ export const currentDictInfoAtom = atom<Dictionary>((get) => {
 
 export const currentChapterAtom = atomWithStorage('currentChapter', 0)
 
-export const loopWordConfigAtom = atomForConfig<{ times: LoopWordTimesOption }>('loopWordConfig', {
-  times: 1,
-})
-
-export const keySoundsConfigAtom = atomForConfig('keySoundsConfig', {
-  isOpen: true,
-  isOpenClickSound: true,
-  volume: 1,
-  resource: keySoundResources[0],
-})
-
-export const hintSoundsConfigAtom = atomForConfig('hintSoundsConfig', {
-  isOpen: true,
-  volume: 1,
-  isOpenWrongSound: true,
-  isOpenCorrectSound: true,
-  wrongResource: wrongSoundResources[0],
-  correctResource: correctSoundResources[0],
-})
-
 export const pronunciationConfigAtom = atomForConfig('pronunciation', {
   isOpen: true,
   volume: 1,
   type: 'us' as PronunciationType,
   name: '美音',
-  isLoop: false,
   isTransRead: false,
   transVolume: 1,
   rate: 1,
@@ -78,8 +52,6 @@ export const phoneticConfigAtom = atomForConfig('phoneticConfig', {
   type: 'us' as PhoneticType,
 })
 
-export const isOpenDarkModeAtom = atomWithStorage('isOpenDarkModeAtom', window.matchMedia('(prefers-color-scheme: dark)').matches)
-
 export const isShowSkipAtom = atom(false)
 
 export const isInDevModeAtom = atom(false)
@@ -93,11 +65,6 @@ export const infoPanelStateAtom = atom<InfoPanelState>({
 
 export const wordDictationConfigAtom = atomForConfig('wordDictationConfig', {
   isOpen: false,
-  type: 'hideAll' as WordDictationType,
-  openBy: 'auto' as WordDictationOpenBy,
 })
 
 export const dismissStartCardDateAtom = atomWithStorage<Date | null>(DISMISS_START_CARD_DATE_KEY, null)
-
-// for dev test
-//   dismissStartCardDateAtom = atom<Date | null>(new Date())

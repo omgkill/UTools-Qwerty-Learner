@@ -28,10 +28,7 @@ export type TypingState = {
   isFinished: boolean
   isShowSkip: boolean
   isTransVisible: boolean
-  isLoopSingleWord: boolean
-  // 是否正在保存数据
   isSavingRecord: boolean
-  // 沉浸模式
   isImmersiveMode: boolean
 }
 
@@ -55,7 +52,6 @@ export const initialState: TypingState = {
   isFinished: false,
   isShowSkip: false,
   isTransVisible: true,
-  isLoopSingleWord: false,
   isSavingRecord: false,
   isImmersiveMode: false,
 }
@@ -68,7 +64,6 @@ export enum TypingStateActionType {
   REPORT_WRONG_WORD = 'REPORT_WRONG_WORD',
   REPORT_CORRECT_WORD = 'REPORT_CORRECT_WORD',
   NEXT_WORD = 'NEXT_WORD',
-  LOOP_CURRENT_WORD = 'LOOP_CURRENT_WORD',
   FINISH_CHAPTER = 'FINISH_CHAPTER',
   INCREASE_CORRECT_COUNT = 'INCREASE_CORRECT_COUNT',
   INCREASE_WRONG_COUNT = 'INCREASE_WRONG_COUNT',
@@ -81,8 +76,6 @@ export enum TypingStateActionType {
   TICK_TIMER = 'TICK_TIMER',
   ADD_WORD_RECORD_ID = 'ADD_WORD_RECORD_ID',
   SET_IS_SAVING_RECORD = 'SET_IS_SAVING_RECORD',
-  SET_IS_LOOP_SINGLE_WORD = 'SET_IS_LOOP_SINGLE_WORD',
-  TOGGLE_IS_LOOP_SINGLE_WORD = 'TOGGLE_IS_LOOP_SINGLE_WORD',
   TOGGLE_IMMERSIVE_MODE = 'TOGGLE_IMMERSIVE_MODE',
 }
 
@@ -95,7 +88,6 @@ export type TypingStateAction =
   | { type: TypingStateActionType.REPORT_WRONG_WORD }
   | { type: TypingStateActionType.REPORT_CORRECT_WORD }
   | { type: TypingStateActionType.NEXT_WORD }
-  | { type: TypingStateActionType.LOOP_CURRENT_WORD }
   | { type: TypingStateActionType.FINISH_CHAPTER }
   | { type: TypingStateActionType.INCREASE_CORRECT_COUNT }
   | { type: TypingStateActionType.INCREASE_WRONG_COUNT }
@@ -107,8 +99,6 @@ export type TypingStateAction =
   | { type: TypingStateActionType.TICK_TIMER; addTime?: number }
   | { type: TypingStateActionType.ADD_WORD_RECORD_ID; payload: number }
   | { type: TypingStateActionType.SET_IS_SAVING_RECORD; payload: boolean }
-  | { type: TypingStateActionType.SET_IS_LOOP_SINGLE_WORD; payload: boolean }
-  | { type: TypingStateActionType.TOGGLE_IS_LOOP_SINGLE_WORD }
 
 type Dispatch = (action: TypingStateAction) => void
 
@@ -160,10 +150,6 @@ export const typingReducer = (state: TypingState, action: TypingStateAction) => 
       state.chapterData.index += 1
       state.chapterData.wordCount += 1
       state.isShowSkip = false
-      break
-    case TypingStateActionType.LOOP_CURRENT_WORD:
-      state.isShowSkip = false
-      state.chapterData.wordCount += 1
       break
     case TypingStateActionType.FINISH_CHAPTER:
       state.chapterData.wordCount += 1
@@ -235,14 +221,6 @@ export const typingReducer = (state: TypingState, action: TypingStateAction) => 
     }
     case TypingStateActionType.SET_IS_SAVING_RECORD: {
       state.isSavingRecord = action.payload
-      break
-    }
-    case TypingStateActionType.SET_IS_LOOP_SINGLE_WORD: {
-      state.isLoopSingleWord = action.payload
-      break
-    }
-    case TypingStateActionType.TOGGLE_IS_LOOP_SINGLE_WORD: {
-      state.isLoopSingleWord = !state.isLoopSingleWord
       break
     }
     default: {

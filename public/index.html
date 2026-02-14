@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-Hans">
+<html lang="zh-Hans" class="dark">
   <head>
     <meta charset="UTF-8" />
     <script type="text/javascript">
@@ -60,17 +60,6 @@
         -webkit-box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.2);
       }
     </style>
-    <script>
-      window.migrateUtoolsToLocalStorage && window.migrateUtoolsToLocalStorage()
-
-      // Dark mode init
-      if (
-        ('state' in localStorage && JSON.parse(localStorage.state).darkMode) ||
-        (!('state' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
-      ) {
-        document.documentElement.classList.add('dark')
-      }
-    </script>
   </head>
 
   <body>

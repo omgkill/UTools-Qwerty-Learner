@@ -1,55 +1,30 @@
 import { TypingContext, TypingStateActionType } from '../../store'
 import PrevAndNextWord from '../PrevAndNextWord'
-import Progress from '../Progress'
 import Phonetic from './components/Phonetic'
 import Translation from './components/Translation'
 import WordComponent from './components/Word'
 import { usePrefetchPronunciationSound } from '@/hooks/usePronunciation'
-import { isShowPrevAndNextWordAtom, loopWordConfigAtom, phoneticConfigAtom } from '@/store'
+import { isShowPrevAndNextWordAtom, phoneticConfigAtom } from '@/store'
 import type { Word } from '@/typings'
 import { useAtomValue } from 'jotai'
-import { useCallback, useContext, useState } from 'react'
+import { useCallback, useContext } from 'react'
 
 export default function WordPanel() {
-  // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
   const { state, dispatch } = useContext(TypingContext)!
   const phoneticConfig = useAtomValue(phoneticConfigAtom)
   const isShowPrevAndNextWord = useAtomValue(isShowPrevAndNextWordAtom)
-  const [wordComponentKey, setWordComponentKey] = useState(0)
-  const [currentWordExerciseCount, setCurrentWordExerciseCount] = useState(0)
-  const { times: loopWordTimes } = useAtomValue(loopWordConfigAtom)
   const currentWord = state.chapterData.words[state.chapterData.index]
   const nextWord = state.chapterData.words[state.chapterData.index + 1] as Word | undefined
 
   usePrefetchPronunciationSound(nextWord?.name)
 
-  const reloadCurrentWordComponent = useCallback(() => {
-    setWordComponentKey((old) => old + 1)
-  }, [])
-
   const onFinish = useCallback(() => {
-    if (state.chapterData.index < state.chapterData.words.length - 1 || currentWordExerciseCount < loopWordTimes - 1) {
-      // 用户完成当前单词
-      if (currentWordExerciseCount < loopWordTimes - 1) {
-        setCurrentWordExerciseCount((old) => old + 1)
-        dispatch({ type: TypingStateActionType.LOOP_CURRENT_WORD })
-        reloadCurrentWordComponent()
-      } else {
-        setCurrentWordExerciseCount(0)
-        dispatch({ type: TypingStateActionType.NEXT_WORD })
-      }
+    if (state.chapterData.index < state.chapterData.words.length - 1) {
+      dispatch({ type: TypingStateActionType.NEXT_WORD })
     } else {
-      // 用户完成当前章节
       dispatch({ type: TypingStateActionType.FINISH_CHAPTER })
     }
-  }, [
-    state.chapterData.index,
-    state.chapterData.words.length,
-    currentWordExerciseCount,
-    loopWordTimes,
-    dispatch,
-    reloadCurrentWordComponent,
-  ])
+  }, [state.chapterData.index, state.chapterData.words.length, dispatch])
 
   return (
     <div className="container flex h-full w-full flex-col items-center justify-center">
@@ -76,14 +51,13 @@ export default function WordPanel() {
               </div>
             )}
             <div className="relative">
-              <WordComponent word={currentWord} onFinish={onFinish} key={wordComponentKey} />
+              <WordComponent word={currentWord} onFinish={onFinish} />
               {phoneticConfig.isOpen && <Phonetic word={currentWord} />}
               {state.isTransVisible && <Translation trans={currentWord.trans.join('；')} />}
             </div>
           </div>
         )}
       </div>
-      {/* <Progress className={`mb-10 mt-auto ${state.isTyping ? 'opacity-100' : 'opacity-0'}`} /> */}
     </div>
   )
 }

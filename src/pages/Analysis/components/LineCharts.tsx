@@ -1,11 +1,9 @@
 import purple from './purple.json'
 import useWindowSize from '@/hooks/useWindowSize'
-import { isOpenDarkModeAtom } from '@/store'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TitleComponent, TooltipComponent } from 'echarts/components'
 import * as echarts from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { useAtom } from 'jotai'
 import type { FC } from 'react'
 import { useEffect, useRef } from 'react'
 
@@ -20,8 +18,6 @@ interface LineChartsProps {
 }
 
 const LineCharts: FC<LineChartsProps> = ({ data, title, suffix, name }) => {
-  const [isOpenDarkMode] = useAtom(isOpenDarkModeAtom)
-
   const chartRef = useRef<HTMLDivElement>(null)
 
   const { width, height } = useWindowSize()
@@ -32,7 +28,7 @@ const LineCharts: FC<LineChartsProps> = ({ data, title, suffix, name }) => {
     let chart = echarts.getInstanceByDom(chartRef.current)
     chart?.dispose()
 
-    chart = echarts.init(chartRef.current, isOpenDarkMode ? 'purple' : 'light')
+    chart = echarts.init(chartRef.current, 'purple')
 
     const option = {
       tooltip: { trigger: 'axis' },
@@ -68,7 +64,7 @@ const LineCharts: FC<LineChartsProps> = ({ data, title, suffix, name }) => {
     }
 
     chart.setOption(option)
-  }, [data, title, suffix, name, isOpenDarkMode])
+  }, [data, title, suffix, name])
 
   useEffect(() => {
     if (!chartRef.current) return
@@ -78,7 +74,7 @@ const LineCharts: FC<LineChartsProps> = ({ data, title, suffix, name }) => {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="text-center text-xl font-bold text-gray-600	dark:text-white">{title}</div>
+      <div className="text-center text-xl font-bold text-white">{title}</div>
       <div style={{ width: '100%', height: '100%' }} ref={chartRef} className="line-chart flex-grow"></div>
     </div>
   )

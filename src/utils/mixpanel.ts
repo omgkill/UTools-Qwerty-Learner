@@ -2,8 +2,6 @@ import type { TypingState } from '@/pages/Typing/store'
 import {
   currentChapterAtom,
   currentDictInfoAtom,
-  isOpenDarkModeAtom,
-  keySoundsConfigAtom,
   phoneticConfigAtom,
   pronunciationConfigAtom,
   randomConfigAtom,
@@ -46,17 +44,12 @@ export function recordAnalysisAction(type: analysisType) {
   mixpanel.track('analysis', props)
 }
 
-/**
- * mixpanel 单词和章节统计事件
- */
 export type ModeInfo = {
   modeDictation: boolean
   modeDark: boolean
   modeShuffle: boolean
 
-  enabledKeyboardSound: boolean
   enabledPhotonicsSymbol: boolean
-  enabledSingleWordLoop: boolean
 
   pronunciationAuto: boolean
   pronunciationOption: PronunciationType | 'none'
@@ -87,8 +80,6 @@ export type ChapterLogUpload = ModeInfo & {
 export function useMixPanelWordLogUploader(typingState: TypingState) {
   const currentChapter = useAtomValue(currentChapterAtom)
   const { name: dictName } = useAtomValue(currentDictInfoAtom)
-  const isDarkMode = useAtomValue(isOpenDarkModeAtom)
-  const keySoundsConfig = useAtomValue(keySoundsConfigAtom)
   const phoneticConfig = useAtomValue(phoneticConfigAtom)
   const pronunciationConfig = useAtomValue(pronunciationConfigAtom)
   const randomConfig = useAtomValue(randomConfigAtom)
@@ -100,12 +91,10 @@ export function useMixPanelWordLogUploader(typingState: TypingState) {
         order: typingState.chapterData.index + 1,
         chapter: (currentChapter + 1).toString(),
         wordlist: dictName,
-        modeDictation: !typingState.isWordVisible,
-        modeDark: isDarkMode,
+        modeDictation: false,
+        modeDark: true,
         modeShuffle: randomConfig.isOpen,
-        enabledKeyboardSound: keySoundsConfig.isOpen,
         enabledPhotonicsSymbol: phoneticConfig.isOpen,
-        enabledSingleWordLoop: typingState.isLoopSingleWord,
         pronunciationAuto: pronunciationConfig.isOpen,
         pronunciationOption: pronunciationConfig.isOpen === false ? 'none' : pronunciationConfig.type,
       }
@@ -115,8 +104,6 @@ export function useMixPanelWordLogUploader(typingState: TypingState) {
       typingState,
       currentChapter,
       dictName,
-      isDarkMode,
-      keySoundsConfig.isOpen,
       phoneticConfig.isOpen,
       pronunciationConfig.isOpen,
       pronunciationConfig.type,
@@ -130,8 +117,6 @@ export function useMixPanelWordLogUploader(typingState: TypingState) {
 export function useMixPanelChapterLogUploader(typingState: TypingState) {
   const currentChapter = useAtomValue(currentChapterAtom)
   const { name: dictName } = useAtomValue(currentDictInfoAtom)
-  const isDarkMode = useAtomValue(isOpenDarkModeAtom)
-  const keySoundsConfig = useAtomValue(keySoundsConfigAtom)
   const phoneticConfig = useAtomValue(phoneticConfigAtom)
   const pronunciationConfig = useAtomValue(pronunciationConfigAtom)
   const randomConfig = useAtomValue(randomConfigAtom)
@@ -145,12 +130,10 @@ export function useMixPanelChapterLogUploader(typingState: TypingState) {
       countCorrect: typingState.chapterData.correctCount,
       chapter: (currentChapter + 1).toString(),
       wordlist: dictName,
-      modeDictation: !typingState.isWordVisible,
-      modeDark: isDarkMode,
+      modeDictation: false,
+      modeDark: true,
       modeShuffle: randomConfig.isOpen,
-      enabledKeyboardSound: keySoundsConfig.isOpen,
       enabledPhotonicsSymbol: phoneticConfig.isOpen,
-      enabledSingleWordLoop: typingState.isLoopSingleWord,
       pronunciationAuto: pronunciationConfig.isOpen,
       pronunciationOption: pronunciationConfig.isOpen === false ? 'none' : pronunciationConfig.type,
     }
@@ -159,8 +142,6 @@ export function useMixPanelChapterLogUploader(typingState: TypingState) {
     typingState,
     currentChapter,
     dictName,
-    isDarkMode,
-    keySoundsConfig.isOpen,
     phoneticConfig.isOpen,
     pronunciationConfig.isOpen,
     pronunciationConfig.type,
