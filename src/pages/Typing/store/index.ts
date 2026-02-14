@@ -77,6 +77,7 @@ export enum TypingStateActionType {
   ADD_WORD_RECORD_ID = 'ADD_WORD_RECORD_ID',
   SET_IS_SAVING_RECORD = 'SET_IS_SAVING_RECORD',
   TOGGLE_IMMERSIVE_MODE = 'TOGGLE_IMMERSIVE_MODE',
+  UPDATE_WORD_INFO = 'UPDATE_WORD_INFO',
 }
 
 export type TypingStateAction =
@@ -99,6 +100,7 @@ export type TypingStateAction =
   | { type: TypingStateActionType.TICK_TIMER; addTime?: number }
   | { type: TypingStateActionType.ADD_WORD_RECORD_ID; payload: number }
   | { type: TypingStateActionType.SET_IS_SAVING_RECORD; payload: boolean }
+  | { type: TypingStateActionType.UPDATE_WORD_INFO; payload: { index: number; data: Partial<WordWithIndex> } }
 
 type Dispatch = (action: TypingStateAction) => void
 
@@ -217,6 +219,13 @@ export const typingReducer = (state: TypingState, action: TypingStateAction) => 
     }
     case TypingStateActionType.ADD_WORD_RECORD_ID: {
       state.chapterData.wordRecordIds.push(action.payload)
+      break
+    }
+    case TypingStateActionType.UPDATE_WORD_INFO: {
+      const target = state.chapterData.words[action.payload.index]
+      if (target) {
+        state.chapterData.words[action.payload.index] = { ...target, ...action.payload.data }
+      }
       break
     }
     case TypingStateActionType.SET_IS_SAVING_RECORD: {

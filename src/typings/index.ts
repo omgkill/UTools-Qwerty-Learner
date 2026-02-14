@@ -18,6 +18,7 @@ export type Word = {
   usphone: string
   ukphone: string
   notation?: string
+  tense?: string
 }
 
 export type WordWithIndex = Word & {

@@ -3,11 +3,12 @@ import PrevAndNextWord from '../PrevAndNextWord'
 import Phonetic from './components/Phonetic'
 import Translation from './components/Translation'
 import WordComponent from './components/Word'
+import { parseMdxEntry } from '../../hooks/useWordList'
 import { usePrefetchPronunciationSound } from '@/hooks/usePronunciation'
 import { isShowPrevAndNextWordAtom, phoneticConfigAtom } from '@/store'
 import type { Word } from '@/typings'
 import { useAtomValue } from 'jotai'
-import { useCallback, useContext } from 'react'
+import { useCallback, useContext, useEffect, useRef } from 'react'
 
 export default function WordPanel() {
   const { state, dispatch } = useContext(TypingContext)!
@@ -17,6 +18,7 @@ export default function WordPanel() {
   const nextWord = state.chapterData.words[state.chapterData.index + 1] as Word | undefined
 
   usePrefetchPronunciationSound(nextWord?.name)
+  const queriedWordsRef = useRef(new Set<string>())
 
   const onFinish = useCallback(() => {
     if (state.chapterData.index < state.chapterData.words.length - 1) {
@@ -25,6 +27,46 @@ export default function WordPanel() {
       dispatch({ type: TypingStateActionType.FINISH_CHAPTER })
     }
   }, [state.chapterData.index, state.chapterData.words.length, dispatch])
+
+  const requestWordMeaning = useCallback(
+    async (targetIndex: number) => {
+      const target = state.chapterData.words[targetIndex]
+      if (!target) return
+      if (!window.queryFirstMdxWord) return
+      const dicts = window.getMdxDictConfig?.() || window.services?.getDictList?.() || []
+      if (!dicts[0]) return
+      if (queriedWordsRef.current.has(target.name)) return
+
+      const hasTranslations = target.trans?.some((item) => item && item.trim().length > 0)
+      const hasPhonetics = Boolean(target.ukphone && target.ukphone.trim().length > 0)
+      if (hasTranslations && hasPhonetics) return
+
+      queriedWordsRef.current.add(target.name)
+      const result = await window.queryFirstMdxWord(target.name)
+      if (!result || !result.ok || !result.content) return
+
+      const parsed = parseMdxEntry(result.content)
+      if (parsed.translations.length === 0 && !parsed.phonetics.uk && !parsed.tense) return
+
+      dispatch({
+        type: TypingStateActionType.UPDATE_WORD_INFO,
+        payload: {
+          index: targetIndex,
+          data: {
+            trans: parsed.translations.length > 0 ? parsed.translations : target.trans,
+            ukphone: parsed.phonetics.uk || target.ukphone,
+            tense: parsed.tense || target.tense,
+          },
+        },
+      })
+    },
+    [dispatch, state.chapterData.words],
+  )
+
+  useEffect(() => {
+    void requestWordMeaning(state.chapterData.index)
+    void requestWordMeaning(state.chapterData.index + 1)
+  }, [requestWordMeaning, state.chapterData.index])
 
   return (
     <div className="container flex h-full w-full flex-col items-center justify-center">
@@ -53,7 +95,7 @@ export default function WordPanel() {
             <div className="relative">
               <WordComponent word={currentWord} onFinish={onFinish} />
               {phoneticConfig.isOpen && <Phonetic word={currentWord} />}
-              {state.isTransVisible && <Translation trans={currentWord.trans.join('；')} />}
+              {state.isTransVisible && <Translation trans={currentWord.trans} tense={currentWord.tense} />}
             </div>
           </div>
         )}

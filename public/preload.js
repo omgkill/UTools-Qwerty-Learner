@@ -443,6 +443,17 @@ if (typeof utools !== 'undefined') {
     return await Promise.all(promises);
   };
 
+  window.queryFirstMdxWord = async (word) => {
+    const w = (word || '').trim();
+    if (!w) return null;
+
+    const config = window.getMdxDictConfig();
+    const firstDict = config[0];
+    if (!firstDict || !firstDict.path || !fs.existsSync(firstDict.path)) return null;
+
+    return await queryInDict(firstDict.path, w);
+  };
+
   // 兼容 voca-plugin 的接口命名
   window.services = {
     selectDictFiles: window.selectMdxFiles,
@@ -459,6 +470,7 @@ if (typeof utools !== 'undefined') {
   window.removeMdxDict = () => [];
   window.updateMdxDictOrder = () => [];
   window.queryMdxWord = async () => [];
+  window.queryFirstMdxWord = async () => null;
   window.dictMdxLoader = {
     load: async () => { throw new Error('mdict not available in dev mode'); },
     unload: () => {}

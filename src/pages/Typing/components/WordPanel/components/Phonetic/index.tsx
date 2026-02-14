@@ -7,17 +7,16 @@ export type PhoneticProps = {
 }
 
 function Phonetic({ word }: PhoneticProps) {
-  const phoneticConfig = useAtomValue(phoneticConfigAtom)
   const isTextSelectable = useAtomValue(isTextSelectableAtom)
+  const displayPhonetic = word.ukphone || word.usphone
 
   return (
     <div
-      className={`space-x-5 pt-1 text-center text-sm font-normal text-gray-600 transition-colors duration-300 dark:text-gray-400 ${
+      className={`space-x-5 pt-1 text-center text-xl font-normal text-gray-600 transition-colors duration-300 dark:text-gray-400 ${
         isTextSelectable && 'select-text'
       }`}
     >
-      {phoneticConfig.type === 'us' && word.usphone && word.usphone.length > 1 && <span>{`AmE: [${word.usphone}]`}</span>}
-      {phoneticConfig.type === 'uk' && word.ukphone && word.ukphone.length > 1 && <span>{`BrE: [${word.ukphone}]`}</span>}
+      {displayPhonetic && displayPhonetic.length > 1 && <span>{`[${displayPhonetic}]`}</span>}
     </div>
   )
 }

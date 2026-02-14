@@ -1,7 +1,8 @@
 import { GalleryContext } from '../'
 import FileDropZone from '../FileDropZone'
 import { languageType } from '../constants'
-import { parseWordListFile } from './parseWordList.ts'
+import type { ParsedWordList } from './parseWordList.ts'
+import { parseWordList, parseWordListFile } from './parseWordList.ts'
 import LoadingIndicator from '@/components/LoadingIndicator'
 import Tooltip from '@/components/Tooltip'
 import { Dialog, Transition } from '@headlessui/react'
@@ -20,6 +21,11 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
   const [fileInfo, setFileInfo] = useState({ name: '', type: '', msg: '' })
   const [wordCount, setWordCount] = useState(0)
   const [alertMessage, setAlertMessage] = useState({ loadDictMsg: '', resolveDictMsg: '' })
+  const [importMode, setImportMode] = useState<'file' | 'text'>('text')
+  const [textValue, setTextValue] = useState('')
+  const [summary, setSummary] = useState({ rawCount: 0, duplicateCount: 0, skippedNoExplain: 0, validCount: 0 })
+  const [skippedWords, setSkippedWords] = useState<string[]>([])
+  const [importResult, setImportResult] = useState('')
 
   const [isOpen, setIsOpen] = useState(false)
 
@@ -33,6 +39,11 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
     setFileInfo({ name: '', type: '', msg: '' })
     setWordCount(0)
     setAlertMessage({ loadDictMsg: '', resolveDictMsg: '' })
+    setImportMode('text')
+    setTextValue('')
+    setSummary({ rawCount: 0, duplicateCount: 0, skippedNoExplain: 0, validCount: 0 })
+    setSkippedWords([])
+    setImportResult('')
 
     const config = window.readLocalWordBankConfig()
     const limitCount = (() => {
@@ -51,6 +62,71 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
       ...formData,
       [event.target.name]: event.target.value,
     })
+  }
+
+  const handleSwitchImportMode = (mode: 'file' | 'text') => {
+    setImportMode(mode)
+    setFileInfo({ name: '', type: '', msg: '' })
+    setWordCount(0)
+    setAlertMessage({ loadDictMsg: '', resolveDictMsg: '' })
+    setSummary({ rawCount: 0, duplicateCount: 0, skippedNoExplain: 0, validCount: 0 })
+    setSkippedWords([])
+    setImportResult('')
+    window._pendingWordList = null
+  }
+
+  const resolveWordList = async (parsed: ParsedWordList) => {
+    if (parsed.words.length === 0) {
+      setAlertMessage({ loadDictMsg: '', resolveDictMsg: '未找到有效单词' })
+      setWordCount(0)
+      setSummary({ rawCount: parsed.rawCount, duplicateCount: parsed.rawCount, skippedNoExplain: 0, validCount: 0 })
+      setSkippedWords([])
+      window._pendingWordList = null
+      return
+    }
+
+    const dicts = window.getMdxDictConfig?.() || window.services?.getDictList?.() || []
+    if (!dicts[0] || !window.queryFirstMdxWord) {
+      setAlertMessage({ loadDictMsg: '', resolveDictMsg: '未检测到词典，无法校验释义' })
+      setWordCount(0)
+      setSummary({ rawCount: parsed.rawCount, duplicateCount: parsed.rawCount - parsed.words.length, skippedNoExplain: 0, validCount: 0 })
+      setSkippedWords([])
+      window._pendingWordList = null
+      return
+    }
+
+    setAlertMessage({ loadDictMsg: '校验释义中', resolveDictMsg: '' })
+
+    let skippedNoExplain = 0
+    const skippedNoExplainWords: string[] = []
+    const validWords = []
+    for (const word of parsed.words) {
+      try {
+        const result = await window.queryFirstMdxWord(word.name)
+        if (result && result.ok && result.content) {
+          validWords.push(word)
+        } else {
+          skippedNoExplain += 1
+          skippedNoExplainWords.push(word.name)
+        }
+      } catch {
+        skippedNoExplain += 1
+        skippedNoExplainWords.push(word.name)
+      }
+    }
+
+    const duplicateCount = parsed.rawCount - parsed.words.length
+    const validCount = validWords.length
+    setSummary({ rawCount: parsed.rawCount, duplicateCount, skippedNoExplain, validCount })
+    setWordCount(validCount)
+    setSkippedWords(skippedNoExplainWords)
+    window._pendingWordList = validCount > 0 ? validWords : null
+
+    if (validCount === 0) {
+      setAlertMessage({ loadDictMsg: '', resolveDictMsg: '没有可导入的单词' })
+      return
+    }
+    setAlertMessage({ loadDictMsg: `解析完毕，有效 ${validCount} 个单词`, resolveDictMsg: '' })
   }
 
   const handleFilesSelected = async (files) => {
@@ -81,17 +157,17 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
     setAlertMessage({ ...alertMessage, loadDictMsg: '解析中' })
 
     try {
-      const words = await parseWordListFile(file)
-      if (words.length === 0) {
-        setAlertMessage({ loadDictMsg: '', resolveDictMsg: '未找到有效单词' })
-        return
-      }
-      setWordCount(words.length)
-      setAlertMessage({ loadDictMsg: `解析完毕，共 ${words.length} 个单词`, resolveDictMsg: '' })
-      window._pendingWordList = words
+      const parsed = await parseWordListFile(file)
+      await resolveWordList(parsed)
     } catch (error) {
       setAlertMessage({ loadDictMsg: '', resolveDictMsg: '解析失败：' + error.message })
     }
+  }
+
+  const handleResolveText = async () => {
+    setAlertMessage({ loadDictMsg: '解析中', resolveDictMsg: '' })
+    const parsed = parseWordList(textValue)
+    await resolveWordList(parsed)
   }
 
   const handleSubmit = async (event) => {
@@ -123,7 +199,12 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
 
     saveWordBank(formData, window._pendingWordList)
     window._pendingWordList = null
-    toast.success('自定义词库添加成功')
+    const summaryText =
+      summary.validCount > 0
+        ? `导入 ${summary.validCount} 个，去重 ${summary.duplicateCount} 个，跳过无释义 ${summary.skippedNoExplain} 个`
+        : '未导入有效单词'
+    setImportResult(`导入成功：${formData.name}，${summaryText}`)
+    toast.success(`自定义词库添加成功，${summaryText}`)
     mixpanel.track('Import WordBank')
 
     onSaveDictSuccess()
@@ -207,45 +288,119 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
                       </select>
                     </div>
 
-                    <div className="mb-4">
-                      <FileDropZone onFilesSelected={handleFilesSelected}>
-                        {fileInfo.name.trim() ? (
-                          <div className="flex flex-col items-start justify-center py-4 text-gray-200">
-                            <p className="pb-2">
-                              <span className="font-mono text-lg font-bold">文件: </span>
-                              {fileInfo.name}
-                            </p>
-                            <p className="pb-2">
-                              <span className="font-mono text-lg font-bold">提示: </span>
-                              {fileInfo.msg}
-                            </p>
-                            {wordCount > 0 && (
-                              <p className="pb-2 text-green-400">
-                                <span className="font-mono text-lg font-bold">单词数: </span>
-                                {wordCount}
+                    <div className="mb-6 flex items-center gap-3">
+                      <span className="font-bold text-gray-200">导入方式:</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className={`rounded-lg px-3 py-1 text-sm font-bold ${
+                            importMode === 'file' ? 'bg-indigo-400 text-white' : 'bg-gray-700 text-gray-200'
+                          }`}
+                          onClick={() => handleSwitchImportMode('file')}
+                        >
+                          文件
+                        </button>
+                        <button
+                          type="button"
+                          className={`rounded-lg px-3 py-1 text-sm font-bold ${
+                            importMode === 'text' ? 'bg-indigo-400 text-white' : 'bg-gray-700 text-gray-200'
+                          }`}
+                          onClick={() => handleSwitchImportMode('text')}
+                        >
+                          文本
+                        </button>
+                      </div>
+                    </div>
+
+                    {importMode === 'file' ? (
+                      <div className="mb-4">
+                        <FileDropZone onFilesSelected={handleFilesSelected}>
+                          {fileInfo.name.trim() ? (
+                            <div className="flex flex-col items-start justify-center py-4 text-gray-200">
+                              <p className="pb-2">
+                                <span className="font-mono text-lg font-bold">文件: </span>
+                                {fileInfo.name}
                               </p>
-                            )}
+                              <p className="pb-2">
+                                <span className="font-mono text-lg font-bold">提示: </span>
+                                {fileInfo.msg}
+                              </p>
+                              {wordCount > 0 && (
+                                <p className="pb-2 text-green-400">
+                                  <span className="font-mono text-lg font-bold">单词数: </span>
+                                  {wordCount}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center text-gray-200">
+                              <IconAdd className="h-16 w-16 p-2 text-lg text-gray-200" />
+                              <p className="text-2lg py-4 font-bold">
+                                拖拽或点击上传<span className="text-red-400">文本文件</span>
+                              </p>
+                              <p className="text-sm text-gray-400">
+                                支持 txt、csv 等文本格式，单词以空格、Tab、逗号、分号、换行分隔
+                              </p>
+                            </div>
+                          )}
+                          {alertMessage.loadDictMsg === '解析中' || alertMessage.loadDictMsg === '校验释义中' ? (
+                            <LoadingIndicator text={alertMessage.loadDictMsg} />
+                          ) : (
+                            alertMessage.loadDictMsg && (
+                              <p className="text-green-400">{alertMessage.loadDictMsg}</p>
+                            )
+                          )}
+                        </FileDropZone>
+                      </div>
+                    ) : (
+                      <div className="mb-4">
+                        <textarea
+                          value={textValue}
+                          onChange={(event) => setTextValue(event.target.value)}
+                          rows={6}
+                          className="w-full rounded-lg border border-gray-400 bg-gray-700 p-3 text-white"
+                          placeholder="单词以空格、Tab、逗号、分号、换行分隔"
+                        />
+                        <div className="mt-3 flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={handleResolveText}
+                            className="rounded-lg bg-indigo-400 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-500"
+                          >
+                            解析文本
+                          </button>
+                          {wordCount > 0 && <span className="text-sm text-green-400">单词数：{wordCount}</span>}
+                        </div>
+                        {alertMessage.loadDictMsg === '解析中' || alertMessage.loadDictMsg === '校验释义中' ? (
+                          <div className="mt-3">
+                            <LoadingIndicator text={alertMessage.loadDictMsg} />
                           </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center text-gray-200">
-                            <IconAdd className="h-16 w-16 p-2 text-lg text-gray-200" />
-                            <p className="text-2lg py-4 font-bold">
-                              拖拽或点击上传<span className="text-red-400">文本文件</span>
-                            </p>
-                            <p className="text-sm text-gray-400">
-                              支持 txt、csv 等文本格式，单词以空格、Tab、逗号、分号、换行分隔
-                            </p>
-                          </div>
-                        )}
-                        {alertMessage.loadDictMsg === '解析中' ? (
-                          <LoadingIndicator text={alertMessage.loadDictMsg} />
                         ) : (
                           alertMessage.loadDictMsg && (
-                            <p className="text-green-400">{alertMessage.loadDictMsg}</p>
+                            <p className="mt-3 text-green-400">{alertMessage.loadDictMsg}</p>
                           )
                         )}
-                      </FileDropZone>
-                    </div>
+                      </div>
+                    )}
+
+                    {summary.rawCount > 0 && (
+                      <p className="mb-4 text-sm text-gray-400">{`原始 ${summary.rawCount} 个，去重 ${summary.duplicateCount} 个，跳过无释义 ${summary.skippedNoExplain} 个，导入 ${summary.validCount} 个`}</p>
+                    )}
+                    {importResult && <p className="mb-4 text-sm text-green-400">{importResult}</p>}
+                    {skippedWords.length > 0 && (
+                      <div className="mb-4">
+                        <div className="mb-2 text-sm font-bold text-gray-200">跳过单词（无释义）</div>
+                        <div className="max-h-24 overflow-y-auto rounded-lg border border-gray-700 bg-gray-900 p-2 text-xs text-gray-300">
+                          <div className="flex flex-wrap gap-2">
+                            {skippedWords.map((word) => (
+                              <span key={word} className="rounded bg-gray-700 px-2 py-1 text-gray-200">
+                                {word}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="mt-8 flex justify-between">
                       <div className="mx-2 my-4 text-lg text-red-400 ">{alertMessage.resolveDictMsg}</div>

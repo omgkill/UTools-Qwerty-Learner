@@ -34,8 +34,8 @@ export const currentDictInfoAtom = currentWordBankAtom
 export const pronunciationConfigAtom = atomForConfig('pronunciation', {
   isOpen: true,
   volume: 1,
-  type: 'us' as PronunciationType,
-  name: '美音',
+  type: 'uk' as PronunciationType,
+  name: '英音',
   isTransRead: false,
   transVolume: 1,
   rate: 1,
@@ -58,7 +58,7 @@ export const isTextSelectableAtom = atomWithStorage('isTextSelectable', false)
 
 export const phoneticConfigAtom = atomForConfig('phoneticConfig', {
   isOpen: true,
-  type: 'us' as PhoneticType,
+  type: 'uk' as PhoneticType,
 })
 
 export const isShowSkipAtom = atom(false)

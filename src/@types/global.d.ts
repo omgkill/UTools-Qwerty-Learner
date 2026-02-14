@@ -20,6 +20,10 @@ declare global {
     removeMdxDict: (path: string) => Array<{ path: string; name: string }>
     updateMdxDictOrder: (dicts: Array<{ path: string; name: string }>) => Array<{ path: string; name: string }>
     queryMdxWord: (word: string) => Promise<Array<{ dictPath: string; dictName: string; ok: boolean; content?: string; error?: string }>>
+    queryFirstMdxWord: (word: string) => Promise<{ dictPath: string; dictName: string; ok: boolean; content?: string; error?: string } | null>
+    services: {
+      getDictList: () => Array<{ path: string; name: string }>
+    }
     getMode: () => string
     getAction: () => { code: string; payload?: string } | null
     clearAllData: () => boolean

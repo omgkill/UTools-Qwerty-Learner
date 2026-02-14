@@ -1,6 +1,11 @@
 import type { Word } from '@/typings'
 
-export function parseWordList(text: string): Word[] {
+export type ParsedWordList = {
+  words: Word[]
+  rawCount: number
+}
+
+export function parseWordList(text: string): ParsedWordList {
   const words = text
     .split(/[\t\s,;\n\r]+/)
     .map((word) => word.trim())
@@ -8,22 +13,25 @@ export function parseWordList(text: string): Word[] {
 
   const uniqueWords = [...new Set(words.map((w) => w.toLowerCase()))]
 
-  return uniqueWords.map((word) => ({
-    name: word,
-    trans: [],
-    usphone: '',
-    ukphone: '',
-  }))
+  return {
+    rawCount: words.length,
+    words: uniqueWords.map((word) => ({
+      name: word,
+      trans: [],
+      usphone: '',
+      ukphone: '',
+    })),
+  }
 }
 
-export function parseWordListFile(file: File): Promise<Word[]> {
+export function parseWordListFile(file: File): Promise<ParsedWordList> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (event) => {
       try {
         const text = event.target?.result as string
-        const words = parseWordList(text)
-        resolve(words)
+        const parsed = parseWordList(text)
+        resolve(parsed)
       } catch (error) {
         reject(error)
       }
