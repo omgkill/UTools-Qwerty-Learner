@@ -19,6 +19,7 @@ declare global {
     queryMdxWord: (word: string) => Promise<MdxResult[]>
     getMdxDictConfig: () => DictItem[]
     getMode: () => string
+    getAction: () => { code: string; payload?: string } | null
     services: {
       queryWord: (word: string) => Promise<MdxResult[]>
       getDictList: () => DictItem[]
@@ -47,10 +48,19 @@ export default function MdxQueryPage() {
       }
     }
     window.addEventListener('utools-mode-change', handleModeChange as EventListener)
+    
+    const action = window.getAction?.()
+    if (action?.payload) {
+      const inputWord = String(action.payload).trim()
+      if (inputWord) {
+        handleSearch(inputWord)
+      }
+    }
+    
     return () => {
       window.removeEventListener('utools-mode-change', handleModeChange as EventListener)
     }
-  }, [])
+  }, [handleSearch])
 
   const loadDicts = useCallback(() => {
     try {

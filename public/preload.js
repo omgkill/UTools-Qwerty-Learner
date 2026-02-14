@@ -7,13 +7,16 @@ window.process = process;
 
 // Mode Handling
 let currentMode = 'typing';
+let currentAction = null;
 if (typeof utools !== 'undefined') {
-  utools.onPluginEnter(({ code }) => {
-    currentMode = code;
-    window.dispatchEvent(new CustomEvent('utools-mode-change', { detail: code }));
+  utools.onPluginEnter((action) => {
+    currentMode = action.code;
+    currentAction = action;
+    window.dispatchEvent(new CustomEvent('utools-mode-change', { detail: action }));
   });
 }
 window.getMode = () => currentMode;
+window.getAction = () => currentAction;
 
 // Dev Mock - 必须在其他函数之前初始化
 if (typeof utools === 'undefined') {
