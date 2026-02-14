@@ -1,5 +1,5 @@
 import { CHAPTER_LENGTH } from '@/constants'
-import { currentChapterAtom, currentDictInfoAtom, idDictionaryMapAtom } from '@/store'
+import { currentChapterAtom, currentWordBankAtom, idWordBankMapAtom } from '@/store'
 import type { Word, WordWithIndex } from '@/typings/index'
 import { useAtom, useAtomValue } from 'jotai'
 import { useMemo } from 'react'
@@ -12,24 +12,23 @@ export type UseWordListResult = {
 }
 
 export function useWordList(): UseWordListResult {
-  const currentDictInfo = useAtomValue(currentDictInfoAtom)
+  const currentWordBank = useAtomValue(currentWordBankAtom)
   const [currentChapter, setCurrentChapter] = useAtom(currentChapterAtom)
 
-  const isFirstChapter = currentDictInfo?.id === 'cet4' && currentChapter === 0
+  const isFirstChapter = currentWordBank?.id === 'cet4' && currentChapter === 0
 
-  // Reset current chapter to 0, when currentChapter is greater than chapterCount.
-  if (currentDictInfo && currentChapter >= currentDictInfo.chapterCount) {
+  if (currentWordBank && currentChapter >= currentWordBank.chapterCount) {
     setCurrentChapter(0)
   }
 
-  const isLocalDict = currentDictInfo ? (currentDictInfo.id.startsWith('x-dict-') || currentDictInfo.languageCategory === 'custom') : false
+  const isLocalWordBank = currentWordBank ? (currentWordBank.id.startsWith('x-dict-') || currentWordBank.languageCategory === 'custom') : false
   const {
     data: wordList,
     error,
     isLoading,
   } = useSWR(
-    currentDictInfo ? (isLocalDict ? currentDictInfo.id : currentDictInfo.url) : null,
-    isLocalDict ? localWordListFetcher : wordListFetcher
+    currentWordBank ? (isLocalWordBank ? currentWordBank.id : currentWordBank.url) : null,
+    isLocalWordBank ? localWordListFetcher : wordListFetcher
   )
 
   const words: WordWithIndex[] = useMemo(() => {
@@ -60,7 +59,7 @@ async function wordListFetcher(url: string): Promise<Word[]> {
 async function localWordListFetcher(id: string): Promise<Word[]> {
   let words: Word[] = []
   try {
-    words = await window.readLocalDict(id)
+    words = await window.readLocalWordBank(id)
   } catch (err) {
     console.error(err)
   }

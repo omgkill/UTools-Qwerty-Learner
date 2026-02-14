@@ -1,4 +1,4 @@
-import type { Dictionary } from '@/typings'
+import type { WordBank } from '@/typings'
 
 export default function groupBy<T>(elements: T[], iteratee: (value: T) => string) {
   return elements.reduce<Record<string, T[]>>((result, value) => {
@@ -12,14 +12,14 @@ export default function groupBy<T>(elements: T[], iteratee: (value: T) => string
   }, {})
 }
 
-export function groupByDictTags(dicts: Dictionary[]) {
-  return dicts.reduce<Record<string, Dictionary[]>>((result, dict) => {
-    const uniqueTags = [...new Set(dict.tags)]
+export function groupByDictTags(wordBanks: WordBank[]) {
+  return wordBanks.reduce<Record<string, WordBank[]>>((result, wb) => {
+    const uniqueTags = [...new Set(wb.tags)]
     uniqueTags.forEach((tag) => {
       if (Object.prototype.hasOwnProperty.call(result, tag)) {
-        result[tag].push(dict)
+        result[tag].push(wb)
       } else {
-        result[tag] = [dict]
+        result[tag] = [wb]
       }
     })
     return result

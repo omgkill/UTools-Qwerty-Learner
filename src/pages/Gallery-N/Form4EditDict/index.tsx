@@ -10,15 +10,14 @@ import IconX from '~icons/tabler/x'
 import EditIcon from '~icons/uil/edit-alt'
 
 type Form4EditDictProps = {
-  dictId: string
+  wordBankId: string
 }
 
-// eslint-disable-next-line react/prop-types
-const Form4EditDict: React.FC<Form4EditDictProps> = ({ dictId }) => {
+const Form4EditDict: React.FC<Form4EditDictProps> = ({ wordBankId }) => {
   const [formData, setFormData] = useState({ name: '', language: '' })
 
-  const [dictsList, setDictsList] = useState([])
-  const [dictIndex, setDictIndex] = useState(0)
+  const [wordBanksList, setWordBanksList] = useState([])
+  const [wordBankIndex, setWordBankIndex] = useState(0)
 
   const handleRefresh = useContext(InnerContext)
 
@@ -30,11 +29,11 @@ const Form4EditDict: React.FC<Form4EditDictProps> = ({ dictId }) => {
   }
   async function openModal(event) {
     event.stopPropagation()
-    const config = await window.readLocalDictConfig()
-    setDictsList([...config])
+    const config = await window.readLocalWordBankConfig()
+    setWordBanksList([...config])
     for (let i = 0; i < config.length; i++) {
-      if (config[i].id === dictId) {
-        setDictIndex(i)
+      if (config[i].id === wordBankId) {
+        setWordBankIndex(i)
         setFormData({ ...config[i] })
         break
       }
@@ -45,24 +44,24 @@ const Form4EditDict: React.FC<Form4EditDictProps> = ({ dictId }) => {
   async function handleSubmit(event) {
     event.preventDefault()
     if (formData.name.trim().length <= 0) {
-      toast.info('词典名称不能为空')
+      toast.info('词库名称不能为空')
       return false
     }
     if (formData.name.trim().length >= 10) {
-      toast.info('词典名称过长(应少于10个字)')
+      toast.info('词库名称过长(应少于10个字)')
       return false
     }
     if (formData.description.trim().length >= 10) {
-      toast.info('词典描述过长(应少于10个字)')
+      toast.info('词库描述过长(应少于10个字)')
       return false
     }
 
-    const newDictInfo = Object.assign({}, dictsList[dictIndex], {
+    const newWordBankInfo = Object.assign({}, wordBanksList[wordBankIndex], {
       ...formData,
     })
-    dictsList[dictIndex] = newDictInfo
-    await window.writeLocalDictConfig(dictsList)
-    window.initLocalDictionries()
+    wordBanksList[wordBankIndex] = newWordBankInfo
+    await window.writeLocalWordBankConfig(wordBanksList)
+    window.initLocalWordBanks()
     handleRefresh()
 
     setIsOpen(false)
@@ -79,22 +78,22 @@ const Form4EditDict: React.FC<Form4EditDictProps> = ({ dictId }) => {
   async function handleDelClick() {
     event.preventDefault()
 
-    const result = await window.delLocalDict(dictId)
+    const result = await window.delLocalWordBank(wordBankId)
     if (result) {
       toast.success('删除成功')
-      mixpanel.track('Delete Dict', { status: 'Success' })
+      mixpanel.track('Delete WordBank', { status: 'Success' })
     } else {
       toast.error('删除失败')
-      mixpanel.track('Delete Dict', { status: 'Failed' })
+      mixpanel.track('Delete WordBank', { status: 'Failed' })
     }
-    window.initLocalDictionries()
+    window.initLocalWordBanks()
     handleRefresh()
     setIsOpen(false)
   }
 
   return (
     <>
-      <button className={`my-3 mr-3 text-gray-300 hover:text-gray-500 hover:dark:text-blue-400`} onClick={openModal} title="修改词典信息">
+      <button className={`my-3 mr-3 text-gray-300 hover:text-gray-500 hover:dark:text-blue-400`} onClick={openModal} title="修改词库信息">
         <EditIcon />
       </button>
       <Transition appear show={isOpen} as={Fragment}>
@@ -127,13 +126,12 @@ const Form4EditDict: React.FC<Form4EditDictProps> = ({ dictId }) => {
                     <IconX className="absolute right-7 top-5 cursor-pointer text-gray-400" />
                   </button>
                   <Dialog.Title as="h2" className="mb-8 text-center text-xl font-medium leading-6 text-gray-800 dark:text-gray-200">
-                    修改词典
+                    修改词库
                   </Dialog.Title>
-                  {/* <p>{dictId}</p> */}
                   <form onSubmit={handleSubmit} className="p-2">
                     <div className="mb-8 grid grid-cols-[1fr_5fr]">
                       <label htmlFor="name" className="mb-4 block font-bold text-gray-600 dark:text-gray-200">
-                        词典名称:
+                        词库名称:
                       </label>
                       <input
                         type="text"
@@ -146,7 +144,7 @@ const Form4EditDict: React.FC<Form4EditDictProps> = ({ dictId }) => {
                     </div>
                     <div className="mb-8 grid grid-cols-[1fr_5fr]">
                       <label htmlFor="description" className="mb-4 block font-bold text-gray-600 dark:text-gray-200">
-                        词典描述:
+                        词库描述:
                       </label>
                       <input
                         type="text"

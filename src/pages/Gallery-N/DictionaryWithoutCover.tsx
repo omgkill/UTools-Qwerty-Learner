@@ -4,8 +4,8 @@ import { GalleryContext, InnerContext } from './index'
 import bookCover from '@/assets/book-cover.png'
 import Tooltip from '@/components/Tooltip'
 import useIntersectionObserver from '@/hooks/useIntersectionObserver'
-import { currentDictIdAtom } from '@/store'
-import type { Dictionary } from '@/typings'
+import { currentWordBankIdAtom } from '@/store'
+import type { WordBank } from '@/typings'
 import { calcChapterCount } from '@/utils'
 import * as Progress from '@radix-ui/react-progress'
 import { Dialog, Transition } from '@headlessui/react'
@@ -15,22 +15,22 @@ import { toast } from 'react-toastify'
 import IconDelete from '~icons/mdi/delete'
 
 interface Props {
-  dictionary: Dictionary
+  wordBank: WordBank
   onClick?: () => void
 }
 
-export default function DictionaryComponent({ dictionary, onClick }: Props) {
+export default function DictionaryComponent({ wordBank, onClick }: Props) {
   const { state } = useContext(GalleryContext)!
-  const currentDictID = useAtomValue(currentDictIdAtom)
+  const currentWordBankID = useAtomValue(currentWordBankIdAtom)
   const handleRefresh = useContext(InnerContext)
   const [confirmIsOpen, setConfirmIsOpen] = useState(false)
 
   const divRef = useRef<HTMLDivElement>(null)
   const entry = useIntersectionObserver(divRef, {})
   const isVisible = !!entry?.isIntersecting
-  const dictStats = useDictStats(dictionary.id, isVisible)
-  const chapterCount = useMemo(() => calcChapterCount(dictionary.length), [dictionary.length])
-  const isSelected = currentDictID === dictionary.id
+  const dictStats = useDictStats(wordBank.id, isVisible)
+  const chapterCount = useMemo(() => calcChapterCount(wordBank.length), [wordBank.length])
+  const isSelected = currentWordBankID === wordBank.id
   const progress = useMemo(
     () => (dictStats ? Math.ceil((dictStats.exercisedChapterCount / chapterCount) * 100) : 0),
     [dictStats, chapterCount],
@@ -42,13 +42,13 @@ export default function DictionaryComponent({ dictionary, onClick }: Props) {
   }
 
   const handleConfirmDelete = async () => {
-    const result = await window.delLocalDict(dictionary.id)
+    const result = await window.delLocalWordBank(wordBank.id)
     if (result) {
       toast.success('删除成功')
     } else {
       toast.error('删除失败')
     }
-    window.initLocalDictionries()
+    window.initLocalWordBanks()
     handleRefresh()
     setConfirmIsOpen(false)
   }
@@ -69,16 +69,16 @@ export default function DictionaryComponent({ dictionary, onClick }: Props) {
               isSelected ? 'text-white' : 'text-gray-800 group-hover:text-indigo-400 dark:text-gray-200'
             }`}
           >
-            {dictionary.name}
+            {wordBank.name}
           </h1>
-          <Tooltip className="w-full" content={dictionary.description}>
+          <Tooltip className="w-full" content={wordBank.description}>
             <p className={`mb-1 w-full truncate ${isSelected ? 'text-white' : 'text-gray-600 dark:text-gray-200'}`}>
-              {dictionary.description}
+              {wordBank.description}
               {'\u00A0'}{' '}
             </p>
           </Tooltip>
 
-          <p className={`mb-0.5 font-bold ${isSelected ? 'text-white' : 'text-gray-600 dark:text-gray-200'}`}>{dictionary.length} 词</p>
+          <p className={`mb-0.5 font-bold ${isSelected ? 'text-white' : 'text-gray-600 dark:text-gray-200'}`}>{wordBank.length} 词</p>
           <div className="flex w-full items-center justify-end pt-2">
             {'c' === state.vipState && progress > 0 && (
               <Progress.Root
@@ -92,16 +92,16 @@ export default function DictionaryComponent({ dictionary, onClick }: Props) {
                 />
               </Progress.Root>
             )}
-            {['custom'].includes(dictionary.languageCategory) && (
+            {['custom'].includes(wordBank.languageCategory) && (
               <>
                 <button
                   className={`my-3 mr-3 ${isSelected ? 'text-white hover:text-red-200' : 'text-gray-300 hover:text-red-500'}`}
                   onClick={handleDeleteClick}
-                  title="删除词典"
+                  title="删除词库"
                 >
                   <IconDelete className="h-5 w-5" />
                 </button>
-                <Form4EditDict dictId={dictionary.id} />
+                <Form4EditDict wordBankId={wordBank.id} />
               </>
             )}
             <img src={bookCover} className={`absolute right-3 top-3 w-16 ${isSelected ? 'opacity-50' : 'opacity-20'}`} />
@@ -140,7 +140,7 @@ export default function DictionaryComponent({ dictionary, onClick }: Props) {
                   </Dialog.Title>
                   <div className="mt-2">
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      确定要删除词典「{dictionary.name}」吗？此操作不可撤销。
+                      确定要删除词库「{wordBank.name}」吗？此操作不可撤销。
                     </p>
                   </div>
 

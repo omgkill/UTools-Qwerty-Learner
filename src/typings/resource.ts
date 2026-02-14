@@ -1,6 +1,6 @@
 import type { LanguageCategoryType, LanguageType, PronunciationType } from '.'
 
-export type DictionaryResource = {
+export type WordBankResource = {
   id: string
   name: string
   description: string
@@ -10,11 +10,10 @@ export type DictionaryResource = {
   length: number
   language: LanguageType
   languageCategory: LanguageCategoryType
-  //override default pronunciation when not undefined
   defaultPronIndex?: number
 }
 
-export type Dictionary = {
+export type WordBank = {
   id: string
   name: string
   description: string
@@ -24,11 +23,12 @@ export type Dictionary = {
   length: number
   language: LanguageType
   languageCategory: LanguageCategoryType
-  // calculated in the store
   chapterCount: number
-  //override default pronunciation when not undefined
   defaultPronIndex?: number
 }
+
+export type DictionaryResource = WordBankResource
+export type Dictionary = WordBank
 
 export type PronunciationConfig = {
   name: string

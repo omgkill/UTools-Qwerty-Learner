@@ -43,7 +43,8 @@ function Root() {
 
   useEffect(() => {
     const handleModeChange = (e: Event) => {
-      const newMode = (e as CustomEvent).detail
+      const action = (e as CustomEvent).detail
+      const newMode = action?.code || action || 'typing'
       setMode(newMode)
     }
     window.addEventListener('utools-mode-change', handleModeChange)

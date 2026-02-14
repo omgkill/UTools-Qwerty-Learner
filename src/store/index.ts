@@ -1,7 +1,7 @@
 import atomForConfig from './atomForConfig'
 import { DISMISS_START_CARD_DATE_KEY } from '@/constants'
 import type {
-  Dictionary,
+  WordBank,
   InfoPanelState,
   PhoneticType,
   PronunciationType,
@@ -9,22 +9,27 @@ import type {
 import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 
-export const dictionariesAtom = atom<Dictionary[]>([])
+export const wordBanksAtom = atom<WordBank[]>([])
 
-export const idDictionaryMapAtom = atom<Record<string, Dictionary>>((get) => {
-  const dictionaries = get(dictionariesAtom)
-  return Object.fromEntries(dictionaries.map((dict) => [dict.id, dict]))
+export const idWordBankMapAtom = atom<Record<string, WordBank>>((get) => {
+  const wordBanks = get(wordBanksAtom)
+  return Object.fromEntries(wordBanks.map((wb) => [wb.id, wb]))
 })
 
-export const currentDictIdAtom = atomWithStorage('currentDict', '')
-export const currentDictInfoAtom = atom<Dictionary | null>((get) => {
-  const id = get(currentDictIdAtom)
+export const currentWordBankIdAtom = atomWithStorage('currentWordBank', '')
+export const currentWordBankAtom = atom<WordBank | null>((get) => {
+  const id = get(currentWordBankIdAtom)
   if (!id) return null
-  const map = get(idDictionaryMapAtom)
+  const map = get(idWordBankMapAtom)
   return map[id] || null
 })
 
 export const currentChapterAtom = atomWithStorage('currentChapter', 0)
+
+export const dictionariesAtom = wordBanksAtom
+export const idDictionaryMapAtom = idWordBankMapAtom
+export const currentDictIdAtom = currentWordBankIdAtom
+export const currentDictInfoAtom = currentWordBankAtom
 
 export const pronunciationConfigAtom = atomForConfig('pronunciation', {
   isOpen: true,

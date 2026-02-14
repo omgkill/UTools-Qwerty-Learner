@@ -1,9 +1,12 @@
-import type { Dictionary, DictionaryResource } from '@/typings/index'
+import type { WordBank, WordBankResource } from '@/typings/index'
 import { calcChapterCount } from '@/utils'
 
-export const dictionaryResources: DictionaryResource[] = []
+export const wordBankResources: WordBankResource[] = []
 
-export const builtinDictionaries: Dictionary[] = dictionaryResources.map((resource) => ({
+export const builtinWordBanks: WordBank[] = wordBankResources.map((resource) => ({
   ...resource,
   chapterCount: calcChapterCount(resource.length),
 }))
+
+export const dictionaryResources = wordBankResources
+export const builtinDictionaries = builtinWordBanks

@@ -2,8 +2,8 @@ import DictionaryGroup from './CategoryDicts'
 import ChapterList from './ChapterList'
 import Form4AddDict from './Form4AddDict'
 import Layout from '@/components/Layout'
-import { dictionariesAtom } from '@/store'
-import type { Dictionary } from '@/typings'
+import { wordBanksAtom } from '@/store'
+import type { WordBank } from '@/typings'
 import groupBy, { groupByDictTags } from '@/utils/groupBy'
 import * as ScrollArea from '@radix-ui/react-scroll-area'
 import { useAtomValue, useSetAtom } from 'jotai'
@@ -15,12 +15,12 @@ import { useImmer } from 'use-immer'
 import IconX from '~icons/tabler/x'
 
 export type GalleryState = {
-  chapterListDict: Dictionary | null
+  chapterListWordBank: WordBank | null
   vipState: string
 }
 
 const initialGalleryState: GalleryState = {
-  chapterListDict: null,
+  chapterListWordBank: null,
   vipState: '',
 }
 
@@ -34,44 +34,44 @@ export const InnerContext = createContext<() => void>(() => {})
 export default function GalleryPage() {
   const [galleryState, setGalleryState] = useImmer<GalleryState>(initialGalleryState)
   const navigate = useNavigate()
-  const dictionaries = useAtomValue(dictionariesAtom)
-  const setDictionaries = useSetAtom(dictionariesAtom)
+  const wordBanks = useAtomValue(wordBanksAtom)
+  const setWordBanks = useSetAtom(wordBanksAtom)
 
   const [refreshCount, setPageRefresh] = useState(0)
 
-  const loadDictionaries = useCallback(() => {
-    const config = window.readLocalDictConfig()
-    const customDicts = config.filter((dict: Dictionary) => dict.id && dict.id.startsWith('x-dict-'))
-    const uniqueDicts = customDicts.reduce((acc: Dictionary[], dict: Dictionary) => {
-      if (!acc.some((d) => d.id === dict.id)) {
-        acc.push(dict)
+  const loadWordBanks = useCallback(() => {
+    const config = window.readLocalWordBankConfig()
+    const customWordBanks = config.filter((wb: WordBank) => wb.id && wb.id.startsWith('x-dict-'))
+    const uniqueWordBanks = customWordBanks.reduce((acc: WordBank[], wb: WordBank) => {
+      if (!acc.some((d) => d.id === wb.id)) {
+        acc.push(wb)
       }
       return acc
     }, [])
-    setDictionaries(uniqueDicts)
-  }, [setDictionaries])
+    setWordBanks(uniqueWordBanks)
+  }, [setWordBanks])
 
   useEffect(() => {
-    loadDictionaries()
-  }, [loadDictionaries])
+    loadWordBanks()
+  }, [loadWordBanks])
 
   useEffect(() => {
     if (refreshCount > 0) {
-      loadDictionaries()
+      loadWordBanks()
     }
-  }, [refreshCount, loadDictionaries])
+  }, [refreshCount, loadWordBanks])
 
   const { groupedByCategoryAndTag } = useMemo(() => {
     refreshCount
 
-    const groupedByCategory = Object.entries(groupBy(dictionaries, (dict) => dict.category))
+    const groupedByCategory = Object.entries(groupBy(wordBanks, (wb) => wb.category))
     const groupedByCategoryAndTag = groupedByCategory.map(
-      ([category, dicts]) => [category, groupByDictTags(dicts)] as [string, Record<string, Dictionary[]>],
+      ([category, wbs]) => [category, groupByDictTags(wbs)] as [string, Record<string, WordBank[]>],
     )
     return {
       groupedByCategoryAndTag,
     }
-  }, [refreshCount, dictionaries])
+  }, [refreshCount, wordBanks])
 
   const onBack = useCallback(() => {
     navigate('/')
@@ -97,7 +97,7 @@ export default function GalleryPage() {
           <div className="mt-20 flex w-full flex-1 flex-col items-center justify-center overflow-y-auto">
             <div className="flex w-full flex-1 flex-col overflow-y-auto">
               <div className="flex h-20 w-full items-center justify-between pb-6">
-                <h1 className="text-2xl font-bold text-gray-200">自定义词典</h1>
+                <h1 className="text-2xl font-bold text-gray-200">自定义词库</h1>
               </div>
               <InnerContext.Provider value={refreshPage}>
                 <ScrollArea.Root className="flex-1 overflow-y-auto ">

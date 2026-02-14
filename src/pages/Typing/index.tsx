@@ -11,9 +11,8 @@ import { useWordList } from './hooks/useWordList'
 import { TypingContext, TypingStateActionType, initialState, typingReducer } from './store'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
-import UpdateDialog from '@/components/UpdateDialog'
-import { currentChapterAtom, currentDictIdAtom, currentDictInfoAtom, dictionariesAtom, randomConfigAtom } from '@/store'
-import type { Dictionary } from '@/typings'
+import { currentChapterAtom, currentWordBankIdAtom, currentWordBankAtom, wordBanksAtom, randomConfigAtom } from '@/store'
+import type { WordBank } from '@/typings'
 import { isLegal } from '@/utils'
 import { useSaveChapterRecord } from '@/utils/db'
 import { useMixPanelChapterLogUploader } from '@/utils/mixpanel'
@@ -33,10 +32,10 @@ const App: React.FC = () => {
   const { words } = useWordList()
 
   const currentChapter = useAtomValue(currentChapterAtom)
-  const [currentDictId, setCurrentDictId] = useAtom(currentDictIdAtom)
-  const currentDictInfo = useAtomValue(currentDictInfoAtom)
-  const dictionaries = useAtomValue(dictionariesAtom)
-  const setDictionaries = useSetAtom(dictionariesAtom)
+  const [currentWordBankId, setCurrentWordBankId] = useAtom(currentWordBankIdAtom)
+  const currentWordBank = useAtomValue(currentWordBankAtom)
+  const wordBanks = useAtomValue(wordBanksAtom)
+  const setWordBanks = useSetAtom(wordBanksAtom)
   const randomConfig = useAtomValue(randomConfigAtom)
   const navigate = useNavigate()
 
@@ -44,35 +43,35 @@ const App: React.FC = () => {
   const saveChapterRecord = useSaveChapterRecord()
 
   useEffect(() => {
-    const config = window.readLocalDictConfig()
-    const customDicts = config.filter((dict: Dictionary) => dict.id && dict.id.startsWith('x-dict-'))
-    const uniqueDicts = customDicts.reduce((acc: Dictionary[], dict: Dictionary) => {
-      if (!acc.some((d) => d.id === dict.id)) {
-        acc.push(dict)
+    const config = window.readLocalWordBankConfig()
+    const customWordBanks = config.filter((wb: WordBank) => wb.id && wb.id.startsWith('x-dict-'))
+    const uniqueWordBanks = customWordBanks.reduce((acc: WordBank[], wb: WordBank) => {
+      if (!acc.some((d) => d.id === wb.id)) {
+        acc.push(wb)
       }
       return acc
     }, [])
-    setDictionaries(uniqueDicts)
+    setWordBanks(uniqueWordBanks)
     setIsInitialized(true)
-  }, [setDictionaries])
+  }, [setWordBanks])
 
   useEffect(() => {
     if (!isInitialized) return
 
-    if (dictionaries.length === 0) {
+    if (wordBanks.length === 0) {
       navigate('/gallery')
       return
     }
 
-    if (!currentDictId || !currentDictInfo) {
-      const firstDict = dictionaries[0]
-      if (firstDict) {
-        setCurrentDictId(firstDict.id)
+    if (!currentWordBankId || !currentWordBank) {
+      const firstWordBank = wordBanks[0]
+      if (firstWordBank) {
+        setCurrentWordBankId(firstWordBank.id)
       } else {
         navigate('/gallery')
       }
     }
-  }, [isInitialized, currentDictId, currentDictInfo, dictionaries, navigate, setCurrentDictId])
+  }, [isInitialized, currentWordBankId, currentWordBank, wordBanks, navigate, setCurrentWordBankId])
 
   useEffect(() => {
     const handleModeChange = () => {
@@ -187,7 +186,7 @@ const App: React.FC = () => {
 
   useConfetti(state.isFinished && !state.isImmersiveMode)
 
-  if (!isInitialized || !currentDictInfo) {
+  if (!isInitialized || !currentWordBank) {
     return (
       <Layout>
         <div className="flex h-full items-center justify-center">
@@ -207,12 +206,12 @@ const App: React.FC = () => {
         <Layout>
           {!state.isImmersiveMode && (
             <Header>
-              <Tooltip content="词典章节切换">
+              <Tooltip content="词库章节切换">
                 <NavLink
                   className="block rounded-lg px-3 py-1 text-lg transition-colors duration-300 ease-in-out hover:bg-indigo-400 hover:text-white focus:outline-none text-white text-opacity-60 hover:text-opacity-100"
                   to="/gallery"
                 >
-                  {currentDictInfo.name} 第 {currentChapter + 1} 章
+                  {currentWordBank.name} 第 {currentChapter + 1} 章
                 </NavLink>
               </Tooltip>
               <PronunciationSwitcher />
@@ -251,7 +250,6 @@ const App: React.FC = () => {
 
         {!state.isImmersiveMode && <WordList />}
       </TypingContext.Provider>
-      <UpdateDialog />
     </>
   )
 }

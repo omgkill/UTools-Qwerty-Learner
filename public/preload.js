@@ -76,56 +76,54 @@ window.getDB = (id) => {
 window.postUToolsUserData = (data) => window.postDB('user-data', data);
 window.getUToolsUserData = () => window.getDB('user-data');
 
-// Local Dictionary Management
-window.readLocalDictConfig = () => {
-  const doc = utools.db.get('local-dict-config');
-  console.log('readLocalDictConfig:', doc);
+// Local Word Bank Management (词库管理 - 用于背单词)
+const WORD_BANK_CONFIG_KEY = 'local-wordbank-config';
+
+window.readLocalWordBankConfig = () => {
+  const doc = utools.db.get(WORD_BANK_CONFIG_KEY);
+  console.log('readLocalWordBankConfig:', doc);
   return doc ? doc.data : [];
 };
 
-window.writeLocalDictConfig = (config) => {
-  const doc = utools.db.get('local-dict-config');
+window.writeLocalWordBankConfig = (config) => {
+  const doc = utools.db.get(WORD_BANK_CONFIG_KEY);
   utools.db.put({
-    _id: 'local-dict-config',
+    _id: WORD_BANK_CONFIG_KEY,
     data: config,
     _rev: doc ? doc._rev : undefined
   });
 };
 
-window.newLocalDictFromJson = (jsonData, dictMeta) => {
-  // Save dictionary content
-  const contentDoc = utools.db.get(dictMeta.id);
+window.newLocalWordBankFromJson = (jsonData, wordBankMeta) => {
+  const contentDoc = utools.db.get(wordBankMeta.id);
   utools.db.put({
-    _id: dictMeta.id,
+    _id: wordBankMeta.id,
     data: jsonData,
     _rev: contentDoc ? contentDoc._rev : undefined
   });
   
-  // Check if dict already exists in config
-  const config = window.readLocalDictConfig();
-  const existingIndex = config.findIndex(d => d.id === dictMeta.id);
+  const config = window.readLocalWordBankConfig();
+  const existingIndex = config.findIndex(d => d.id === wordBankMeta.id);
   
   if (existingIndex >= 0) {
-    // Update existing dict
-    config[existingIndex] = dictMeta;
+    config[existingIndex] = wordBankMeta;
   } else {
-    // Add new dict
-    config.push(dictMeta);
+    config.push(wordBankMeta);
   }
   
-  window.writeLocalDictConfig(config);
+  window.writeLocalWordBankConfig(config);
 };
 
-window.readLocalDict = (id) => {
+window.readLocalWordBank = (id) => {
   const doc = utools.db.get(id);
   return doc ? doc.data : [];
 };
 
-window.delLocalDict = (id) => {
-  const config = window.readLocalDictConfig();
+window.delLocalWordBank = (id) => {
+  const config = window.readLocalWordBankConfig();
   const newConfig = config.filter(d => d.id !== id);
   if (newConfig.length !== config.length) {
-    window.writeLocalDictConfig(newConfig);
+    window.writeLocalWordBankConfig(newConfig);
   }
   
   const doc = utools.db.get(id);
@@ -135,13 +133,20 @@ window.delLocalDict = (id) => {
   return true;
 };
 
-// Initialize Local Dictionaries
-window.initLocalDictionries = () => {
-  const config = window.readLocalDictConfig();
-  if (typeof window.updateLocalDictionaries === 'function') {
-    window.updateLocalDictionaries(config);
+window.initLocalWordBanks = () => {
+  const config = window.readLocalWordBankConfig();
+  if (typeof window.updateLocalWordBanks === 'function') {
+    window.updateLocalWordBanks(config);
   }
 };
+
+// 兼容旧接口名称 (Dictionary → WordBank)
+window.readLocalDictConfig = window.readLocalWordBankConfig;
+window.writeLocalDictConfig = window.writeLocalWordBankConfig;
+window.newLocalDictFromJson = window.newLocalWordBankFromJson;
+window.readLocalDict = window.readLocalWordBank;
+window.delLocalDict = window.delLocalWordBank;
+window.initLocalDictionries = window.initLocalWordBanks;
 
 // Export Database
 window.exportDatabase2UTools = () => {
@@ -154,13 +159,14 @@ window.migrateLocalStorageToUtools = () => {
 // Clear All Data
 window.clearAllData = () => {
   try {
-    const config = window.readLocalDictConfig();
-    config.forEach((dict) => {
-      if (dict.id) {
-        utools.db.remove(dict.id);
+    const config = window.readLocalWordBankConfig();
+    config.forEach((wordBank) => {
+      if (wordBank.id) {
+        utools.db.remove(wordBank.id);
       }
     });
-    utools.db.remove('local-dict-config');
+    utools.db.remove(WORD_BANK_CONFIG_KEY);
+    utools.db.remove('local-dict-config'); // 兼容旧数据
     utools.db.remove('user-data');
     utools.db.remove('x-typing-mistake');
     localStorage.clear();

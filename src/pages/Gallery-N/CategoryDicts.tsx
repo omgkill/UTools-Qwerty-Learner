@@ -1,46 +1,46 @@
 import DictTagSwitcher from './DictTagSwitcher'
 import DictionaryComponent from './DictionaryWithoutCover'
 import { GalleryContext } from './index'
-import { currentDictInfoAtom } from '@/store'
-import type { Dictionary } from '@/typings'
+import { currentWordBankAtom } from '@/store'
+import type { WordBank } from '@/typings'
 import { findCommonValues } from '@/utils'
 import { useAtomValue } from 'jotai'
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
-export default function DictionaryGroup({ groupedDictsByTag }: { groupedDictsByTag: Record<string, Dictionary[]> }) {
+export default function DictionaryGroup({ groupedDictsByTag }: { groupedDictsByTag: Record<string, WordBank[]> }) {
   const { setState } = useContext(GalleryContext)!
   const tagList = useMemo(() => Object.keys(groupedDictsByTag), [groupedDictsByTag])
   const [currentTag, setCurrentTag] = useState(tagList[0])
-  const currentDictInfo = useAtomValue(currentDictInfoAtom)
+  const currentWordBank = useAtomValue(currentWordBankAtom)
 
   const onChangeCurrentTag = useCallback((tag: string) => {
     setCurrentTag(tag)
   }, [])
 
-  const onClickDict = useCallback(
-    (dict: Dictionary) => {
+  const onClickWordBank = useCallback(
+    (wordBank: WordBank) => {
       setState((state) => {
-        state.chapterListDict = dict
+        state.chapterListWordBank = wordBank
       })
     },
     [setState],
   )
 
   useEffect(() => {
-    if (currentDictInfo && currentDictInfo.tags) {
-      const commonTags = findCommonValues(tagList, currentDictInfo.tags)
+    if (currentWordBank && currentWordBank.tags) {
+      const commonTags = findCommonValues(tagList, currentWordBank.tags)
       if (commonTags.length > 0) {
         setCurrentTag(commonTags[0])
       }
     }
-  }, [currentDictInfo, tagList])
+  }, [currentWordBank, tagList])
 
   return (
     <div>
       <DictTagSwitcher tagList={tagList} currentTag={currentTag} onChangeCurrentTag={onChangeCurrentTag} />
       <div className="mt-8 grid gap-x-5 gap-y-10 px-1 pb-4 sm:grid-cols-1 md:grid-cols-2 dic3:grid-cols-3 dic4:grid-cols-4">
-        {groupedDictsByTag[currentTag]?.map((dict) => {
-          return <DictionaryComponent key={dict.id} dictionary={dict} onClick={() => onClickDict(dict)} />
+        {groupedDictsByTag[currentTag]?.map((wordBank) => {
+          return <DictionaryComponent key={wordBank.id} wordBank={wordBank} onClick={() => onClickWordBank(wordBank)} />
         })}
       </div>
     </div>
