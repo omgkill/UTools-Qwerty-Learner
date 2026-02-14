@@ -33,35 +33,6 @@ export default function MdxQueryPage() {
   const [results, setResults] = useState<MdxResult[]>([])
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
-  useEffect(() => {
-    loadDicts()
-  }, [])
-
-  useEffect(() => {
-    const handleModeChange = (e: CustomEvent) => {
-      const action = e.detail
-      if (action?.payload) {
-        const inputWord = String(action.payload).trim()
-        if (inputWord) {
-          handleSearch(inputWord)
-        }
-      }
-    }
-    window.addEventListener('utools-mode-change', handleModeChange as EventListener)
-    
-    const action = window.getAction?.()
-    if (action?.payload) {
-      const inputWord = String(action.payload).trim()
-      if (inputWord) {
-        handleSearch(inputWord)
-      }
-    }
-    
-    return () => {
-      window.removeEventListener('utools-mode-change', handleModeChange as EventListener)
-    }
-  }, [handleSearch])
-
   const loadDicts = useCallback(() => {
     try {
       const config = window.getMdxDictConfig?.() || window.services?.getDictList?.() || []
@@ -95,6 +66,35 @@ export default function MdxQueryPage() {
   const toggleExpand = useCallback((dictPath: string) => {
     setExpanded(prev => ({ ...prev, [dictPath]: !prev[dictPath] }))
   }, [])
+
+  useEffect(() => {
+    loadDicts()
+  }, [loadDicts])
+
+  useEffect(() => {
+    const handleModeChange = (e: CustomEvent) => {
+      const action = e.detail
+      if (action?.payload) {
+        const inputWord = String(action.payload).trim()
+        if (inputWord) {
+          handleSearch(inputWord)
+        }
+      }
+    }
+    window.addEventListener('utools-mode-change', handleModeChange as EventListener)
+
+    const action = window.getAction?.()
+    if (action?.payload) {
+      const inputWord = String(action.payload).trim()
+      if (inputWord) {
+        handleSearch(inputWord)
+      }
+    }
+
+    return () => {
+      window.removeEventListener('utools-mode-change', handleModeChange as EventListener)
+    }
+  }, [handleSearch])
 
   if (loading) {
     return (
