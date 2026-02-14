@@ -13,7 +13,7 @@ import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
 import UpdateDialog from '@/components/UpdateDialog'
 import { currentChapterAtom, currentDictIdAtom, currentDictInfoAtom, dictionariesAtom, randomConfigAtom } from '@/store'
-import { builtinDictionaries } from '@/resources/dictionary'
+import type { Dictionary } from '@/typings'
 import { isLegal } from '@/utils'
 import { useSaveChapterRecord } from '@/utils/db'
 import { useMixPanelChapterLogUploader } from '@/utils/mixpanel'
@@ -45,7 +45,14 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const config = window.readLocalDictConfig()
-    setDictionaries([...config, ...builtinDictionaries])
+    const customDicts = config.filter((dict: Dictionary) => dict.id && dict.id.startsWith('x-dict-'))
+    const uniqueDicts = customDicts.reduce((acc: Dictionary[], dict: Dictionary) => {
+      if (!acc.some((d) => d.id === dict.id)) {
+        acc.push(dict)
+      }
+      return acc
+    }, [])
+    setDictionaries(uniqueDicts)
     setIsInitialized(true)
   }, [setDictionaries])
 

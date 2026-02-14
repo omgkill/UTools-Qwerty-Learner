@@ -1,11 +1,9 @@
 import DictionaryGroup from './CategoryDicts'
 import ChapterList from './ChapterList'
 import Form4AddDict from './Form4AddDict'
-import { LanguageTabSwitcher } from './LanguageTabSwitcher'
 import Layout from '@/components/Layout'
-import { builtinDictionaries } from '@/resources/dictionary'
-import { currentDictInfoAtom, dictionariesAtom } from '@/store'
-import type { Dictionary, LanguageCategoryType } from '@/typings'
+import { dictionariesAtom } from '@/store'
+import type { Dictionary } from '@/typings'
 import groupBy, { groupByDictTags } from '@/utils/groupBy'
 import * as ScrollArea from '@radix-ui/react-scroll-area'
 import { useAtomValue, useSetAtom } from 'jotai'
@@ -17,13 +15,11 @@ import { useImmer } from 'use-immer'
 import IconX from '~icons/tabler/x'
 
 export type GalleryState = {
-  currentLanguageTab: LanguageCategoryType
   chapterListDict: Dictionary | null
   vipState: string
 }
 
 const initialGalleryState: GalleryState = {
-  currentLanguageTab: 'custom',
   chapterListDict: null,
   vipState: '',
 }
@@ -33,12 +29,11 @@ export const GalleryContext = createContext<{
   setState: Updater<GalleryState>
 } | null>(null)
 
-export const InnerContext = createContext()
+export const InnerContext = createContext<() => void>(() => {})
 
 export default function GalleryPage() {
   const [galleryState, setGalleryState] = useImmer<GalleryState>(initialGalleryState)
   const navigate = useNavigate()
-  const currentDictInfo = useAtomValue(currentDictInfoAtom)
   const dictionaries = useAtomValue(dictionariesAtom)
   const setDictionaries = useSetAtom(dictionariesAtom)
 
@@ -46,7 +41,14 @@ export default function GalleryPage() {
 
   const loadDictionaries = useCallback(() => {
     const config = window.readLocalDictConfig()
-    setDictionaries([...config, ...builtinDictionaries])
+    const customDicts = config.filter((dict: Dictionary) => dict.id && dict.id.startsWith('x-dict-'))
+    const uniqueDicts = customDicts.reduce((acc: Dictionary[], dict: Dictionary) => {
+      if (!acc.some((d) => d.id === dict.id)) {
+        acc.push(dict)
+      }
+      return acc
+    }, [])
+    setDictionaries(uniqueDicts)
   }, [setDictionaries])
 
   useEffect(() => {
@@ -62,15 +64,14 @@ export default function GalleryPage() {
   const { groupedByCategoryAndTag } = useMemo(() => {
     refreshCount
 
-    const currentLanguageCategoryDicts = dictionaries.filter((dict) => dict.languageCategory === galleryState.currentLanguageTab)
-    const groupedByCategory = Object.entries(groupBy(currentLanguageCategoryDicts, (dict) => dict.category))
+    const groupedByCategory = Object.entries(groupBy(dictionaries, (dict) => dict.category))
     const groupedByCategoryAndTag = groupedByCategory.map(
       ([category, dicts]) => [category, groupByDictTags(dicts)] as [string, Record<string, Dictionary[]>],
     )
     return {
       groupedByCategoryAndTag,
     }
-  }, [galleryState.currentLanguageTab, refreshCount, dictionaries])
+  }, [refreshCount, dictionaries])
 
   const onBack = useCallback(() => {
     navigate('/')
@@ -82,15 +83,10 @@ export default function GalleryPage() {
   useHotkeys('enter,esc', onBack, { preventDefault: true })
 
   useEffect(() => {
-    if (currentDictInfo) {
-      setGalleryState((state) => {
-        state.currentLanguageTab = currentDictInfo.languageCategory
-      })
-    }
     setGalleryState((state) => {
       state.vipState = localStorage.getItem('x-vipState') || ''
     })
-  }, [currentDictInfo, setGalleryState])
+  }, [setGalleryState])
 
   return (
     <Layout>
@@ -101,7 +97,7 @@ export default function GalleryPage() {
           <div className="mt-20 flex w-full flex-1 flex-col items-center justify-center overflow-y-auto">
             <div className="flex w-full flex-1 flex-col overflow-y-auto">
               <div className="flex h-20 w-full items-center justify-between pb-6">
-                <LanguageTabSwitcher />
+                <h1 className="text-2xl font-bold text-gray-200">自定义词典</h1>
               </div>
               <InnerContext.Provider value={refreshPage}>
                 <ScrollArea.Root className="flex-1 overflow-y-auto ">
@@ -120,7 +116,7 @@ export default function GalleryPage() {
               </InnerContext.Provider>
             </div>
           </div>
-          {galleryState.currentLanguageTab === 'custom' && <Form4AddDict onSaveDictSuccess={refreshPage} />}
+          <Form4AddDict onSaveDictSuccess={refreshPage} />
         </div>
       </GalleryContext.Provider>
     </Layout>

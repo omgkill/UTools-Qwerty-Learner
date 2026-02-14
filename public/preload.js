@@ -147,3 +147,36 @@ window.exportDatabase2UTools = () => {
 // Migration
 window.migrateLocalStorageToUtools = () => {
 };
+
+// Clear All Data
+window.clearAllData = () => {
+  try {
+    const config = window.readLocalDictConfig();
+    config.forEach((dict) => {
+      if (dict.id) {
+        utools.db.remove(dict.id);
+      }
+    });
+    utools.db.remove('local-dict-config');
+    utools.db.remove('user-data');
+    utools.db.remove('x-typing-mistake');
+    localStorage.clear();
+    console.log('All data cleared');
+    return true;
+  } catch (err) {
+    console.error('Clear all data failed:', err);
+    return false;
+  }
+};
+
+// Restart Plugin
+window.restartPlugin = () => {
+  if (typeof utools !== 'undefined') {
+    utools.outPlugin();
+    setTimeout(() => {
+      utools.showMainWindow();
+    }, 100);
+  } else {
+    window.location.reload();
+  }
+};
