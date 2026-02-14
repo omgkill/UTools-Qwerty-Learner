@@ -180,3 +180,285 @@ window.restartPlugin = () => {
     window.location.reload();
   }
 };
+
+// ============================================
+// MDX Dictionary Support (only in uTools environment)
+// ============================================
+
+if (typeof utools !== 'undefined') {
+  // 动态加载 mdict，只在 uTools 环境中
+  let mdictParser = null;
+  try {
+    mdictParser = require('mdict/mdict-parser.js');
+  } catch (e) {
+    console.warn('mdict module not available:', e.message);
+  }
+
+  const mdxInstances = new Map();
+
+  // 获取 MIME 类型
+  function getMimeType(filename) {
+    const ext = path.extname(filename).toLowerCase();
+    switch (ext) {
+      case '.jpg': case '.jpeg': return 'image/jpeg';
+      case '.png': return 'image/png';
+      case '.gif': return 'image/gif';
+      case '.bmp': return 'image/bmp';
+      case '.svg': return 'image/svg+xml';
+      case '.mp3': return 'audio/mpeg';
+      case '.wav': return 'audio/wav';
+      case '.ogg': return 'audio/ogg';
+      case '.css': return 'text/css';
+      case '.js': return 'text/javascript';
+      default: return 'application/octet-stream';
+    }
+  }
+
+  // 替换 HTML 中的资源为 base64
+  async function replaceResources(html, mddLookup) {
+    if (!html || !mddLookup) return html;
+    
+    const regex = /(src|href)=["']([^"']+)["']/g;
+    const matches = [];
+    let match;
+    
+    while ((match = regex.exec(html)) !== null) {
+      matches.push({ full: match[0], attr: match[1], val: match[2] });
+    }
+    
+    if (matches.length === 0) return html;
+    
+    const replacements = new Map();
+    const uniqueVals = [...new Set(matches.map(m => m.val))];
+    
+    await Promise.all(uniqueVals.map(async (val) => {
+      if (val.startsWith('entry://') || val.startsWith('http') || val.startsWith('https') || val.startsWith('data:')) {
+        return;
+      }
+      
+      try {
+        const buffer = await mddLookup(val);
+        if (buffer) {
+          const base64 = Buffer.from(buffer).toString('base64');
+          const mime = getMimeType(val);
+          replacements.set(val, `data:${mime};base64,${base64}`);
+        }
+      } catch (e) {
+        // 资源未找到是正常的，忽略错误
+      }
+    }));
+    
+    return html.replace(regex, (match, attr, val) => {
+      if (replacements.has(val)) {
+        return `${attr}="${replacements.get(val)}"`;
+      }
+      return match;
+    });
+  }
+
+  window.dictMdxLoader = {
+    async load(filePath) {
+      if (mdxInstances.has(filePath)) {
+        return mdxInstances.get(filePath);
+      }
+
+      if (!mdictParser) {
+        throw new Error('mdict module not loaded');
+      }
+
+      const files = [];
+
+      const mdxBuf = Buffer.from(filePath);
+      mdxBuf.name = filePath;
+      files.push(mdxBuf);
+
+      const mddPath = filePath.replace(/\.mdx$/i, '.mdd');
+      if (fs.existsSync(mddPath)) {
+        const mddBuf = Buffer.from(mddPath);
+        mddBuf.name = mddPath;
+        files.push(mddBuf);
+      }
+
+      try {
+        const resources = await mdictParser.load(files);
+
+        const mdxLookup = await resources.mdx;
+        let mddLookup = null;
+
+        if (resources.mdd) {
+          try {
+            mddLookup = await resources.mdd;
+          } catch (e) {
+            console.error('MDD load failed', e);
+          }
+        } else if (resources['.mdd']) {
+          try {
+            mddLookup = await resources['.mdd'];
+          } catch (e) {
+            console.error('MDD load failed', e);
+          }
+        }
+
+        const result = { mdxLookup, mddLookup, filePath };
+        mdxInstances.set(filePath, result);
+        return result;
+
+      } catch (e) {
+        console.error('Load mdict failed', e);
+        throw new Error(`词典加载失败: ${e.message}`);
+      }
+    },
+
+    unload(filePath) {
+      mdxInstances.delete(filePath);
+    }
+  };
+
+  // MDX Dictionary Management (使用与 voca-plugin 相同的 key)
+  const MDX_CONFIG_KEY = 'mdict-config';
+
+  window.getMdxDictConfig = () => {
+    const doc = utools.db.get(MDX_CONFIG_KEY);
+    if (!doc) return [];
+    return doc.dicts || doc.data || [];
+  };
+
+  window.saveMdxDictConfig = (dicts) => {
+    const doc = utools.db.get(MDX_CONFIG_KEY);
+    utools.db.put({
+      _id: MDX_CONFIG_KEY,
+      dicts: dicts,
+      _rev: doc ? doc._rev : undefined
+    });
+  };
+
+  window.selectMdxFiles = () => {
+    const files = utools.showOpenDialog({
+      title: '选择 MDX 词典文件',
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'MDX Dictionaries', extensions: ['mdx'] }]
+    });
+    
+    if (!files || !files.length) return null;
+
+    const config = window.getMdxDictConfig();
+    const already = new Set(config.map(d => d.path));
+    
+    for (const f of files) {
+      if (!already.has(f)) {
+        config.push({
+          path: f,
+          name: path.basename(f)
+        });
+      }
+    }
+    
+    window.saveMdxDictConfig(config);
+    return config;
+  };
+
+  window.removeMdxDict = (filePath) => {
+    const config = window.getMdxDictConfig();
+    const newConfig = config.filter(d => d.path !== filePath);
+    window.saveMdxDictConfig(newConfig);
+    mdxInstances.delete(filePath);
+    return newConfig;
+  };
+
+  window.updateMdxDictOrder = (dicts) => {
+    window.saveMdxDictConfig(dicts);
+    return dicts;
+  };
+
+  // 在单个词典中查询 (与 voca-plugin queryInDict 逻辑一致)
+  async function queryInDict(filePath, word) {
+    try {
+      const { mdxLookup, mddLookup } = await window.dictMdxLoader.load(filePath);
+      
+      if (!mdxLookup) {
+        throw new Error('词典查询函数未就绪');
+      }
+      
+      let result = '';
+      try {
+        const definitions = await mdxLookup(word);
+        if (Array.isArray(definitions) && definitions.length > 0) {
+          result = definitions.join('\n<hr>\n');
+        }
+      } catch (e) {
+        if (typeof e === 'string' && e.includes('NOT FOUND')) {
+          result = '';
+        } else {
+          throw e;
+        }
+      }
+      
+      // 如果有结果且有 MDD，替换资源
+      if (result && mddLookup) {
+        try {
+          result = await replaceResources(result, mddLookup);
+        } catch (e) {
+          console.error('Resource replacement failed', e);
+        }
+      }
+
+      return {
+        dictPath: filePath,
+        dictName: path.basename(filePath),
+        ok: !!result,
+        content: result
+      };
+    } catch (e) {
+      const errMsg = e && e.message ? e.message : String(e);
+      return {
+        dictPath: filePath,
+        dictName: path.basename(filePath),
+        ok: false,
+        error: errMsg
+      };
+    }
+  }
+
+  // Query word in MDX dictionaries (与 voca-plugin queryWord 逻辑一致)
+  window.queryMdxWord = async (word) => {
+    const w = (word || '').trim();
+    if (!w) return [];
+    
+    const config = window.getMdxDictConfig();
+    
+    // 过滤存在的词典文件，并行查询
+    const promises = config
+      .filter(d => fs.existsSync(d.path))
+      .map(d => queryInDict(d.path, w));
+    
+    return await Promise.all(promises);
+  };
+
+  // 兼容 voca-plugin 的接口命名
+  window.services = {
+    selectDictFiles: window.selectMdxFiles,
+    getDictList: window.getMdxDictConfig,
+    updateDictOrder: window.updateMdxDictOrder,
+    removeDict: window.removeMdxDict,
+    queryWord: window.queryMdxWord
+  };
+} else {
+  // 开发环境 mock
+  window.getMdxDictConfig = () => [];
+  window.saveMdxDictConfig = () => {};
+  window.selectMdxFiles = () => null;
+  window.removeMdxDict = () => [];
+  window.updateMdxDictOrder = () => [];
+  window.queryMdxWord = async () => [];
+  window.dictMdxLoader = {
+    load: async () => { throw new Error('mdict not available in dev mode'); },
+    unload: () => {}
+  };
+  window.services = {
+    selectDictFiles: window.selectMdxFiles,
+    getDictList: window.getMdxDictConfig,
+    updateDictOrder: window.updateMdxDictOrder,
+    removeDict: window.removeMdxDict,
+    queryWord: window.queryMdxWord
+  };
+}

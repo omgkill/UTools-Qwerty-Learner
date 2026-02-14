@@ -1,9 +1,11 @@
 import Loading from './components/Loading'
 import './index.css'
 import TypingPage from './pages/Typing'
+import MdxQueryPage from './pages/MdxQuery'
+import MdxManagePage from './pages/MdxManage'
 import { processPayment, setConcealFeature } from '@/utils/utools'
 import mixpanel from 'mixpanel-browser'
-import React, { Suspense, lazy, useEffect } from 'react'
+import React, { Suspense, lazy, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
@@ -33,8 +35,21 @@ if (import.meta.env.DEV || window.utools.isDev()) {
 const container = document.getElementById('root')
 
 function Root() {
+  const [mode, setMode] = useState(window.getMode?.() || 'typing')
+
   useEffect(() => {
     document.documentElement.classList.add('dark')
+  }, [])
+
+  useEffect(() => {
+    const handleModeChange = (e: Event) => {
+      const newMode = (e as CustomEvent).detail
+      setMode(newMode)
+    }
+    window.addEventListener('utools-mode-change', handleModeChange)
+    return () => {
+      window.removeEventListener('utools-mode-change', handleModeChange)
+    }
   }, [])
 
   useEffect(() => {
@@ -43,8 +58,47 @@ function Root() {
 
     // 设定摸鱼模式
     setConcealFeature()
-    mixpanel.track('Open', { mode: window.getMode() })
-  }, [])
+    mixpanel.track('Open', { mode: mode })
+  }, [mode])
+
+  if (mode === 'mdx-query') {
+    return (
+      <React.StrictMode>
+        <MdxQueryPage />
+        <ToastContainer
+          position="bottom-right"
+          autoClose={2500}
+          hideProgressBar
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable={false}
+          pauseOnHover
+        />
+      </React.StrictMode>
+    )
+  }
+
+  if (mode === 'mdx-manage') {
+    return (
+      <React.StrictMode>
+        <MdxManagePage />
+        <ToastContainer
+          position="bottom-right"
+          autoClose={2500}
+          hideProgressBar
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable={false}
+          pauseOnHover
+        />
+      </React.StrictMode>
+    )
+  }
+
   return (
     <React.StrictMode>
       <HashRouter basename="" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

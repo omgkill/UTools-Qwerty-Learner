@@ -17,6 +17,25 @@
       "code": "conceal",
       "explain": "🐟背单词打字摸鱼模式，摸鱼一时爽,一直摸鱼一直爽~~",
       "cmds": ["moyu", "moyv", "typing-摸鱼模式"]
+    },
+    {
+      "code": "mdx-query",
+      "explain": "📖查词典",
+      "cmds": [
+        {
+          "type": "over",
+          "label": "查词典",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "查词",
+        "词典"
+      ]
+    },
+    {
+      "code": "mdx-manage",
+      "explain": "📚管理MDX词典",
+      "cmds": ["管理词典", "mdx管理"]
     }
   ],
   "pluginSetting": {
