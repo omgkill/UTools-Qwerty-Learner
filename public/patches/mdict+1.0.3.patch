@@ -1,0 +1,71 @@
+diff --git a/node_modules/mdict/mdict-parser.js b/node_modules/mdict/mdict-parser.js
+index ddf6b85..7bee44c 100644
+--- a/node_modules/mdict/mdict-parser.js
++++ b/node_modules/mdict/mdict-parser.js
+@@ -147,6 +147,11 @@ var ripemd128 = require(__dirname+"/ripemd128.js");
+  // var fdFileName = null;
+  function sliceThen(file, offset, len) {
+    var p = new Promise(function(_resolve) {
++      // Handle Buffer directly (which we used as a hack for filename)
++      if (Buffer.isBuffer(file)) {
++        file = file.toString('utf8');
++      }
++
+      fs.open(file, 'r', function(err, fd){
+        if (err) {
+          throw err;
+@@ -158,6 +163,7 @@ var ripemd128 = require(__dirname+"/ripemd128.js");
+            throw err;
+          }
+          
++          fs.close(fd, function(){}); // Close fd after read
+          _resolve(buffer);
+        });
+      });
+@@ -443,13 +449,21 @@ var ripemd128 = require(__dirname+"/ripemd128.js");
+        },
+        
+        // Read raw data as Uint8Array from current offset with specified length in bytes
+-        readRaw: function(len) {
+-          return conseq(newUint8Array(buf, offset, len), this.forward(len === UNDEFINED ? buf.length - offset : len));
+-        },
+-      };
++    readRaw: function(len) {
++      if (typeof len !== 'number') {
++        len = buf.length - offset;
++      }
+      
+-      return Object.create(methods);
+-    }
++      // Return a Node.js Buffer instead of Uint8Array for binary data compatibility
++      // mdict uses newUint8Array which creates a view/copy, we want a Buffer
++      var raw = Buffer.alloc(len);
++      buf.copy(raw, 0, offset, offset + len);
++      return conseq(raw, this.forward(len === UNDEFINED ? buf.length - offset : len));
++    },
++  };
++
++  return Object.create(methods);
++}
+    
+    /**
+     * Read the first 4 bytes of mdx/mdd file to get length of header_str.
+@@ -951,8 +965,17 @@ var ripemd128 = require(__dirname+"/ripemd128.js");
+      // TODO: chain multiple mdd file
+      mdd: function(phrase) {
+        var word = phrase.trim().toLowerCase();
+-        word = '\\' + word.replace(/(^[/\\])|([/]$)/, '');
++        // word = '\\' + word.replace(/(^[/\\])|([/]$)/, '');
++        // word = word.replace(/\//g, '\\');
++        // mdict original path handling was a bit aggressive, simplify it for standard mdd paths
++        // Many mdds use unix style '/' or windows style '\' mixed.
++        // The most robust way is to try exact match first, then normalize.
++        // BUT here we stick to what usually works: ensure leading backslash and use backslashes.
++        if (!word.startsWith('\\') && !word.startsWith('/')) {
++             word = '\\' + word;
++        }
+        word = word.replace(/\//g, '\\');
++        
+        return seekVanguard(word).spread(function(kdx, idx, list) {
+          return list.slice(idx).filter(function(one) {
+            return one.toLowerCase() === word;
