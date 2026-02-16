@@ -42,7 +42,7 @@
     "single": true
   },
   "window": {
-    "background": "#00000000",
-    "opacity": 0
+    "background": "#111827",
+    "opacity": 255
   }
 }

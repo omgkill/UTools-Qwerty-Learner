@@ -34,33 +34,62 @@ if (import.meta.env.DEV || window.utools.isDev()) {
 
 const container = document.getElementById('root')
 
+const log = (msg: string) => {
+  const timestamp = new Date().toISOString().substr(11, 12)
+  const line = `[${timestamp}] [index.tsx] ${msg}`
+  console.log(line)
+  ;(window as any).debugLog?.(`[index.tsx] ${msg}`)
+}
+
 function Root() {
-  const [mode, setMode] = useState(window.getMode?.() || 'typing')
+  const [mode, setMode] = useState<string | null>(null)
+  const [isModeReady, setIsModeReady] = useState(false)
+
+  log(`Root render: mode=${mode}, isModeReady=${isModeReady}`)
 
   useEffect(() => {
     document.documentElement.classList.add('dark')
   }, [])
 
   useEffect(() => {
+    log('useEffect: registering mode change listener')
+    
     const handleModeChange = (e: Event) => {
       const action = (e as CustomEvent).detail
       const newMode = action?.code || action || 'typing'
+      log(`handleModeChange: code=${action?.code}, newMode=${newMode}`)
       setMode(newMode)
+      setIsModeReady(true)
     }
+    
+    const initialMode = window.getMode?.()
+    log(`useEffect: initialMode=${initialMode}`)
+    if (initialMode) {
+      setMode(initialMode)
+      setIsModeReady(true)
+    }
+    
     window.addEventListener('utools-mode-change', handleModeChange)
     return () => {
+      log('useEffect: cleanup - removing listener')
       window.removeEventListener('utools-mode-change', handleModeChange)
     }
   }, [])
 
   useEffect(() => {
-    // 强制设置VIP状态
+    if (!mode) return
     localStorage.setItem('x-vipState', 'c')
-
-    // 设定摸鱼模式
     setConcealFeature()
     mixpanel.track('Open', { mode: mode })
   }, [mode])
+
+  if (!isModeReady) {
+    return (
+      <React.StrictMode>
+        <Loading />
+      </React.StrictMode>
+    )
+  }
 
   if (mode === 'mdx-query') {
     return (

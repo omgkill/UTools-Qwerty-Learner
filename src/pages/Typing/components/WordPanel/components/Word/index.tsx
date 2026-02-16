@@ -20,7 +20,7 @@ import { getUtcStringForMixpanel, useMixPanelWordLogUploader } from '@/utils'
 import { useSaveWordRecord } from '@/utils/db'
 import type { LetterMistakes } from '@/utils/db/record'
 import { useAtomValue } from 'jotai'
-import { useCallback, useContext, useEffect, useState } from 'react'
+import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useImmer } from 'use-immer'
 
 type WordState = {
@@ -58,6 +58,7 @@ const initialWordState: WordState = {
 export default function WordComponent({ word, onFinish }: { word: Word; onFinish: () => void }) {
   const { state, dispatch } = useContext(TypingContext)!
   const [wordState, setWordState] = useImmer<WordState>(structuredClone(initialWordState))
+  const onFinishCalledRef = useRef(false)
 
   const wordDictationConfig = useAtomValue(wordDictationConfigAtom)
   const isTextSelectable = useAtomValue(isTextSelectableAtom)
@@ -78,6 +79,7 @@ export default function WordComponent({ word, onFinish }: { word: Word; onFinish
     newWordState.letterStates = new Array(headword.length).fill('normal')
     newWordState.startTime = getUtcStringForMixpanel()
     setWordState(newWordState)
+    onFinishCalledRef.current = false
   }, [word, setWordState])
 
   const updateInput = useCallback(
@@ -191,6 +193,9 @@ export default function WordComponent({ word, onFinish }: { word: Word; onFinish
 
   useEffect(() => {
     if (wordState.isFinished) {
+      if (onFinishCalledRef.current) return
+      onFinishCalledRef.current = true
+
       if (!wordState.hasMadeInputWrong) {
         dispatch({ type: TypingStateActionType.REPORT_CORRECT_WORD })
       }

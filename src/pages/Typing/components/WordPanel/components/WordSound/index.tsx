@@ -6,7 +6,7 @@ import usePronunciationSound from '@/hooks/usePronunciation'
 import { TypingContext } from '@/pages/Typing/store'
 import { pronunciationIsOpenAtom } from '@/store'
 import { useAtomValue } from 'jotai'
-import { useCallback, useContext, useEffect } from 'react'
+import { useCallback, useContext, useEffect, useRef } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
 const WordSound = ({ word, inputWord, ...rest }: WordSoundProps) => {
@@ -16,27 +16,42 @@ const WordSound = ({ word, inputWord, ...rest }: WordSoundProps) => {
   const { play, stop, isPlaying } = usePronunciationSound(word)
   const pronunciationIsOpen = useAtomValue(pronunciationIsOpenAtom)
 
+  const playRef = useRef(play)
+  const stopRef = useRef(stop)
+  useEffect(() => {
+    playRef.current = play
+    stopRef.current = stop
+  }, [play, stop])
+
   useHotkeys(
     'ctrl+j',
     () => {
       if (state.isTyping) {
-        stop()
-        play()
+        stopRef.current()
+        playRef.current()
       }
     },
-    [play, stop, state.isTyping],
+    [state.isTyping],
     { enableOnFormTags: true, preventDefault: true },
   )
+
+  const hasPlayedRef = useRef(false)
   useEffect(() => {
     if (inputWord.length === 0 && state.isTyping) {
-      stop()
-      play()
+      if (!hasPlayedRef.current) {
+        hasPlayedRef.current = true
+        stopRef.current()
+        playRef.current()
+      }
+    } else {
+      hasPlayedRef.current = false
     }
-  }, [play, inputWord, stop, state.isTyping])
+  }, [inputWord, state.isTyping, word])
 
   useEffect(() => {
-    return stop
-  }, [word, stop])
+    hasPlayedRef.current = false
+    return () => stopRef.current()
+  }, [word])
 
   const handleClickSoundIcon = useCallback(() => {
     stop()

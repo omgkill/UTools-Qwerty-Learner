@@ -5,12 +5,13 @@
   height: 100vh;
   box-sizing: border-box;
   overflow: auto;
+  background-color: #111827;
 }
 
 .loading {
   padding: 20px;
   text-align: center;
-  color: #86868b;
+  color: #98989d;
   font-size: 14px;
 }
 
@@ -23,8 +24,7 @@
   border-radius: 12px;
   padding: 12px;
   margin-bottom: 8px;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  background: transparent;
 }
 
 .result-header {
@@ -40,20 +40,20 @@
 }
 
 .result-header:hover {
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .collapse-icon {
   width: 16px;
   display: inline-block;
   font-size: 12px;
-  color: #007aff;
+  color: #818cf8;
 }
 
 .dict-name {
   font-weight: 500;
   font-size: 14px;
-  color: #1d1d1f;
+  color: #f5f5f7;
 }
 
 .result-body {
@@ -67,31 +67,31 @@
   font-size: 15px;
   line-height: 1.7;
   word-wrap: break-word;
-  color: #1d1d1f;
+  color: #e0e0e0;
 }
 
 .result-content a {
-  color: #007aff;
+  color: #818cf8;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.15s ease;
 }
 
 .result-content a:hover {
-  color: #0051d5;
+  color: #a5b4fc;
   text-decoration: underline;
 }
 
 .result-content b,
 .result-content strong {
   font-weight: 600;
-  color: #1d1d1f;
+  color: #fff;
 }
 
 .result-content i,
 .result-content em {
   font-style: italic;
-  color: #6e6e73;
+  color: #a5d6ff;
 }
 
 .result-content ul,
@@ -111,7 +111,7 @@
 .result-content hr {
   margin: 16px 0;
   border: none;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .error-text,
@@ -122,114 +122,30 @@
 }
 
 .error-text {
-  color: #ff3b30;
-  background: rgba(255, 59, 48, 0.05);
+  color: #ff453a;
+  background: rgba(255, 69, 58, 0.15);
 }
 
 .empty-text {
-  color: #86868b;
-  background: rgba(142, 142, 147, 0.05);
+  color: #98989d;
+  background: rgba(142, 142, 147, 0.15);
 }
 
 .no-result {
   padding: 20px;
   text-align: center;
-  color: #86868b;
+  color: #98989d;
   font-size: 13px;
 }
 
-/* Dark mode */
-.dark .mdict-page {
-  background: #333333;
+.result-content font[color="blue"],
+.result-content span[style*="color: blue"],
+.result-content span[style*="color:#0000FF"] {
+  color: #818cf8 !important;
 }
 
-.dark .mdict-page h1 {
-  color: #e0e0e0;
-}
-
-.dark .result-item {
-  background: transparent;
-  box-shadow: none;
-  border: none;
-}
-
-.dark .result-item:hover {
-  box-shadow: none;
-  background: transparent;
-}
-
-.dark .result-header:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.dark .collapse-icon {
-  color: #0a84ff;
-}
-
-.dark .dict-name {
-  color: #f5f5f7;
-}
-
-.dark .result-content {
-  background: transparent;
-  color: #e0e0e0;
-}
-
-.dark .result-content a {
-  color: #58a6ff;
-}
-
-.dark .result-content * {
-  color: inherit;
-  background-color: transparent !important;
-}
-
-.dark .result-content b,
-.dark .result-content strong {
-  color: #fff;
-  font-weight: 700;
-}
-
-.dark .result-content i,
-.dark .result-content em {
-  color: #a5d6ff;
-}
-
-.dark .result-content font[color="blue"],
-.dark .result-content span[style*="color: blue"],
-.dark .result-content span[style*="color:#0000FF"] {
-  color: #58a6ff !important;
-}
-
-.dark .result-content font[color="red"],
-.dark .result-content span[style*="color: red"],
-.dark .result-content span[style*="color:#FF0000"] {
+.result-content font[color="red"],
+.result-content span[style*="color: red"],
+.result-content span[style*="color:#FF0000"] {
   color: #ff7b72 !important;
-}
-
-.dark .result-content a {
-  color: #0a84ff;
-}
-
-.dark .result-content a:hover {
-  color: #409cff;
-}
-
-.dark .result-content hr {
-  border-top-color: rgba(255, 255, 255, 0.1);
-}
-
-.dark .error-text {
-  color: #ff453a;
-  background: rgba(255, 69, 58, 0.15);
-}
-
-.dark .empty-text {
-  color: #98989d;
-  background: rgba(142, 142, 147, 0.15);
-}
-
-.dark .no-result {
-  color: #98989d;
-  background: rgba(142, 142, 147, 0.15);
 }

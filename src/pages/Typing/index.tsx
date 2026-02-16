@@ -39,11 +39,14 @@ const App: React.FC = () => {
   const randomConfig = useAtomValue(randomConfigAtom)
   const navigate = useNavigate()
 
+  console.log(`[Typing] isInitialized=${isInitialized}, currentWordBank=${currentWordBank?.name}, words=${words?.length}`)
+
   const chapterLogUploader = useMixPanelChapterLogUploader(state)
   const saveChapterRecord = useSaveChapterRecord()
 
   useEffect(() => {
     const config = window.readLocalWordBankConfig()
+    console.log(`[Typing] config loaded: ${config?.length} wordbanks`)
     const customWordBanks = config.filter((wb: WordBank) => wb.id && wb.id.startsWith('x-dict-'))
     const uniqueWordBanks = customWordBanks.reduce((acc: WordBank[], wb: WordBank) => {
       if (!acc.some((d) => d.id === wb.id)) {
@@ -51,6 +54,7 @@ const App: React.FC = () => {
       }
       return acc
     }, [])
+    console.log(`[Typing] uniqueWordBanks: ${uniqueWordBanks.length}`)
     setWordBanks(uniqueWordBanks)
     setIsInitialized(true)
   }, [setWordBanks])

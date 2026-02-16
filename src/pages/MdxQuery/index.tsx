@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import './index.css'
 
+const log = (msg: string) => {
+  const timestamp = new Date().toISOString().substr(11, 12)
+  const line = `[${timestamp}] [MdxQuery] ${msg}`
+  console.log(line)
+  ;(window as any).debugLog?.(`[MdxQuery] ${msg}`)
+}
+
 interface MdxResult {
   dictPath: string
   dictName: string
@@ -28,14 +35,18 @@ declare global {
 }
 
 export default function MdxQueryPage() {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [dicts, setDicts] = useState<DictItem[]>([])
   const [results, setResults] = useState<MdxResult[]>([])
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
+  log(`render: loading=${loading}, dicts.length=${dicts.length}, results.length=${results.length}`)
+
   const loadDicts = useCallback(() => {
+    log('loadDicts called')
     try {
       const config = window.getMdxDictConfig?.() || window.services?.getDictList?.() || []
+      log(`loadDicts: found ${config.length} dicts`)
       setDicts(config)
     } catch (e) {
       console.error('getDictList error', e)
@@ -44,10 +55,15 @@ export default function MdxQueryPage() {
 
   const handleSearch = useCallback(async (word: string) => {
     const w = word.trim()
-    if (!w) return
+    log(`handleSearch: word="${w}"`)
+    if (!w) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     try {
       const res = await window.queryMdxWord?.(w) || await window.services?.queryWord?.(w) || []
+      log(`handleSearch: got ${res.length} results`)
       setResults(res)
       const exp: Record<string, boolean> = {}
       for (const r of res) {
@@ -68,12 +84,16 @@ export default function MdxQueryPage() {
   }, [])
 
   useEffect(() => {
+    log('useEffect: loadDicts')
     loadDicts()
   }, [loadDicts])
 
   useEffect(() => {
+    log('useEffect: setup mode change listener for search')
+    
     const handleModeChange = (e: CustomEvent) => {
       const action = e.detail
+      log(`handleModeChange: action.payload=${action?.payload}`)
       if (action?.payload) {
         const inputWord = String(action.payload).trim()
         if (inputWord) {
@@ -84,11 +104,16 @@ export default function MdxQueryPage() {
     window.addEventListener('utools-mode-change', handleModeChange as EventListener)
 
     const action = window.getAction?.()
+    log(`useEffect: getAction() = ${JSON.stringify(action)}`)
     if (action?.payload) {
       const inputWord = String(action.payload).trim()
       if (inputWord) {
         handleSearch(inputWord)
+      } else {
+        setLoading(false)
       }
+    } else {
+      setLoading(false)
     }
 
     return () => {

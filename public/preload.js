@@ -5,14 +5,30 @@ window.fs = fs;
 window.path = path;
 window.process = process;
 
+// 日志功能
+const logFile = path.join(require('os').tmpdir(), 'qwerty-learner-debug.log');
+const log = (msg) => {
+  const timestamp = new Date().toISOString().substr(11, 12);
+  const line = `[${timestamp}] ${msg}\n`;
+  try {
+    fs.appendFileSync(logFile, line);
+  } catch (e) {}
+  console.log(line.trim());
+};
+window.debugLog = log;
+log('=== preload.js loaded ===');
+
 // Mode Handling
-let currentMode = 'typing';
+let currentMode = null;
 let currentAction = null;
 if (typeof utools !== 'undefined') {
+  log('Registering onPluginEnter callback');
   utools.onPluginEnter((action) => {
+    log(`onPluginEnter triggered: code=${action.code}, payload=${action.payload}`);
     currentMode = action.code;
     currentAction = action;
     window.dispatchEvent(new CustomEvent('utools-mode-change', { detail: action }));
+    log('utools-mode-change event dispatched');
   });
 }
 window.getMode = () => currentMode;
@@ -21,6 +37,9 @@ window.getAction = () => currentAction;
 // Dev Mock - 必须在其他函数之前初始化
 if (typeof utools === 'undefined') {
   console.log('uTools environment not detected. Using mock.');
+  
+  // 开发环境默认显示背单词界面
+  currentMode = 'typing';
   
   let mockDb = {};
   

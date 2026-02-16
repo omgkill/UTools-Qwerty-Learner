@@ -3,7 +3,7 @@ import type { PronunciationType } from '@/typings'
 import { addHowlListener } from '@/utils'
 import { Howl } from 'howler'
 import { useAtomValue } from 'jotai'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 const pronunciationApi = 'https://dict.youdao.com/dictvoice?audio='
 const SOUND_CACHE_LIMIT = 50
@@ -55,11 +55,21 @@ export default function usePronunciationSound(word: string) {
   const pronunciationConfig = useAtomValue(pronunciationConfigAtom)
   const [isPlaying, setIsPlaying] = useState(false)
   const soundUrl = useMemo(() => generateWordSoundSrc(word, pronunciationConfig.type), [word, pronunciationConfig.type])
-  const [sound, setSound] = useState<Howl | null>(null)
+
+  const soundRef = useRef<Howl | null>(null)
+  const [sound, setSound] = useState<Howl | null>(() => {
+    const cached = pronunciationSoundCache.get(soundUrl)
+    if (cached) {
+      soundRef.current = cached
+      return cached
+    }
+    return null
+  })
 
   useEffect(() => {
     const cached = pronunciationSoundCache.get(soundUrl)
     if (cached) {
+      soundRef.current = cached
       setSound(cached)
       return
     }
@@ -72,17 +82,19 @@ export default function usePronunciationSound(word: string) {
       rate: pronunciationConfig.rate,
     })
     pronunciationSoundCache.set(soundUrl, newSound, (evicted) => evicted.unload())
+    soundRef.current = newSound
     setSound(newSound)
   }, [soundUrl])
 
   useEffect(() => {
-    if (!sound) return
+    const currentSound = soundRef.current
+    if (!currentSound) return
     const unListens: Array<() => void> = []
 
-    unListens.push(addHowlListener(sound, 'play', () => setIsPlaying(true)))
-    unListens.push(addHowlListener(sound, 'end', () => setIsPlaying(false)))
-    unListens.push(addHowlListener(sound, 'pause', () => setIsPlaying(false)))
-    unListens.push(addHowlListener(sound, 'playerror', () => setIsPlaying(false)))
+    unListens.push(addHowlListener(currentSound, 'play', () => setIsPlaying(true)))
+    unListens.push(addHowlListener(currentSound, 'end', () => setIsPlaying(false)))
+    unListens.push(addHowlListener(currentSound, 'pause', () => setIsPlaying(false)))
+    unListens.push(addHowlListener(currentSound, 'playerror', () => setIsPlaying(false)))
 
     return () => {
       setIsPlaying(false)
@@ -91,23 +103,27 @@ export default function usePronunciationSound(word: string) {
   }, [sound])
 
   useEffect(() => {
-    if (!sound) return
-    sound.volume(pronunciationConfig.volume)
-    sound.rate(pronunciationConfig.rate)
+    const currentSound = soundRef.current
+    if (!currentSound) return
+    currentSound.volume(pronunciationConfig.volume)
+    currentSound.rate(pronunciationConfig.rate)
   }, [sound, pronunciationConfig.rate, pronunciationConfig.volume])
 
   const play = useCallback(() => {
-    if (!sound) return
-    sound.volume(pronunciationConfig.volume)
-    sound.rate(pronunciationConfig.rate)
-    sound.play()
-  }, [sound, pronunciationConfig.rate, pronunciationConfig.volume])
+    const currentSound = soundRef.current
+    if (!currentSound) return
+    currentSound.stop()
+    currentSound.volume(pronunciationConfig.volume)
+    currentSound.rate(pronunciationConfig.rate)
+    currentSound.play()
+  }, [pronunciationConfig.rate, pronunciationConfig.volume])
 
   const stop = useCallback(() => {
-    if (!sound) return
-    sound.stop()
+    const currentSound = soundRef.current
+    if (!currentSound) return
+    currentSound.stop()
     setIsPlaying(false)
-  }, [sound])
+  }, [])
 
   return { play, stop, isPlaying }
 }

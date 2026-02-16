@@ -17,6 +17,7 @@ export default function WordPanel() {
   const currentWord = state.chapterData.words[state.chapterData.index]
   const nextWord = state.chapterData.words[state.chapterData.index + 1] as Word | undefined
 
+  usePrefetchPronunciationSound(currentWord?.name)
   usePrefetchPronunciationSound(nextWord?.name)
   const queriedWordsRef = useRef(new Set<string>())
 
