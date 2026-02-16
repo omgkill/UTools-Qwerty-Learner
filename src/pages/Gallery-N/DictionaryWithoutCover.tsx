@@ -1,6 +1,6 @@
 import Form4EditDict from './Form4EditDict'
 import { useDictStats } from './hooks/useDictStats'
-import { GalleryContext, InnerContext } from './index'
+import { InnerContext } from './index'
 import bookCover from '@/assets/book-cover.png'
 import Tooltip from '@/components/Tooltip'
 import useIntersectionObserver from '@/hooks/useIntersectionObserver'
@@ -20,7 +20,6 @@ interface Props {
 }
 
 export default function DictionaryComponent({ wordBank, onClick }: Props) {
-  const { state } = useContext(GalleryContext)!
   const currentWordBankID = useAtomValue(currentWordBankIdAtom)
   const handleRefresh = useContext(InnerContext)
   const [confirmIsOpen, setConfirmIsOpen] = useState(false)
@@ -31,10 +30,13 @@ export default function DictionaryComponent({ wordBank, onClick }: Props) {
   const dictStats = useDictStats(wordBank.id, isVisible)
   const chapterCount = useMemo(() => calcChapterCount(wordBank.length), [wordBank.length])
   const isSelected = currentWordBankID === wordBank.id
-  const progress = useMemo(
+
+  const chapterProgress = useMemo(
     () => (dictStats ? Math.ceil((dictStats.exercisedChapterCount / chapterCount) * 100) : 0),
     [dictStats, chapterCount],
   )
+
+  const masteryProgress = dictStats?.totalProgress ?? 0
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -79,18 +81,41 @@ export default function DictionaryComponent({ wordBank, onClick }: Props) {
           </Tooltip>
 
           <p className={`mb-0.5 font-bold ${isSelected ? 'text-white' : 'text-gray-600 dark:text-gray-200'}`}>{wordBank.length} 词</p>
+
+          {dictStats && (
+            <div className="mb-1 flex w-full items-center gap-2 text-xs">
+              <span className={`${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
+                📚 已学 {dictStats.learnedWords}
+              </span>
+              <span className={`${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
+                ✅ 已掌握 {dictStats.masteredWords}
+              </span>
+              {dictStats.dueWords > 0 && (
+                <span className={`${isSelected ? 'text-orange-200' : 'text-orange-500'}`}>
+                  🔄 待复习 {dictStats.dueWords}
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="flex w-full items-center justify-end pt-2">
-            {'c' === state.vipState && progress > 0 && (
-              <Progress.Root
-                value={progress}
-                max={100}
-                className={`mr-4 h-2 w-full rounded-full border bg-white ${isSelected ? 'border-indigo-600' : 'border-indigo-400'}`}
-              >
-                <Progress.Indicator
-                  className={`h-full rounded-full pl-0 ${isSelected ? 'bg-indigo-600' : 'bg-indigo-400'}`}
-                  style={{ width: `calc(${progress}% )` }}
-                />
-              </Progress.Root>
+            {dictStats && masteryProgress > 0 && (
+              <div className="mr-4 flex flex-1 flex-col gap-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className={`${isSelected ? 'text-white/80' : 'text-gray-500'}`}>掌握进度</span>
+                  <span className={`${isSelected ? 'text-white' : 'text-indigo-500'}`}>{masteryProgress}%</span>
+                </div>
+                <Progress.Root
+                  value={masteryProgress}
+                  max={100}
+                  className={`h-2 w-full rounded-full border bg-white ${isSelected ? 'border-indigo-600' : 'border-indigo-400'}`}
+                >
+                  <Progress.Indicator
+                    className={`h-full rounded-full pl-0 ${isSelected ? 'bg-indigo-600' : 'bg-indigo-400'}`}
+                    style={{ width: `calc(${masteryProgress}% )` }}
+                  />
+                </Progress.Root>
+              </div>
             )}
             {['custom'].includes(wordBank.languageCategory) && (
               <>

@@ -1,4 +1,5 @@
 import { db } from '@/utils/db'
+import { MASTERY_LEVELS } from '@/utils/db/progress'
 import type { IChapterRecord } from '@/utils/db/record'
 import { useEffect, useState } from 'react'
 
@@ -14,14 +15,17 @@ export function useDictStats(dictID: string, isStartLoad: boolean) {
     if (isStartLoad && !dictStats) {
       fetchDictStats()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dictID, isStartLoad])
+  }, [dictID, isStartLoad, dictStats])
 
   return dictStats
 }
 
 interface IDictStats {
   exercisedChapterCount: number
+  learnedWords: number
+  masteredWords: number
+  dueWords: number
+  totalProgress: number
 }
 
 async function getDictStats(dict: string): Promise<IDictStats> {
@@ -33,5 +37,18 @@ async function getDictStats(dict: string): Promise<IDictStats> {
 
   const exercisedChapterCount = uniqueChapter.length
 
-  return { exercisedChapterCount }
+  const allProgress = await db.wordProgress.where('dict').equals(dict).toArray()
+  const learnedWords = allProgress.filter((p) => p.masteryLevel > MASTERY_LEVELS.NEW).length
+  const masteredWords = allProgress.filter((p) => p.masteryLevel >= MASTERY_LEVELS.MASTERED).length
+  const dueWords = allProgress.filter((p) => p.nextReviewTime <= Date.now() && p.masteryLevel < MASTERY_LEVELS.MASTERED).length
+
+  const totalProgress = allProgress.length > 0 ? Math.round((masteredWords / allProgress.length) * 100) : 0
+
+  return {
+    exercisedChapterCount,
+    learnedWords,
+    masteredWords,
+    dueWords,
+    totalProgress,
+  }
 }

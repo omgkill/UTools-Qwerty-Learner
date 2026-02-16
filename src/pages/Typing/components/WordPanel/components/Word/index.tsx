@@ -18,6 +18,7 @@ import {
 import type { Word } from '@/typings'
 import { getUtcStringForMixpanel, useMixPanelWordLogUploader } from '@/utils'
 import { useSaveWordRecord } from '@/utils/db'
+import { useDailyRecord, useWordProgress } from '@/utils/db/useProgress'
 import type { LetterMistakes } from '@/utils/db/record'
 import { useAtomValue } from 'jotai'
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
@@ -72,6 +73,8 @@ export default function WordComponent({ word, onFinish }: { word: Word; onFinish
   const pronunciationIsOpen = useAtomValue(pronunciationIsOpenAtom)
   const [isHoveringWord, setIsHoveringWord] = useState(false)
   const currentLanguage = useAtomValue(currentDictInfoAtom).language
+  const { updateWordProgress } = useWordProgress()
+  const { incrementReviewed, incrementLearned } = useDailyRecord()
 
   useEffect(() => {
     const prevWord = lastWordNameRef.current
@@ -227,9 +230,23 @@ export default function WordComponent({ word, onFinish }: { word: Word; onFinish
         letterMistake: wordState.letterMistake,
       })
 
+      const isCorrect = !wordState.hasMadeInputWrong
+      updateWordProgress(word.name, isCorrect, wordState.wrongCount)
+        .then((progress) => {
+          const isNewWord = progress.reps === 1
+          if (isNewWord) {
+            incrementLearned()
+          } else {
+            incrementReviewed()
+          }
+        })
+        .catch((e) => {
+          console.error('Failed to update word progress:', e)
+        })
+
       onFinish()
     }
-  }, [wordState.isFinished, wordState.hasMadeInputWrong, wordState.startTime, wordState.endTime, wordState.correctCount, wordState.wrongCount, wordState.letterTimeArray, wordState.letterMistake, word.name, dispatch, wordLogUploader, saveWordRecord, onFinish])
+  }, [wordState.isFinished, wordState.hasMadeInputWrong, wordState.startTime, wordState.endTime, wordState.correctCount, wordState.wrongCount, wordState.letterTimeArray, wordState.letterMistake, word.name, dispatch, wordLogUploader, saveWordRecord, updateWordProgress, incrementLearned, incrementReviewed, onFinish])
 
   useEffect(() => {
     if (wordState.wrongCount >= 4) {

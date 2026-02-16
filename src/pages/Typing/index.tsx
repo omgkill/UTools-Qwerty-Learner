@@ -7,14 +7,16 @@ import Switcher from './components/Switcher'
 import WordList from './components/WordList'
 import WordPanel from './components/WordPanel'
 import { useConfetti } from './hooks/useConfetti'
+import type { LearningType } from './hooks/useWordList'
 import { useWordList } from './hooks/useWordList'
 import { TypingContext, TypingStateActionType, initialState, typingReducer } from './store'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
-import { currentChapterAtom, currentWordBankIdAtom, currentWordBankAtom, wordBanksAtom, randomConfigAtom } from '@/store'
+import { currentWordBankIdAtom, currentWordBankAtom, wordBanksAtom, randomConfigAtom } from '@/store'
 import type { WordBank } from '@/typings'
 import { isLegal } from '@/utils'
 import { useSaveChapterRecord } from '@/utils/db'
+import { useWordProgress } from '@/utils/db/useProgress'
 import { useMixPanelChapterLogUploader } from '@/utils/mixpanel'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import mixpanel from 'mixpanel-browser'
@@ -25,19 +27,26 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { useImmerReducer } from 'use-immer'
 
+const LEARNING_TYPE_LABELS: Record<LearningType, { icon: string; label: string }> = {
+  review: { icon: '🔄', label: '复习' },
+  new: { icon: '📚', label: '新词' },
+  consolidate: { icon: '🔁', label: '巩固' },
+  complete: { icon: '✅', label: '完成' },
+}
+
 const App: React.FC = () => {
   const [state, dispatch] = useImmerReducer(typingReducer, structuredClone(initialState))
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isInitialized, setIsInitialized] = useState<boolean>(false)
-  const { words } = useWordList()
+  const { words, learningType, dueCount, todayLearned, todayReviewed, newWordQuota, remainingForTarget, hasReachedTarget } = useWordList()
 
-  const currentChapter = useAtomValue(currentChapterAtom)
   const [currentWordBankId, setCurrentWordBankId] = useAtom(currentWordBankIdAtom)
   const currentWordBank = useAtomValue(currentWordBankAtom)
   const wordBanks = useAtomValue(wordBanksAtom)
   const setWordBanks = useSetAtom(wordBanksAtom)
   const randomConfig = useAtomValue(randomConfigAtom)
   const navigate = useNavigate()
+  const { markAsMastered } = useWordProgress()
 
   console.log(`[Typing] isInitialized=${isInitialized}, currentWordBank=${currentWordBank?.name}, words=${words?.length}`)
 
@@ -100,6 +109,14 @@ const App: React.FC = () => {
     dispatch({ type: TypingStateActionType.SKIP_WORD })
   }, [dispatch])
 
+  const handleMastered = useCallback(async () => {
+    const currentWord = state.chapterData.words?.[state.chapterData.wordIndex]
+    if (currentWord) {
+      await markAsMastered(currentWord.name)
+      dispatch({ type: TypingStateActionType.SKIP_WORD })
+    }
+  }, [state.chapterData.words, state.chapterData.wordIndex, markAsMastered, dispatch])
+
   useEffect(() => {
     const onBlur = () => {
       dispatch({ type: TypingStateActionType.SET_IS_TYPING, payload: false })
@@ -148,6 +165,17 @@ const App: React.FC = () => {
     { preventDefault: true },
   )
 
+  useHotkeys(
+    'alt+m',
+    () => {
+      if (state.isShowSkip) {
+        handleMastered()
+      }
+    },
+    { preventDefault: true },
+    [state.isShowSkip, handleMastered],
+  )
+
   useEffect(() => {
     if (state.isFinished && !state.isSavingRecord) {
       chapterLogUploader()
@@ -190,6 +218,8 @@ const App: React.FC = () => {
 
   useConfetti(state.isFinished && !state.isImmersiveMode)
 
+  const typeInfo = LEARNING_TYPE_LABELS[learningType]
+
   if (!isInitialized || !currentWordBank) {
     return (
       <Layout>
@@ -210,27 +240,62 @@ const App: React.FC = () => {
         <Layout>
           {!state.isImmersiveMode && (
             <Header>
-              <Tooltip content="词库章节切换">
+              <Tooltip content="切换词库">
                 <NavLink
                   className="block rounded-lg px-3 py-1 text-lg transition-colors duration-300 ease-in-out hover:bg-indigo-400 hover:text-white focus:outline-none text-white text-opacity-60 hover:text-opacity-100"
                   to="/gallery"
                 >
-                  {currentWordBank.name} 第 {currentChapter + 1} 章
+                  {currentWordBank.name}
                 </NavLink>
               </Tooltip>
+              <div className="flex items-center gap-2 text-sm text-white/80">
+                <span className="rounded bg-white/20 px-2 py-0.5">
+                  {typeInfo.icon} {typeInfo.label}
+                </span>
+                {(todayLearned > 0 || todayReviewed > 0) && (
+                  <span className="rounded bg-white/20 px-2 py-0.5">
+                    今日 {todayLearned + todayReviewed} 词
+                  </span>
+                )}
+                {learningType === 'new' && newWordQuota > 0 && (
+                  <span className="rounded bg-green-500/30 px-2 py-0.5 text-green-200">
+                    新词配额 {newWordQuota}
+                  </span>
+                )}
+                {!hasReachedTarget && remainingForTarget > 0 && (
+                  <span className="rounded bg-white/10 px-2 py-0.5">
+                    距目标 {remainingForTarget} 词
+                  </span>
+                )}
+                {hasReachedTarget && (
+                  <span className="rounded bg-green-500/30 px-2 py-0.5 text-green-200">
+                    ✓ 今日目标达成
+                  </span>
+                )}
+              </div>
               <PronunciationSwitcher />
               <Switcher />
               <StartButton isLoading={isLoading} />
-              <Tooltip content="跳过该词 Alt + S">
-                <button
-                  className={`${
-                    state.isShowSkip ? 'bg-orange-400' : 'invisible w-0 bg-gray-300 px-0 opacity-0'
-                  } btn-primary transition-all duration-300 `}
-                  onClick={skipWord}
-                >
-                  Skip
-                </button>
-              </Tooltip>
+              {state.isShowSkip && (
+                <>
+                  <Tooltip content="跳过该词 Alt + S">
+                    <button
+                      className="bg-orange-400 btn-primary transition-all duration-300"
+                      onClick={skipWord}
+                    >
+                      Skip
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="标记已掌握 Alt + M">
+                    <button
+                      className="bg-green-500 btn-primary transition-all duration-300"
+                      onClick={handleMastered}
+                    >
+                      ✓ 掌握
+                    </button>
+                  </Tooltip>
+                </>
+              )}
             </Header>
           )}
           <div className="container mx-auto flex h-full flex-1 flex-col items-center justify-center pb-4">

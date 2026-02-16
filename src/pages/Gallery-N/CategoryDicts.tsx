@@ -1,17 +1,18 @@
 import DictTagSwitcher from './DictTagSwitcher'
 import DictionaryComponent from './DictionaryWithoutCover'
-import { GalleryContext } from './index'
-import { currentWordBankAtom } from '@/store'
+import { currentWordBankAtom, currentWordBankIdAtom } from '@/store'
 import type { WordBank } from '@/typings'
 import { findCommonValues } from '@/utils'
-import { useAtomValue } from 'jotai'
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { useAtom, useAtomValue } from 'jotai'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 export default function DictionaryGroup({ groupedDictsByTag }: { groupedDictsByTag: Record<string, WordBank[]> }) {
-  const { setState } = useContext(GalleryContext)!
   const tagList = useMemo(() => Object.keys(groupedDictsByTag), [groupedDictsByTag])
   const [currentTag, setCurrentTag] = useState(tagList[0])
   const currentWordBank = useAtomValue(currentWordBankAtom)
+  const [, setCurrentWordBankId] = useAtom(currentWordBankIdAtom)
+  const navigate = useNavigate()
 
   const onChangeCurrentTag = useCallback((tag: string) => {
     setCurrentTag(tag)
@@ -19,11 +20,10 @@ export default function DictionaryGroup({ groupedDictsByTag }: { groupedDictsByT
 
   const onClickWordBank = useCallback(
     (wordBank: WordBank) => {
-      setState((state) => {
-        state.chapterListWordBank = wordBank
-      })
+      setCurrentWordBankId(wordBank.id)
+      navigate('/')
     },
-    [setState],
+    [setCurrentWordBankId, navigate],
   )
 
   useEffect(() => {

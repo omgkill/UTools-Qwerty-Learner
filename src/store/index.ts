@@ -6,6 +6,7 @@ import type {
   PhoneticType,
   PronunciationType,
 } from '@/typings'
+import type { IDailyRecord } from '@/utils/db/progress'
 import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 
@@ -24,7 +25,7 @@ export const currentWordBankAtom = atom<WordBank | null>((get) => {
   return map[id] || null
 })
 
-export const currentChapterAtom = atomWithStorage('currentChapter', 0)
+export const dailyRecordAtom = atom<IDailyRecord | null>(null)
 
 export const dictionariesAtom = wordBanksAtom
 export const idDictionaryMapAtom = idWordBankMapAtom
@@ -63,6 +64,8 @@ export const phoneticConfigAtom = atomForConfig('phoneticConfig', {
 
 export const isShowSkipAtom = atom(false)
 
+export const isShowMasteredAtom = atom(false)
+
 export const isInDevModeAtom = atom(false)
 
 export const infoPanelStateAtom = atom<InfoPanelState>({
@@ -77,3 +80,5 @@ export const wordDictationConfigAtom = atomForConfig('wordDictationConfig', {
 })
 
 export const dismissStartCardDateAtom = atomWithStorage<Date | null>(DISMISS_START_CARD_DATE_KEY, null)
+
+export const shouldShowProgressAtom = atomWithStorage('shouldShowProgress', true)

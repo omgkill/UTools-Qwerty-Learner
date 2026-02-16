@@ -106,9 +106,14 @@ type Dispatch = (action: TypingStateAction) => void
 
 export const typingReducer = (state: TypingState, action: TypingStateAction) => {
   switch (action.type) {
-    case TypingStateActionType.SETUP_CHAPTER:
-      state.chapterData.words = action.payload.shouldShuffle ? shuffle(action.payload.words) : action.payload.words
-      break
+    case TypingStateActionType.SETUP_CHAPTER: {
+      const newState = structuredClone(initialState)
+      newState.chapterData.words = action.payload.shouldShuffle ? shuffle(action.payload.words) : action.payload.words
+      newState.isTyping = true
+      newState.isTransVisible = state.isTransVisible
+      newState.isImmersiveMode = state.isImmersiveMode
+      return newState
+    }
     case TypingStateActionType.SET_IS_SKIP:
       state.isShowSkip = action.payload
       break

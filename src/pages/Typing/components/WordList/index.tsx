@@ -1,25 +1,20 @@
 import { TypingContext, TypingStateActionType } from '../../store'
 import WordCard from './WordCard'
 import Drawer from '@/components/Drawer'
-import Tooltip from '@/components/Tooltip'
-import { currentChapterAtom, currentDictInfoAtom } from '@/store'
+import { currentDictInfoAtom } from '@/store'
 import { Dialog } from '@headlessui/react'
 import * as ScrollArea from '@radix-ui/react-scroll-area'
-import { atom, useAtomValue } from 'jotai'
+import { useAtomValue } from 'jotai'
 import { useContext, useState } from 'react'
 import ListIcon from '~icons/tabler/list'
 import IconX from '~icons/tabler/x'
-
-const currentDictTitle = atom((get) => {
-  return `${get(currentDictInfoAtom).name} 第 ${get(currentChapterAtom) + 1} 章`
-})
 
 export default function WordList() {
   // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
   const { state, dispatch } = useContext(TypingContext)!
 
   const [isOpen, setIsOpen] = useState(false)
-  const currentDictTitleValue = useAtomValue(currentDictTitle)
+  const currentDictInfo = useAtomValue(currentDictInfoAtom)
 
   function closeModal() {
     setIsOpen(false)
@@ -42,7 +37,7 @@ export default function WordList() {
 
       <Drawer open={isOpen} onClose={closeModal} classNames="bg-stone-50 dark:bg-gray-900">
         <Dialog.Title as="h3" className="flex items-center justify-between p-4 text-lg font-medium leading-6 dark:text-gray-50">
-          {currentDictTitleValue}
+          {currentDictInfo?.name}
           <IconX onClick={closeModal} className="cursor-pointer" />
         </Dialog.Title>
         <ScrollArea.Root className="flex-1 select-none overflow-y-auto ">
