@@ -36,6 +36,16 @@ const WordSound = ({ word, inputWord, ...rest }: WordSoundProps) => {
   )
 
   const hasPlayedRef = useRef(false)
+  const lastWordRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (lastWordRef.current !== word) {
+      lastWordRef.current = word
+      hasPlayedRef.current = false
+    }
+    return () => stopRef.current()
+  }, [word])
+
   useEffect(() => {
     if (inputWord.length === 0 && state.isTyping) {
       if (!hasPlayedRef.current) {
@@ -47,11 +57,6 @@ const WordSound = ({ word, inputWord, ...rest }: WordSoundProps) => {
       hasPlayedRef.current = false
     }
   }, [inputWord, state.isTyping, word])
-
-  useEffect(() => {
-    hasPlayedRef.current = false
-    return () => stopRef.current()
-  }, [word])
 
   const handleClickSoundIcon = useCallback(() => {
     stop()

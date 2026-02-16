@@ -70,7 +70,7 @@ export default function WordPanel() {
   }, [requestWordMeaning, state.chapterData.index])
 
   return (
-    <div className="container flex h-full w-full flex-col items-center justify-center">
+    <div className="container flex w-full flex-col items-center justify-center">
       {!state.isImmersiveMode && (
         <div className="container flex h-24 w-full shrink-0 grow-0 justify-between px-12 pt-10">
           {isShowPrevAndNextWord && state.isTyping && (
@@ -81,7 +81,7 @@ export default function WordPanel() {
           )}
         </div>
       )}
-      <div className="container flex flex-grow flex-col items-center justify-center">
+      <div className="container flex flex-col items-center justify-center">
         {currentWord && (
           <div className="relative flex w-full justify-center">
             {!state.isTyping && (

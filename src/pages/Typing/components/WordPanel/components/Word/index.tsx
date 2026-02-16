@@ -24,6 +24,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useImmer } from 'use-immer'
 
 type WordState = {
+  wordName: string
   displayWord: string
   inputWord: string
   letterStates: LetterState[]
@@ -40,6 +41,7 @@ type WordState = {
 }
 
 const initialWordState: WordState = {
+  wordName: '',
   displayWord: '',
   inputWord: '',
   letterStates: [],
@@ -59,6 +61,7 @@ export default function WordComponent({ word, onFinish }: { word: Word; onFinish
   const { state, dispatch } = useContext(TypingContext)!
   const [wordState, setWordState] = useImmer<WordState>(structuredClone(initialWordState))
   const onFinishCalledRef = useRef(false)
+  const lastWordNameRef = useRef<string | null>(null)
 
   const wordDictationConfig = useAtomValue(wordDictationConfigAtom)
   const isTextSelectable = useAtomValue(isTextSelectableAtom)
@@ -71,16 +74,20 @@ export default function WordComponent({ word, onFinish }: { word: Word; onFinish
   const currentLanguage = useAtomValue(currentDictInfoAtom).language
 
   useEffect(() => {
+    const prevWord = lastWordNameRef.current
+    if (prevWord === word.name) return
+    lastWordNameRef.current = word.name
     let headword = word.name.replace(new RegExp(' ', 'g'), EXPLICIT_SPACE)
     headword = headword.replace(new RegExp('…', 'g'), '..')
 
     const newWordState = structuredClone(initialWordState)
+    newWordState.wordName = word.name
     newWordState.displayWord = headword
     newWordState.letterStates = new Array(headword.length).fill('normal')
     newWordState.startTime = getUtcStringForMixpanel()
     setWordState(newWordState)
     onFinishCalledRef.current = false
-  }, [word, setWordState])
+  }, [word.name, setWordState])
 
   const updateInput = useCallback(
     (updateAction: WordUpdateAction) => {
@@ -194,6 +201,9 @@ export default function WordComponent({ word, onFinish }: { word: Word; onFinish
   useEffect(() => {
     if (wordState.isFinished) {
       if (onFinishCalledRef.current) return
+      if (wordState.wordName !== word.name) {
+        return
+      }
       onFinishCalledRef.current = true
 
       if (!wordState.hasMadeInputWrong) {

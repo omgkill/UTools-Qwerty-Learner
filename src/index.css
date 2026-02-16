@@ -10,6 +10,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   @apply bg-gray-900 transition-colors duration-300;
   user-select: none;
+  overflow: hidden;
 }
 
 code {
@@ -20,6 +21,12 @@ html,
 body,
 :global(#root) {
   height: 100%;
+}
+
+html,
+body {
+  width: 100%;
+  overflow: hidden;
 }
 
 .card {
