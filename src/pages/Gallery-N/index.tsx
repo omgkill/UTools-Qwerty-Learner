@@ -13,12 +13,19 @@ import IconX from '~icons/tabler/x'
 
 export const InnerContext = createContext<() => void>(() => {})
 
+type GalleryState = {
+  vipState: string
+}
+
+export const GalleryContext = createContext<{ state: GalleryState }>({ state: { vipState: '' } })
+
 export default function GalleryPage() {
   const navigate = useNavigate()
   const wordBanks = useAtomValue(wordBanksAtom)
   const setWordBanks = useSetAtom(wordBanksAtom)
 
   const [refreshCount, setPageRefresh] = useState(0)
+  const [galleryState, setGalleryState] = useState<GalleryState>({ vipState: localStorage.getItem('x-vipState') || '' })
 
   const loadWordBanks = useCallback(() => {
     const config = window.readLocalWordBankConfig()
@@ -65,32 +72,34 @@ export default function GalleryPage() {
 
   return (
     <Layout>
-      <div className="relative mb-auto mt-auto flex w-full flex-1 flex-col overflow-y-auto pl-20 ">
-        <IconX className="absolute right-20 top-10 mr-2 h-7 w-7 cursor-pointer text-gray-400" onClick={onBack} />
-        <div className="mt-20 flex w-full flex-1 flex-col items-center justify-center overflow-y-auto">
-          <div className="flex w-full flex-1 flex-col overflow-y-auto">
-            <div className="flex h-20 w-full items-center justify-between pb-6">
-              <h1 className="text-2xl font-bold text-gray-200">自定义词库</h1>
+      <GalleryContext.Provider value={{ state: galleryState }}>
+        <div className="relative mb-auto mt-auto flex w-full flex-1 flex-col overflow-y-auto pl-20 ">
+          <IconX className="absolute right-20 top-10 mr-2 h-7 w-7 cursor-pointer text-gray-400" onClick={onBack} />
+          <div className="mt-20 flex w-full flex-1 flex-col items-center justify-center overflow-y-auto">
+            <div className="flex w-full flex-1 flex-col overflow-y-auto">
+              <div className="flex h-20 w-full items-center justify-between pb-6">
+                <h1 className="text-2xl font-bold text-gray-200">自定义词库</h1>
+              </div>
+              <InnerContext.Provider value={refreshPage}>
+                <ScrollArea.Root className="flex-1 overflow-y-auto ">
+                  <ScrollArea.Viewport className="h-full w-full pb-[20rem]">
+                    <div className="mr-4 flex flex-1 flex-col items-start justify-start gap-14 overflow-y-auto">
+                      {groupedByCategoryAndTag.map(([category, groupeByTag]) => (
+                        <DictionaryGroup key={category} groupedDictsByTag={groupeByTag} />
+                      ))}
+                    </div>
+                  </ScrollArea.Viewport>
+                  <ScrollArea.Scrollbar
+                    className="flex touch-none select-none bg-transparent "
+                    orientation="vertical"
+                  ></ScrollArea.Scrollbar>
+                </ScrollArea.Root>
+              </InnerContext.Provider>
             </div>
-            <InnerContext.Provider value={refreshPage}>
-              <ScrollArea.Root className="flex-1 overflow-y-auto ">
-                <ScrollArea.Viewport className="h-full w-full pb-[20rem]">
-                  <div className="mr-4 flex flex-1 flex-col items-start justify-start gap-14 overflow-y-auto">
-                    {groupedByCategoryAndTag.map(([category, groupeByTag]) => (
-                      <DictionaryGroup key={category} groupedDictsByTag={groupeByTag} />
-                    ))}
-                  </div>
-                </ScrollArea.Viewport>
-                <ScrollArea.Scrollbar
-                  className="flex touch-none select-none bg-transparent "
-                  orientation="vertical"
-                ></ScrollArea.Scrollbar>
-              </ScrollArea.Root>
-            </InnerContext.Provider>
           </div>
+          <Form4AddDict onSaveDictSuccess={refreshPage} />
         </div>
-        <Form4AddDict onSaveDictSuccess={refreshPage} />
-      </div>
+      </GalleryContext.Provider>
     </Layout>
   )
 }

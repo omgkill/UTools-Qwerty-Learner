@@ -21,7 +21,7 @@ import { useMixPanelChapterLogUploader } from '@/utils/mixpanel'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import mixpanel from 'mixpanel-browser'
 import type React from 'react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -39,7 +39,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isInitialized, setIsInitialized] = useState<boolean>(false)
   const { words, learningType, dueCount, todayLearned, todayReviewed, newWordQuota, remainingForTarget, hasReachedTarget } = useWordList()
-
+  const wordsRef = useRef<typeof words>(undefined)
   const [currentWordBankId, setCurrentWordBankId] = useAtom(currentWordBankIdAtom)
   const currentWordBank = useAtomValue(currentWordBankAtom)
   const wordBanks = useAtomValue(wordBanksAtom)
@@ -47,8 +47,6 @@ const App: React.FC = () => {
   const randomConfig = useAtomValue(randomConfigAtom)
   const navigate = useNavigate()
   const { markAsMastered } = useWordProgress()
-
-  console.log(`[Typing] isInitialized=${isInitialized}, currentWordBank=${currentWordBank?.name}, words=${words?.length}`)
 
   const chapterLogUploader = useMixPanelChapterLogUploader(state)
   const saveChapterRecord = useSaveChapterRecord()
@@ -110,12 +108,12 @@ const App: React.FC = () => {
   }, [dispatch])
 
   const handleMastered = useCallback(async () => {
-    const currentWord = state.chapterData.words?.[state.chapterData.wordIndex]
+    const currentWord = state.chapterData.words?.[state.chapterData.index]
     if (currentWord) {
       await markAsMastered(currentWord.name)
       dispatch({ type: TypingStateActionType.SKIP_WORD })
     }
-  }, [state.chapterData.words, state.chapterData.wordIndex, markAsMastered, dispatch])
+  }, [state.chapterData.words, state.chapterData.index, markAsMastered, dispatch])
 
   useEffect(() => {
     const onBlur = () => {
@@ -129,8 +127,12 @@ const App: React.FC = () => {
   }, [dispatch])
 
   useEffect(() => {
-    state.chapterData.words?.length > 0 ? setIsLoading(false) : setIsLoading(true)
-  }, [state.chapterData.words])
+    if (learningType === 'complete') {
+      setIsLoading(false)
+    } else {
+      state.chapterData.words?.length > 0 ? setIsLoading(false) : setIsLoading(true)
+    }
+  }, [state.chapterData.words, learningType])
 
   useEffect(() => {
     if (!state.isTyping) {
@@ -147,13 +149,14 @@ const App: React.FC = () => {
   }, [state.isTyping, isLoading, dispatch])
 
   useEffect(() => {
-    if (words !== undefined) {
+    if (words !== undefined && words !== wordsRef.current) {
+      wordsRef.current = words
       dispatch({
         type: TypingStateActionType.SETUP_CHAPTER,
         payload: { words, shouldShuffle: randomConfig.isOpen },
       })
     }
-  }, [words])
+  }, [words, randomConfig.isOpen, dispatch])
 
   useHotkeys(
     'alt+s',
@@ -307,6 +310,16 @@ const App: React.FC = () => {
                       className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid  border-indigo-400 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
                       role="status"
                     ></div>
+                  </div>
+                ) : learningType === 'complete' ? (
+                  <div className="flex flex-col items-center justify-center space-y-6">
+                    <div className="text-6xl">🎉</div>
+                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">今日目标达成！</h2>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      今日学习 <span className="font-bold text-indigo-600 dark:text-indigo-400">{todayLearned + todayReviewed}</span> 个单词
+                      （新词 <span className="font-bold">{todayLearned}</span> 个，复习 <span className="font-bold">{todayReviewed}</span> 个）
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-500">明天继续加油！</p>
                   </div>
                 ) : (
                   !state.isFinished && <WordPanel />

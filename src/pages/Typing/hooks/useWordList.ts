@@ -1,11 +1,13 @@
-import { currentWordBankAtom } from '@/store'
+import { currentWordBankAtom, dailyRecordAtom } from '@/store'
 import type { Word, WordWithIndex } from '@/typings/index'
+import { LEARNING_CONFIG } from '@/utils/db/progress'
 import { useDailyRecord, useReviewWords, useWordProgress } from '@/utils/db/useProgress'
 import { useAtomValue } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import useSWR from 'swr'
+import { determineLearningType, type LearningType } from './learningLogic'
 
-export type LearningType = 'review' | 'new' | 'consolidate' | 'complete'
+export type { LearningType }
 
 export type UseWordListResult = {
   words: WordWithIndex[] | undefined
@@ -24,6 +26,11 @@ export type UseWordListResult = {
 
 export function useWordList(): UseWordListResult {
   const currentWordBank = useAtomValue(currentWordBankAtom)
+  const dailyRecord = useAtomValue(dailyRecordAtom)
+  const dailyRecordRef = useRef(dailyRecord)
+  dailyRecordRef.current = dailyRecord
+
+  const { refreshDailyRecord } = useDailyRecord()
 
   const [learningType, setLearningType] = useState<LearningType>('review')
   const [dueCount, setDueCount] = useState(0)
@@ -48,15 +55,31 @@ export function useWordList(): UseWordListResult {
 
   const { getDueWordsWithInfo, getNewWords } = useReviewWords()
   const { getWordProgress } = useWordProgress()
-  const {
-    dailyRecord,
-    getNewWordQuota,
-    getRemainingForTarget,
-    hasReachedTarget,
-  } = useDailyRecord()
+
+  useEffect(() => {
+    refreshDailyRecord()
+  }, [refreshDailyRecord])
 
   const todayLearned = dailyRecord?.learnedCount ?? 0
   const todayReviewed = dailyRecord?.reviewedCount ?? 0
+
+  const newWordQuota = useMemo(() => {
+    if (!dailyRecord) return LEARNING_CONFIG.BASE_QUOTA
+    const { BASE_QUOTA, REVIEW_TO_NEW_RATIO, DAILY_NEW_WORD_LIMIT } = LEARNING_CONFIG
+    const bonusQuota = Math.floor(dailyRecord.reviewedCount / REVIEW_TO_NEW_RATIO)
+    const totalQuota = Math.min(BASE_QUOTA + bonusQuota, DAILY_NEW_WORD_LIMIT)
+    return Math.max(0, totalQuota - dailyRecord.learnedCount)
+  }, [dailyRecord])
+
+  const remainingForTarget = useMemo(() => {
+    if (!dailyRecord) return LEARNING_CONFIG.DAILY_MIN_TARGET
+    return Math.max(0, LEARNING_CONFIG.DAILY_MIN_TARGET - dailyRecord.reviewedCount - dailyRecord.learnedCount)
+  }, [dailyRecord])
+
+  const hasReachedTarget = useMemo(() => {
+    if (!dailyRecord) return false
+    return dailyRecord.reviewedCount + dailyRecord.learnedCount >= LEARNING_CONFIG.DAILY_MIN_TARGET
+  }, [dailyRecord])
 
   const loadLearningWords = useCallback(async () => {
     if (!wordList || wordList.length === 0 || !currentWordBank) {
@@ -82,30 +105,21 @@ export function useWordList(): UseWordListResult {
       setNewCount(newWords.length)
       setMasteredCount(mastered)
 
-      if (dueWords.length > 0) {
-        setLearningType('review')
-        setLearningWords(dueWords)
-      } else {
-        const quota = getNewWordQuota()
-        if (quota > 0 && newWords.length > 0) {
-          setLearningType('new')
-          const wordsToLearn = newWords.slice(0, quota)
-          setLearningWords(wordsToLearn)
-        } else if (hasReachedTarget()) {
-          setLearningType('complete')
-          setLearningWords([])
-        } else {
-          setLearningType('consolidate')
-          const learnedWords = wordList
-            .map((word, index) => ({ ...word, index }))
-            .filter((word) => {
-              const progress = allProgress.find((p) => p?.word === word.name)
-              return progress && progress.masteryLevel > 0 && progress.masteryLevel < 7
-            })
-          const shuffled = learnedWords.sort(() => Math.random() - 0.5)
-          setLearningWords(shuffled.slice(0, getRemainingForTarget()))
-        }
-      }
+      const record = dailyRecordRef.current
+      const reviewedCount = record?.reviewedCount ?? 0
+      const learnedCount = record?.learnedCount ?? 0
+
+      const result = determineLearningType({
+        dueWords,
+        newWords,
+        reviewedCount,
+        learnedCount,
+        allProgress,
+        wordList,
+      })
+
+      setLearningType(result.learningType)
+      setLearningWords(result.learningWords)
     } catch (e) {
       console.error('Failed to load learning words:', e)
       setLearningWords([])
@@ -118,18 +132,21 @@ export function useWordList(): UseWordListResult {
     getDueWordsWithInfo,
     getNewWords,
     getWordProgress,
-    getNewWordQuota,
-    hasReachedTarget,
-    getRemainingForTarget,
   ])
+
+  const reloadWords = useCallback(() => {
+    setLoadVersion((v) => v + 1)
+  }, [])
 
   useEffect(() => {
     loadLearningWords()
   }, [loadLearningWords, loadVersion])
 
-  const reloadWords = useCallback(() => {
-    setLoadVersion((v) => v + 1)
-  }, [])
+  useEffect(() => {
+    if (dailyRecord) {
+      reloadWords()
+    }
+  }, [dailyRecord, reloadWords])
 
   useEffect(() => {
     if (
@@ -157,9 +174,9 @@ export function useWordList(): UseWordListResult {
     masteredCount,
     todayLearned,
     todayReviewed,
-    newWordQuota: getNewWordQuota(),
-    remainingForTarget: getRemainingForTarget(),
-    hasReachedTarget: hasReachedTarget(),
+    newWordQuota,
+    remainingForTarget,
+    hasReachedTarget,
   }
 }
 

@@ -3,7 +3,7 @@ import { DailyRecord, DictProgress, getNextReviewTime, getTodayDate, LEARNING_CO
 import type { Word, WordWithIndex } from '@/typings'
 import { currentDictIdAtom, dailyRecordAtom } from '@/store'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { db } from './index'
 
 export function useWordProgress() {
@@ -206,7 +206,7 @@ export function useReviewWords() {
       return db.wordProgress
         .where('dict')
         .equals(dictID)
-        .and((p) => p.nextReviewTime <= now && p.masteryLevel < MASTERY_LEVELS.MASTERED)
+        .and((p) => p.nextReviewTime <= now && p.masteryLevel > MASTERY_LEVELS.NEW && p.masteryLevel < MASTERY_LEVELS.MASTERED)
         .limit(limit)
         .toArray()
     },

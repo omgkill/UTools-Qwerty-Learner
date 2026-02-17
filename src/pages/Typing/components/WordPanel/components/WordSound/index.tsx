@@ -42,19 +42,20 @@ const WordSound = ({ word, inputWord, ...rest }: WordSoundProps) => {
     if (lastWordRef.current !== word) {
       lastWordRef.current = word
       hasPlayedRef.current = false
+      stopRef.current()
     }
-    return () => stopRef.current()
   }, [word])
 
   useEffect(() => {
-    if (inputWord.length === 0 && state.isTyping) {
-      if (!hasPlayedRef.current) {
-        hasPlayedRef.current = true
-        stopRef.current()
-        playRef.current()
-      }
-    } else {
+    if (!state.isTyping) {
       hasPlayedRef.current = false
+      return
+    }
+    
+    if (inputWord.length === 0 && !hasPlayedRef.current) {
+      hasPlayedRef.current = true
+      stopRef.current()
+      playRef.current()
     }
   }, [inputWord, state.isTyping, word])
 
