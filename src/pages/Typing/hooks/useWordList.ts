@@ -64,22 +64,16 @@ export function useWordList(): UseWordListResult {
   const todayReviewed = dailyRecord?.reviewedCount ?? 0
 
   const newWordQuota = useMemo(() => {
-    if (!dailyRecord) return LEARNING_CONFIG.BASE_QUOTA
-    const { BASE_QUOTA, REVIEW_TO_NEW_RATIO, DAILY_NEW_WORD_LIMIT } = LEARNING_CONFIG
-    const bonusQuota = Math.floor(dailyRecord.reviewedCount / REVIEW_TO_NEW_RATIO)
-    const totalQuota = Math.min(BASE_QUOTA + bonusQuota, DAILY_NEW_WORD_LIMIT)
-    return Math.max(0, totalQuota - dailyRecord.learnedCount)
-  }, [dailyRecord])
+    return Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - todayReviewed - todayLearned)
+  }, [todayReviewed, todayLearned])
 
   const remainingForTarget = useMemo(() => {
-    if (!dailyRecord) return LEARNING_CONFIG.DAILY_MIN_TARGET
-    return Math.max(0, LEARNING_CONFIG.DAILY_MIN_TARGET - dailyRecord.reviewedCount - dailyRecord.learnedCount)
-  }, [dailyRecord])
+    return Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - todayReviewed - todayLearned)
+  }, [todayReviewed, todayLearned])
 
   const hasReachedTarget = useMemo(() => {
-    if (!dailyRecord) return false
-    return dailyRecord.reviewedCount + dailyRecord.learnedCount >= LEARNING_CONFIG.DAILY_MIN_TARGET
-  }, [dailyRecord])
+    return todayReviewed + todayLearned >= LEARNING_CONFIG.DAILY_LIMIT
+  }, [todayReviewed, todayLearned])
 
   const loadLearningWords = useCallback(async () => {
     if (!wordList || wordList.length === 0 || !currentWordBank) {
