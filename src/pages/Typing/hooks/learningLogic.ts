@@ -1,0 +1,85 @@
+import { LEARNING_CONFIG } from '@/utils/db/progress'
+import type { IWordProgress } from '@/utils/db/progress'
+import type { Word, WordWithIndex } from '@/typings'
+
+export type LearningType = 'review' | 'new' | 'consolidate' | 'complete'
+
+export type LearningState = {
+  reviewedCount: number
+  learnedCount: number
+}
+
+export type WordProgressInfo = {
+  word: string
+  masteryLevel: number
+  nextReviewTime: number
+}
+
+export type DetermineLearningTypeParams = {
+  dueWords: WordWithIndex[]
+  newWords: WordWithIndex[]
+  reviewedCount: number
+  learnedCount: number
+  allProgress: (IWordProgress | undefined)[]
+  wordList: Word[]
+}
+
+export type DetermineLearningTypeResult = {
+  learningType: LearningType
+  learningWords: WordWithIndex[]
+}
+
+export function determineLearningType(params: DetermineLearningTypeParams): DetermineLearningTypeResult {
+  const { dueWords, newWords, reviewedCount, learnedCount, allProgress, wordList } = params
+
+  if (dueWords.length > 0) {
+    return {
+      learningType: 'review',
+      learningWords: dueWords,
+    }
+  }
+
+  const quota = Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
+
+  if (quota > 0 && newWords.length > 0) {
+    const wordsToLearn = newWords.slice(0, quota)
+    return {
+      learningType: 'new',
+      learningWords: wordsToLearn,
+    }
+  }
+
+  if (reviewedCount + learnedCount >= LEARNING_CONFIG.DAILY_LIMIT) {
+    return {
+      learningType: 'complete',
+      learningWords: [],
+    }
+  }
+
+  const learnedWords = wordList
+    .map((word, index) => ({ ...word, index }))
+    .filter((word) => {
+      const progress = allProgress.find((p) => p?.word === word.name)
+      return progress && progress.masteryLevel > 0 && progress.masteryLevel < 7
+    })
+
+  const shuffled = [...learnedWords].sort(() => Math.random() - 0.5)
+  const remaining = Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
+
+  return {
+    learningType: 'consolidate',
+    learningWords: shuffled.slice(0, remaining),
+  }
+}
+
+export function calculateNewWordQuota(reviewedCount: number, learnedCount: number): number {
+  return Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
+}
+
+export function calculateRemainingForTarget(reviewedCount: number, learnedCount: number): number {
+  return Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
+}
+
+export function hasReachedDailyTarget(reviewedCount: number, learnedCount: number): boolean {
+  return reviewedCount + learnedCount >= LEARNING_CONFIG.DAILY_LIMIT
+}

@@ -25,10 +25,7 @@ export const MASTERY_LEVELS = {
 export type MasteryLevel = (typeof MASTERY_LEVELS)[keyof typeof MASTERY_LEVELS]
 
 export const LEARNING_CONFIG = {
-  BASE_QUOTA: 5,
-  REVIEW_TO_NEW_RATIO: 3,
-  DAILY_NEW_WORD_LIMIT: 20,
-  DAILY_MIN_TARGET: 20,
+  DAILY_LIMIT: 20,
 } as const
 
 export interface IWordProgress {
@@ -156,18 +153,15 @@ export class DailyRecord implements IDailyRecord {
   }
 
   getNewWordQuota(): number {
-    const { BASE_QUOTA, REVIEW_TO_NEW_RATIO, DAILY_NEW_WORD_LIMIT } = LEARNING_CONFIG
-    const bonusQuota = Math.floor(this.reviewedCount / REVIEW_TO_NEW_RATIO)
-    const totalQuota = Math.min(BASE_QUOTA + bonusQuota, DAILY_NEW_WORD_LIMIT)
-    return Math.max(0, totalQuota - this.learnedCount)
+    return Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - this.reviewedCount - this.learnedCount)
   }
 
   get remainingForTarget(): number {
-    return Math.max(0, LEARNING_CONFIG.DAILY_MIN_TARGET - this.totalToday)
+    return Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - this.totalToday)
   }
 
   get hasReachedTarget(): boolean {
-    return this.totalToday >= LEARNING_CONFIG.DAILY_MIN_TARGET
+    return this.totalToday >= LEARNING_CONFIG.DAILY_LIMIT
   }
 }
 
