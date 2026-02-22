@@ -14,21 +14,22 @@ import 'react-toastify/dist/ReactToastify.css'
 const AnalysisPage = lazy(() => import('./pages/Analysis'))
 const GalleryPage = lazy(() => import('./pages/Gallery-N'))
 
+const disabledMixpanelTrack: typeof mixpanel.track = (..._args: Parameters<typeof mixpanel.track>) => undefined
+const mixpanelMutable = mixpanel as unknown as { track: typeof mixpanel.track }
+
 if (import.meta.env.DEV || window.utools.isDev()) {
   const devKey = import.meta.env.VITE_MIXPANEL_KEY_DEV
   if (devKey) {
     mixpanel.init(devKey, { debug: true })
   } else {
-    // @ts-ignore
-    mixpanel.track = () => {}
+    mixpanelMutable.track = disabledMixpanelTrack
   }
 } else {
   const devKey = import.meta.env.VITE_MIXPANEL_KEY_DEV
   if (devKey) {
     mixpanel.init(devKey, { debug: true })
   } else {
-    // @ts-ignore
-    mixpanel.track = () => {}
+    mixpanelMutable.track = disabledMixpanelTrack
   }
 }
 

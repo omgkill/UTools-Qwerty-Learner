@@ -10,7 +10,6 @@ import ListIcon from '~icons/tabler/list'
 import IconX from '~icons/tabler/x'
 
 export default function WordList() {
-  // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
   const { state, dispatch } = useContext(TypingContext)!
 
   const [isOpen, setIsOpen] = useState(false)
@@ -43,8 +42,8 @@ export default function WordList() {
         <ScrollArea.Root className="flex-1 select-none overflow-y-auto ">
           <ScrollArea.Viewport className="h-full w-full px-3">
             <div className="flex h-full w-full flex-col gap-1">
-              {state.chapterData.words?.map((word, index) => {
-                return <WordCard word={word} key={`${word.name}_${index}`} isActive={state.chapterData.index === index} />
+              {state.wordListData.words?.map((word, index) => {
+                return <WordCard word={word} key={`${word.name}_${index}`} isActive={state.wordListData.index === index} />
               })}
             </div>
           </ScrollArea.Viewport>

@@ -1,12 +1,11 @@
 import atomForConfig from './atomForConfig'
 import { DISMISS_START_CARD_DATE_KEY } from '@/constants'
 import type {
-  WordBank,
   InfoPanelState,
   PhoneticType,
   PronunciationType,
+  WordBank,
 } from '@/typings'
-import type { IDailyRecord } from '@/utils/db/progress'
 import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 
@@ -24,8 +23,6 @@ export const currentWordBankAtom = atom<WordBank | null>((get) => {
   const map = get(idWordBankMapAtom)
   return map[id] || null
 })
-
-export const dailyRecordAtom = atom<IDailyRecord | null>(null)
 
 export const dictionariesAtom = wordBanksAtom
 export const idDictionaryMapAtom = idWordBankMapAtom
@@ -62,10 +59,6 @@ export const phoneticConfigAtom = atomForConfig('phoneticConfig', {
   type: 'uk' as PhoneticType,
 })
 
-export const isShowSkipAtom = atom(false)
-
-export const isShowMasteredAtom = atom(false)
-
 export const isInDevModeAtom = atom(false)
 
 export const infoPanelStateAtom = atom<InfoPanelState>({
@@ -77,6 +70,10 @@ export const infoPanelStateAtom = atom<InfoPanelState>({
 
 export const wordDictationConfigAtom = atomForConfig('wordDictationConfig', {
   isOpen: false,
+})
+
+export const dailyLimitConfigAtom = atomForConfig('dailyLimitConfig', {
+  dailyLimit: 20,
 })
 
 export const dismissStartCardDateAtom = atomWithStorage<Date | null>(DISMISS_START_CARD_DATE_KEY, null)

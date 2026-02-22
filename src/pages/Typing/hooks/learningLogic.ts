@@ -22,37 +22,54 @@ export type DetermineLearningTypeParams = {
   learnedCount: number
   allProgress: (IWordProgress | undefined)[]
   wordList: Word[]
+  isExtraReview?: boolean
 }
 
 export type DetermineLearningTypeResult = {
   learningType: LearningType
   learningWords: WordWithIndex[]
+  hasMoreDueWords?: boolean
+  remainingDueCount?: number
 }
 
 export function determineLearningType(params: DetermineLearningTypeParams): DetermineLearningTypeResult {
-  const { dueWords, newWords, reviewedCount, learnedCount, allProgress, wordList } = params
+  const { dueWords, newWords, reviewedCount, learnedCount, allProgress, wordList, isExtraReview = false } = params
 
-  if (dueWords.length > 0) {
+  const remaining = Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
+
+  if (!isExtraReview && reviewedCount + learnedCount >= LEARNING_CONFIG.DAILY_LIMIT) {
+    if (dueWords.length > 0) {
+      return {
+        learningType: 'complete',
+        learningWords: [],
+        hasMoreDueWords: true,
+        remainingDueCount: dueWords.length,
+      }
+    }
     return {
-      learningType: 'review',
-      learningWords: dueWords,
+      learningType: 'complete',
+      learningWords: [],
     }
   }
 
-  const quota = Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
+  if (dueWords.length > 0) {
+    const wordsToReturn = isExtraReview ? dueWords : dueWords.slice(0, remaining)
+    const hasMore = isExtraReview ? false : dueWords.length > remaining
+    return {
+      learningType: 'review',
+      learningWords: wordsToReturn,
+      hasMoreDueWords: hasMore,
+      remainingDueCount: hasMore ? dueWords.length - remaining : 0,
+    }
+  }
+
+  const quota = remaining
 
   if (quota > 0 && newWords.length > 0) {
     const wordsToLearn = newWords.slice(0, quota)
     return {
       learningType: 'new',
       learningWords: wordsToLearn,
-    }
-  }
-
-  if (reviewedCount + learnedCount >= LEARNING_CONFIG.DAILY_LIMIT) {
-    return {
-      learningType: 'complete',
-      learningWords: [],
     }
   }
 
@@ -64,7 +81,6 @@ export function determineLearningType(params: DetermineLearningTypeParams): Dete
     })
 
   const shuffled = [...learnedWords].sort(() => Math.random() - 0.5)
-  const remaining = Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
 
   return {
     learningType: 'consolidate',

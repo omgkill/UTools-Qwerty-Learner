@@ -11,7 +11,7 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { useNavigate } from 'react-router-dom'
 import IconX from '~icons/tabler/x'
 
-export const InnerContext = createContext<() => void>(() => {})
+export const InnerContext = createContext<() => void>(() => undefined)
 
 type GalleryState = {
   vipState: string

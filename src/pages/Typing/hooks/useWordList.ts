@@ -1,11 +1,13 @@
-import { currentWordBankAtom, dailyRecordAtom } from '@/store'
+import { currentWordBankAtom } from '@/store'
+import { dailyRecordAtom } from '../store/atoms'
 import type { Word, WordWithIndex } from '@/typings/index'
 import { LEARNING_CONFIG } from '@/utils/db/progress'
 import { useDailyRecord, useReviewWords, useWordProgress } from '@/utils/db/useProgress'
 import { useAtomValue } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import useSWR from 'swr'
-import { determineLearningType, type LearningType } from './learningLogic'
+import type { LearningType } from './learningLogic'
+import { determineLearningType } from './learningLogic'
 
 export type { LearningType }
 
@@ -22,6 +24,11 @@ export type UseWordListResult = {
   newWordQuota: number
   remainingForTarget: number
   hasReachedTarget: boolean
+  hasMoreDueWords: boolean
+  remainingDueCount: number
+  isExtraReview: boolean
+  startExtraReview: () => void
+  getNextNewWord: () => Promise<WordWithIndex | null>
 }
 
 export function useWordList(): UseWordListResult {
@@ -38,7 +45,11 @@ export function useWordList(): UseWordListResult {
   const [masteredCount, setMasteredCount] = useState(0)
   const [learningWords, setLearningWords] = useState<WordWithIndex[]>([])
   const [loadVersion, setLoadVersion] = useState(0)
+  const [hasMoreDueWords, setHasMoreDueWords] = useState(false)
+  const [remainingDueCount, setRemainingDueCount] = useState(0)
+  const [isExtraReview, setIsExtraReview] = useState(false)
   const isLoadingRef = useRef(false)
+  const lastLearningWordsRef = useRef<WordWithIndex[]>([])
 
   const isLocalWordBank = currentWordBank
     ? currentWordBank.id.startsWith('x-dict-') || currentWordBank.languageCategory === 'custom'
@@ -110,10 +121,20 @@ export function useWordList(): UseWordListResult {
         learnedCount,
         allProgress,
         wordList,
+        isExtraReview,
       })
 
       setLearningType(result.learningType)
-      setLearningWords(result.learningWords)
+      
+      const prevWordNames = lastLearningWordsRef.current.map(w => w.name).join(',')
+      const newWordNames = result.learningWords.map(w => w.name).join(',')
+      if (prevWordNames !== newWordNames) {
+        lastLearningWordsRef.current = result.learningWords
+        setLearningWords(result.learningWords)
+      }
+      
+      setHasMoreDueWords(result.hasMoreDueWords ?? false)
+      setRemainingDueCount(result.remainingDueCount ?? 0)
     } catch (e) {
       console.error('Failed to load learning words:', e)
       setLearningWords([])
@@ -126,11 +147,30 @@ export function useWordList(): UseWordListResult {
     getDueWordsWithInfo,
     getNewWords,
     getWordProgress,
+    isExtraReview,
   ])
 
   const reloadWords = useCallback(() => {
     setLoadVersion((v) => v + 1)
   }, [])
+
+  const startExtraReview = useCallback(() => {
+    setIsExtraReview(true)
+    reloadWords()
+  }, [reloadWords])
+
+  const getNextNewWord = useCallback(async (): Promise<WordWithIndex | null> => {
+    if (!wordList || wordList.length === 0 || !currentWordBank) {
+      return null
+    }
+
+    const newWords = await getNewWords(wordList, 1)
+    if (newWords.length === 0) {
+      return null
+    }
+
+    return newWords[0]
+  }, [wordList, currentWordBank, getNewWords])
 
   useEffect(() => {
     loadLearningWords()
@@ -141,6 +181,12 @@ export function useWordList(): UseWordListResult {
       reloadWords()
     }
   }, [dailyRecord, reloadWords])
+
+  useEffect(() => {
+    if (isExtraReview) {
+      reloadWords()
+    }
+  }, [isExtraReview, reloadWords])
 
   useEffect(() => {
     if (
@@ -171,6 +217,11 @@ export function useWordList(): UseWordListResult {
     newWordQuota,
     remainingForTarget,
     hasReachedTarget,
+    hasMoreDueWords,
+    remainingDueCount,
+    isExtraReview,
+    startExtraReview,
+    getNextNewWord,
   }
 }
 
@@ -184,43 +235,6 @@ async function wordListFetcher(url: string): Promise<Word[]> {
   }
 
   return words
-}
-
-export function parseMdxEntry(html: string): { translations: string[]; phonetics: { us?: string; uk?: string }; tense?: string } {
-  const parser = typeof DOMParser !== 'undefined' ? new DOMParser() : null
-  if (!parser) {
-    return { translations: [], phonetics: {} }
-  }
-
-  const doc = parser.parseFromString(html, 'text/html')
-  const ipaText = doc.querySelector('#ecdict .git .ipa')?.textContent?.trim() || ''
-  const phonetic = normalizePhonetic(ipaText)
-
-  const translations = Array.from(doc.querySelectorAll('#ecdict .gdc .dcb'))
-    .map((block) => {
-      const pos = block.querySelector('.pos')?.textContent?.trim()
-      const dcn = block.querySelector('.dcn')?.textContent?.trim()
-      if (!dcn) return null
-      const text = pos ? `${pos} ${dcn}` : dcn
-      return text.replace(/\s+/g, ' ').trim()
-    })
-    .filter((item): item is string => Boolean(item))
-
-  const unique = Array.from(new Set(translations.map((item) => item.replace(/^[·•\-\s]+/g, '').trim())))
-    .filter((item) => item.length > 1 && item.length < 120)
-    .filter((item) => /[\u4e00-\u9fa5]/.test(item))
-
-  const tense = doc.querySelector('#ecdict .gfm .frm')?.textContent?.trim()
-
-  return {
-    translations: unique.slice(0, 2),
-    phonetics: { uk: phonetic || undefined },
-    tense: tense || undefined,
-  }
-}
-
-function normalizePhonetic(text: string): string {
-  return text.replace(/[\[\]]/g, '').replace(/\s+/g, ' ').trim()
 }
 
 async function localWordListFetcher(id: string): Promise<Word[]> {

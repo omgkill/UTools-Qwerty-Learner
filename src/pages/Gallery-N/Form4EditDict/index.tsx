@@ -210,4 +210,13 @@ const Form4EditDict: React.FC<Form4EditDictProps> = ({ wordBankId }) => {
   )
 }
 
+Form4EditDict.propTypes = {
+  wordBankId: (props: Record<string, unknown>, propName: string, componentName: string) => {
+    if (typeof props[propName] !== 'string' || (props[propName] as string).length === 0) {
+      return new Error(`${componentName}: ${propName} must be a non-empty string`)
+    }
+    return null
+  },
+}
+
 export default Form4EditDict

@@ -10,7 +10,6 @@ import { useCallback, useContext, useEffect, useRef } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
 const WordSound = ({ word, inputWord, ...rest }: WordSoundProps) => {
-  // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
   const { state } = useContext(TypingContext)!
 
   const { play, stop, isPlaying } = usePronunciationSound(word)
@@ -26,12 +25,12 @@ const WordSound = ({ word, inputWord, ...rest }: WordSoundProps) => {
   useHotkeys(
     'ctrl+j',
     () => {
-      if (state.isTyping) {
+      if (state.uiState.isTyping) {
         stopRef.current()
         playRef.current()
       }
     },
-    [state.isTyping],
+    [state.uiState.isTyping],
     { enableOnFormTags: true, preventDefault: true },
   )
 
@@ -47,7 +46,7 @@ const WordSound = ({ word, inputWord, ...rest }: WordSoundProps) => {
   }, [word])
 
   useEffect(() => {
-    if (!state.isTyping) {
+    if (!state.uiState.isTyping) {
       hasPlayedRef.current = false
       return
     }
@@ -57,7 +56,7 @@ const WordSound = ({ word, inputWord, ...rest }: WordSoundProps) => {
       stopRef.current()
       playRef.current()
     }
-  }, [inputWord, state.isTyping, word])
+  }, [inputWord, state.uiState.isTyping, word])
 
   const handleClickSoundIcon = useCallback(() => {
     stop()

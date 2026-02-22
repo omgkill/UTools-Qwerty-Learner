@@ -4,7 +4,6 @@ import { isChineseSymbol, isLegal } from '@/utils'
 import { useCallback, useContext, useEffect } from 'react'
 
 export default function KeyEventHandler({ updateInput }: { updateInput: (updateObj: WordUpdateAction) => void }) {
-  // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
   const { state } = useContext(TypingContext)!
 
   const onKeydown = useCallback(
@@ -24,13 +23,13 @@ export default function KeyEventHandler({ updateInput }: { updateInput: (updateO
   )
 
   useEffect(() => {
-    if (!state.isTyping) return
+    if (!state.uiState.isTyping) return
 
     window.addEventListener('keydown', onKeydown)
     return () => {
       window.removeEventListener('keydown', onKeydown)
     }
-  }, [onKeydown, state.isTyping])
+  }, [onKeydown, state.uiState.isTyping])
 
   return <></>
 }

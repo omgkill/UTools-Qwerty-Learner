@@ -5,18 +5,17 @@ import { useCallback, useContext, useEffect, useRef } from 'react'
 
 export default function TextAreaHandler({ updateInput }: { updateInput: (updateObj: WordUpdateAction) => void }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
   const { state } = useContext(TypingContext)!
 
   useEffect(() => {
     if (!textareaRef.current) return
 
-    if (state.isTyping) {
+    if (state.uiState.isTyping) {
       textareaRef.current.focus()
     } else {
       textareaRef.current.blur()
     }
-  }, [state.isTyping])
+  }, [state.uiState.isTyping])
 
   const onInput = (e: FormEvent<HTMLTextAreaElement>) => {
     const nativeEvent = e.nativeEvent as InputEvent
@@ -32,10 +31,10 @@ export default function TextAreaHandler({ updateInput }: { updateInput: (updateO
   const onBlur = useCallback(() => {
     if (!textareaRef.current) return
 
-    if (state.isTyping) {
+    if (state.uiState.isTyping) {
       textareaRef.current.focus()
     }
-  }, [state.isTyping])
+  }, [state.uiState.isTyping])
 
   return (
     <textarea

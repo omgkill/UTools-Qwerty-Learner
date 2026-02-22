@@ -90,14 +90,14 @@ export class MdxDictAdapter extends BaseDictAdapter {
       /US\s*[:：]?\s*\[([^\]]+)\]/i,
       /AmE\s*[:：]?\s*\[([^\]]+)\]/i,
       /美\s*[:：]?\s*\[([^\]]+)\]/,
-      /DJ\s*[:：]?\s*\/([^\/]+)\//i,
+      /DJ\s*[:：]?\s*[/]([^/]+)[/]/i,
     ]
 
     const ukPatterns = [
       /UK\s*[:：]?\s*\[([^\]]+)\]/i,
       /BrE\s*[:：]?\s*\[([^\]]+)\]/i,
       /英\s*[:：]?\s*\[([^\]]+)\]/,
-      /KK\s*[:：]?\s*\/([^\/]+)\//i,
+      /KK\s*[:：]?\s*[/]([^/]+)[/]/i,
     ]
 
     for (const pattern of usPatterns) {

@@ -1,7 +1,7 @@
 import type { IDailyRecord, IDictProgress, IWordProgress } from './progress'
 import { DailyRecord, DictProgress, WordProgress } from './progress'
-import type { IChapterRecord, IWordRecord, LetterMistakes } from './record'
-import { ChapterRecord, WordRecord } from './record'
+import type { ILearningRecord, IWordRecord, LetterMistakes } from './record'
+import { LearningRecord, WordRecord } from './record'
 import type { TypingState } from '@/pages/Typing/store'
 import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
 import { currentDictIdAtom } from '@/store'
@@ -12,7 +12,7 @@ import { useCallback, useContext } from 'react'
 
 class RecordDB extends Dexie {
   wordRecords!: Table<IWordRecord, number>
-  chapterRecords!: Table<IChapterRecord, number>
+  learningRecords!: Table<ILearningRecord, number>
   wordProgress!: Table<IWordProgress, number>
   dictProgress!: Table<IDictProgress, number>
   dailyRecords!: Table<IDailyRecord, number>
@@ -21,8 +21,8 @@ class RecordDB extends Dexie {
     super('RecordDB')
     this.version(3)
       .stores({
-        wordRecords: '++id,word,timeStamp,dict,chapter,errorCount,[dict+chapter]',
-        chapterRecords: '++id,timeStamp,dict,chapter,time,[dict+chapter]',
+        wordRecords: '++id,word,timeStamp,dict,learning,errorCount,[dict+learning]',
+        learningRecords: '++id,timeStamp,dict,learning,time,[dict+learning]',
         wordProgress: '++id,word,dict,masteryLevel,nextReviewTime,lastReviewTime,[dict+word],[dict+masteryLevel]',
         dictProgress: '++id,dict',
         dailyRecords: '++id,dict,date,[dict+date]',
@@ -43,25 +43,25 @@ class RecordDB extends Dexie {
 export const db = new RecordDB()
 
 db.wordRecords.mapToClass(WordRecord)
-db.chapterRecords.mapToClass(ChapterRecord)
+db.learningRecords.mapToClass(LearningRecord)
 db.wordProgress.mapToClass(WordProgress)
 db.dictProgress.mapToClass(DictProgress)
 db.dailyRecords.mapToClass(DailyRecord)
 
-export function useSaveChapterRecord() {
+export function useSaveLearningRecord() {
   const dictID = useAtomValue(currentDictIdAtom)
 
-  const saveChapterRecord = useCallback(
+  const saveLearningRecord = useCallback(
     (typingState: TypingState) => {
       const {
-        chapterData: { correctCount, wrongCount, wordCount, correctWordIndexes, words, wordRecordIds },
-        timerData: { time },
+        statsData: { correctCount, wrongCount, wordCount, correctWordIndexes, wordRecordIds, timerData },
+        wordListData: { words },
       } = typingState
 
-      const chapterRecord = new ChapterRecord(
+      const learningRecord = new LearningRecord(
         dictID,
         null,
-        time,
+        timerData.time,
         correctCount,
         wrongCount,
         wordCount,
@@ -69,12 +69,12 @@ export function useSaveChapterRecord() {
         words.length,
         wordRecordIds ?? [],
       )
-      db.chapterRecords.add(chapterRecord)
+      db.learningRecords.add(learningRecord)
     },
     [dictID],
   )
 
-  return saveChapterRecord
+  return saveLearningRecord
 }
 
 export type WordKeyLogger = {

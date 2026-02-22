@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { DailyRecord, getNextReviewTime, LEARNING_CONFIG, MASTERY_LEVELS, updateMasteryLevel, WordProgress } from '@/utils/db/progress'
+import { describe, expect, it, beforeEach, afterEach } from 'vitest'
+import { DailyRecord, LEARNING_CONFIG, MASTERY_LEVELS, WordProgress, getNextReviewTime, updateMasteryLevel, setDailyLimit, getDailyLimit, DEFAULT_DAILY_LIMIT } from '@/utils/db/progress'
 
 describe('WordProgress', () => {
   it('should create a new word progress with default values', () => {
@@ -155,9 +155,9 @@ describe('updateMasteryLevel', () => {
     expect(result.newEaseFactor).toBe(2.6)
   })
 
-  it('should not increase level when correct but with wrongs', () => {
+  it('should advance from NEW when correct but with wrongs', () => {
     const result = updateMasteryLevel(MASTERY_LEVELS.NEW, true, 2, 2.5)
-    expect(result.newLevel).toBe(MASTERY_LEVELS.NEW)
+    expect(result.newLevel).toBe(MASTERY_LEVELS.LEARNED)
     expect(result.newEaseFactor).toBe(2.4)
   })
 
@@ -220,5 +220,118 @@ describe('getNextReviewTime', () => {
 describe('LEARNING_CONFIG - Fixed Limit Model', () => {
   it('should have correct default values', () => {
     expect(LEARNING_CONFIG.DAILY_LIMIT).toBe(20)
+  })
+})
+
+describe('DailyRecord - Extra Review', () => {
+  it('should create a daily record with extraReviewedCount default to 0', () => {
+    const record = new DailyRecord('dict-1', '2026-02-18')
+    expect(record.extraReviewedCount).toBe(0)
+  })
+
+  it('should calculate totalReviewed correctly (reviewedCount + extraReviewedCount)', () => {
+    const record = new DailyRecord('dict-1', '2026-02-18')
+    record.reviewedCount = 20
+    record.extraReviewedCount = 5
+    expect(record.totalReviewed).toBe(25)
+  })
+
+  it('should identify when in extra review quota', () => {
+    const record = new DailyRecord('dict-1', '2026-02-18')
+    expect(record.hasExtraReviewQuota).toBe(false)
+    
+    record.reviewedCount = 20
+    expect(record.hasExtraReviewQuota).toBe(true)
+  })
+
+  it('should not count extraReviewedCount in getNewWordQuota', () => {
+    const record = new DailyRecord('dict-1', '2026-02-18')
+    record.reviewedCount = 10
+    record.extraReviewedCount = 15
+    expect(record.getNewWordQuota()).toBe(10)
+  })
+})
+
+describe('Daily Limit Configuration', () => {
+  beforeEach(() => {
+    setDailyLimit(DEFAULT_DAILY_LIMIT)
+  })
+
+  afterEach(() => {
+    setDailyLimit(DEFAULT_DAILY_LIMIT)
+  })
+
+  it('should have default daily limit of 20', () => {
+    expect(getDailyLimit()).toBe(20)
+    expect(DEFAULT_DAILY_LIMIT).toBe(20)
+  })
+
+  it('should allow setting custom daily limit', () => {
+    setDailyLimit(30)
+    expect(getDailyLimit()).toBe(30)
+    expect(LEARNING_CONFIG.DAILY_LIMIT).toBe(30)
+  })
+
+  it('should affect DailyRecord calculations when limit changes', () => {
+    setDailyLimit(10)
+    const record = new DailyRecord('dict-1', '2026-02-18')
+    expect(record.getNewWordQuota()).toBe(10)
+    
+    record.reviewedCount = 5
+    expect(record.getNewWordQuota()).toBe(5)
+    
+    record.learnedCount = 3
+    expect(record.getNewWordQuota()).toBe(2)
+  })
+
+  it('should correctly identify hasReachedTarget with custom limit', () => {
+    setDailyLimit(15)
+    const record = new DailyRecord('dict-1', '2026-02-18')
+    
+    record.reviewedCount = 10
+    record.learnedCount = 4
+    expect(record.hasReachedTarget).toBe(false)
+    
+    record.learnedCount = 5
+    expect(record.hasReachedTarget).toBe(true)
+  })
+
+  it('should correctly identify hasExtraReviewQuota with custom limit', () => {
+    setDailyLimit(15)
+    const record = new DailyRecord('dict-1', '2026-02-18')
+    
+    record.reviewedCount = 14
+    expect(record.hasExtraReviewQuota).toBe(false)
+    
+    record.reviewedCount = 15
+    expect(record.hasExtraReviewQuota).toBe(true)
+  })
+})
+
+describe('ReviewedCount Cap at DAILY_LIMIT (当日已复习数只计入前N个)', () => {
+  it('should cap reviewedCount at DAILY_LIMIT for quota calculation', () => {
+    const record = new DailyRecord('dict-1', '2026-02-18')
+    record.reviewedCount = 25
+    record.learnedCount = 0
+    
+    expect(record.getNewWordQuota()).toBe(0)
+  })
+
+  it('should not allow negative quota when reviewedCount exceeds DAILY_LIMIT', () => {
+    const record = new DailyRecord('dict-1', '2026-02-18')
+    record.reviewedCount = 30
+    record.learnedCount = 5
+    
+    expect(record.getNewWordQuota()).toBe(0)
+  })
+
+  it('should correctly handle reviewedCount > DAILY_LIMIT scenario', () => {
+    const record = new DailyRecord('dict-1', '2026-02-18')
+    record.reviewedCount = 25
+    record.learnedCount = 0
+    
+    expect(record.hasReachedTarget).toBe(true)
+    expect(record.getNewWordQuota()).toBe(0)
+    expect(record.hasExtraReviewQuota).toBe(true)
   })
 })

@@ -1,4 +1,4 @@
-import type { WordBank, Word } from '@/typings'
+import type { Word, WordBank } from '@/typings'
 
 declare global {
   interface Window {

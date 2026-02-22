@@ -50,6 +50,38 @@ describe('determineLearningType', () => {
       expect(result.learningWords).toEqual(dueWords)
     })
 
+    it('should limit review words by remaining slots', () => {
+      const dueWords = Array.from({ length: 10 }, (_, i) => createWordWithIndex(`word${i}`, i))
+      const result = determineLearningType({
+        dueWords,
+        newWords: [],
+        reviewedCount: 18,
+        learnedCount: 0,
+        allProgress: [],
+        wordList,
+      })
+
+      expect(result.learningType).toBe('review')
+      expect(result.learningWords.length).toBe(2)
+    })
+
+    it('should return complete with hasMoreDueWords when target reached but there are due words (extra review scenario)', () => {
+      const dueWords = [createWordWithIndex('apple', 0)]
+      const result = determineLearningType({
+        dueWords,
+        newWords: [],
+        reviewedCount: 20,
+        learnedCount: 0,
+        allProgress: [],
+        wordList,
+      })
+
+      expect(result.learningType).toBe('complete')
+      expect(result.learningWords.length).toBe(0)
+      expect(result.hasMoreDueWords).toBe(true)
+      expect(result.remainingDueCount).toBe(1)
+    })
+
     it('should prioritize review over new words', () => {
       const dueWords = [createWordWithIndex('apple', 0)]
       const newWords = [createWordWithIndex('banana', 1)]
@@ -273,5 +305,130 @@ describe('hasReachedDailyTarget', () => {
     expect(hasReachedDailyTarget(15, 10)).toBe(true)
     expect(hasReachedDailyTarget(20, 0)).toBe(true)
     expect(hasReachedDailyTarget(0, 20)).toBe(true)
+  })
+})
+
+describe('Extra Review Mode', () => {
+  const wordList: Word[] = [createWord('apple'), createWord('banana'), createWord('cherry'), createWord('date')]
+
+  describe('hasMoreDueWords detection', () => {
+    it('should set hasMoreDueWords=true when due words exceed remaining slots', () => {
+      const dueWords = Array.from({ length: 25 }, (_, i) => createWordWithIndex(`word${i}`, i))
+      const result = determineLearningType({
+        dueWords,
+        newWords: [],
+        reviewedCount: 0,
+        learnedCount: 0,
+        allProgress: [],
+        wordList,
+      })
+
+      expect(result.learningType).toBe('review')
+      expect(result.learningWords.length).toBe(20)
+      expect(result.hasMoreDueWords).toBe(true)
+      expect(result.remainingDueCount).toBe(5)
+    })
+
+    it('should set hasMoreDueWords=false when due words fit in remaining slots', () => {
+      const dueWords = Array.from({ length: 10 }, (_, i) => createWordWithIndex(`word${i}`, i))
+      const result = determineLearningType({
+        dueWords,
+        newWords: [],
+        reviewedCount: 0,
+        learnedCount: 0,
+        allProgress: [],
+        wordList,
+      })
+
+      expect(result.learningType).toBe('review')
+      expect(result.learningWords.length).toBe(10)
+      expect(result.hasMoreDueWords).toBe(false)
+      expect(result.remainingDueCount).toBe(0)
+    })
+
+    it('should correctly calculate remainingDueCount', () => {
+      const dueWords = Array.from({ length: 30 }, (_, i) => createWordWithIndex(`word${i}`, i))
+      const result = determineLearningType({
+        dueWords,
+        newWords: [],
+        reviewedCount: 5,
+        learnedCount: 0,
+        allProgress: [],
+        wordList,
+      })
+
+      expect(result.learningWords.length).toBe(15)
+      expect(result.remainingDueCount).toBe(15)
+    })
+  })
+
+  describe('isExtraReview flag', () => {
+    it('should return all due words when isExtraReview=true', () => {
+      const dueWords = Array.from({ length: 30 }, (_, i) => createWordWithIndex(`word${i}`, i))
+      const result = determineLearningType({
+        dueWords,
+        newWords: [],
+        reviewedCount: 20,
+        learnedCount: 0,
+        allProgress: [],
+        wordList,
+        isExtraReview: true,
+      })
+
+      expect(result.learningType).toBe('review')
+      expect(result.learningWords.length).toBe(30)
+      expect(result.hasMoreDueWords).toBe(false)
+    })
+
+    it('should ignore daily limit when isExtraReview=true', () => {
+      const dueWords = [createWordWithIndex('apple', 0), createWordWithIndex('banana', 1)]
+      const result = determineLearningType({
+        dueWords,
+        newWords: [],
+        reviewedCount: 50,
+        learnedCount: 50,
+        allProgress: [],
+        wordList,
+        isExtraReview: true,
+      })
+
+      expect(result.learningType).toBe('review')
+      expect(result.learningWords.length).toBe(2)
+    })
+  })
+
+  describe('extra review scenario flow', () => {
+    it('should trigger extra review when target reached with remaining due words', () => {
+      const dueWords = Array.from({ length: 25 }, (_, i) => createWordWithIndex(`word${i}`, i))
+      
+      const normalResult = determineLearningType({
+        dueWords,
+        newWords: [],
+        reviewedCount: 20,
+        learnedCount: 0,
+        allProgress: [],
+        wordList,
+        isExtraReview: false,
+      })
+
+      expect(normalResult.learningType).toBe('complete')
+      expect(normalResult.learningWords.length).toBe(0)
+      expect(normalResult.hasMoreDueWords).toBe(true)
+      expect(normalResult.remainingDueCount).toBe(25)
+
+      const extraResult = determineLearningType({
+        dueWords,
+        newWords: [],
+        reviewedCount: 20,
+        learnedCount: 0,
+        allProgress: [],
+        wordList,
+        isExtraReview: true,
+      })
+
+      expect(extraResult.learningType).toBe('review')
+      expect(extraResult.learningWords.length).toBe(25)
+      expect(extraResult.hasMoreDueWords).toBe(false)
+    })
   })
 })

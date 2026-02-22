@@ -422,6 +422,15 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
   )
 }
 
+Form4AddDict.propTypes = {
+  onSaveDictSuccess: (props: Record<string, unknown>, propName: string, componentName: string) => {
+    if (typeof props[propName] !== 'function') {
+      return new Error(`${componentName}: ${propName} must be a function`)
+    }
+    return null
+  },
+}
+
 export default Form4AddDict
 
 const saveWordBank = (formData, wordList) => {

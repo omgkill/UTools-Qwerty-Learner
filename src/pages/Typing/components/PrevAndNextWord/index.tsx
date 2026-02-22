@@ -8,13 +8,15 @@ import IconPrev from '~icons/tabler/arrow-narrow-left'
 import IconNext from '~icons/tabler/arrow-narrow-right'
 
 export default function PrevAndNextWord({ type }: LastAndNextWordProps) {
-  // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
   const { state, dispatch } = useContext(TypingContext)!
 
   const wordDictationConfig = useAtomValue(wordDictationConfigAtom)
-  const newIndex = useMemo(() => state.chapterData.index + (type === 'prev' ? -1 : 1), [state.chapterData.index, type])
-  const word = state.chapterData.words[newIndex]
+  const newIndex = useMemo(() => state.wordListData.index + (type === 'prev' ? -1 : 1), [state.wordListData.index, type])
+  const word = state.wordListData.words[newIndex]
   const shortCutKey = useMemo(() => (type === 'prev' ? 'Ctrl + Shift + ArrowLeft' : 'Ctrl + Shift + ArrowRight'), [type])
+
+  const wordInfo = word ? state.wordInfoMap[word.name] : undefined
+  const displayTrans = wordInfo?.trans || word?.trans || []
 
   const onClickWord = useCallback(() => {
     if (!word) return
@@ -60,8 +62,8 @@ export default function PrevAndNextWord({ type }: LastAndNextWordProps) {
               >
                 {headWord}
               </p>
-              {state.isTransVisible && (
-                <p className="line-clamp-1 max-w-full text-sm font-normal text-gray-600 dark:text-gray-500">{word.trans.join('；')}</p>
+              {state.isTransVisible && displayTrans.length > 0 && (
+                <p className="line-clamp-1 max-w-full text-sm font-normal text-gray-600 dark:text-gray-500">{displayTrans.join('；')}</p>
               )}
             </div>
             {type === 'next' && <IconNext className="ml-4 shrink-0 grow-0 text-2xl" />}

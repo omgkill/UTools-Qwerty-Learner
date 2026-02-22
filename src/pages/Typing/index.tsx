@@ -10,21 +10,20 @@ import { useConfetti } from './hooks/useConfetti'
 import type { LearningType } from './hooks/useWordList'
 import { useWordList } from './hooks/useWordList'
 import { TypingContext, TypingStateActionType, initialState, typingReducer } from './store'
+import { useTypingInitializer } from './hooks/useTypingInitializer'
+import { useTypingHotkeys } from './hooks/useTypingHotkeys'
+import { useLearningRecordSaver } from './hooks/useLearningRecordSaver'
+import { useTypingTimer } from './hooks/useTypingTimer'
+import { useExtraReviewPopup } from './hooks/useExtraReviewPopup'
+import { useKeyboardStartListener } from './hooks/useKeyboardStartListener'
+import { useWordSync } from './hooks/useWordSync'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
-import { currentWordBankIdAtom, currentWordBankAtom, wordBanksAtom, randomConfigAtom } from '@/store'
 import type { WordBank } from '@/typings'
-import { isLegal } from '@/utils'
-import { useSaveChapterRecord } from '@/utils/db'
 import { useWordProgress } from '@/utils/db/useProgress'
-import { useMixPanelChapterLogUploader } from '@/utils/mixpanel'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import mixpanel from 'mixpanel-browser'
 import type React from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useHotkeys } from 'react-hotkeys-hook'
-import { NavLink, useNavigate } from 'react-router-dom'
-import { toast } from 'react-toastify'
+import { useCallback, useContext, useEffect } from 'react'
+import { NavLink } from 'react-router-dom'
 import { useImmerReducer } from 'use-immer'
 
 const LEARNING_TYPE_LABELS: Record<LearningType, { icon: string; label: string }> = {
@@ -34,55 +33,33 @@ const LEARNING_TYPE_LABELS: Record<LearningType, { icon: string; label: string }
   complete: { icon: '✅', label: '完成' },
 }
 
-const App: React.FC = () => {
-  const [state, dispatch] = useImmerReducer(typingReducer, structuredClone(initialState))
-  const [isLoading, setIsLoading] = useState<boolean>(true)
-  const [isInitialized, setIsInitialized] = useState<boolean>(false)
-  const { words, learningType, dueCount, todayLearned, todayReviewed, newWordQuota, remainingForTarget, hasReachedTarget } = useWordList()
-  const wordsRef = useRef<typeof words>(undefined)
-  const [currentWordBankId, setCurrentWordBankId] = useAtom(currentWordBankIdAtom)
-  const currentWordBank = useAtomValue(currentWordBankAtom)
-  const wordBanks = useAtomValue(wordBanksAtom)
-  const setWordBanks = useSetAtom(wordBanksAtom)
-  const randomConfig = useAtomValue(randomConfigAtom)
-  const navigate = useNavigate()
+interface TypingAppInnerProps {
+  currentWordBank: WordBank
+}
+
+const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
+  const { state, dispatch } = useTypingContext()!
+  const {
+    words,
+    learningType,
+    todayLearned,
+    todayReviewed,
+    newWordQuota,
+    remainingForTarget,
+    hasReachedTarget,
+    hasMoreDueWords,
+    remainingDueCount,
+    isExtraReview,
+    startExtraReview,
+    getNextNewWord,
+  } = useWordList()
+
   const { markAsMastered } = useWordProgress()
 
-  const chapterLogUploader = useMixPanelChapterLogUploader(state)
-  const saveChapterRecord = useSaveChapterRecord()
-
-  useEffect(() => {
-    const config = window.readLocalWordBankConfig()
-    console.log(`[Typing] config loaded: ${config?.length} wordbanks`)
-    const customWordBanks = config.filter((wb: WordBank) => wb.id && wb.id.startsWith('x-dict-'))
-    const uniqueWordBanks = customWordBanks.reduce((acc: WordBank[], wb: WordBank) => {
-      if (!acc.some((d) => d.id === wb.id)) {
-        acc.push(wb)
-      }
-      return acc
-    }, [])
-    console.log(`[Typing] uniqueWordBanks: ${uniqueWordBanks.length}`)
-    setWordBanks(uniqueWordBanks)
-    setIsInitialized(true)
-  }, [setWordBanks])
-
-  useEffect(() => {
-    if (!isInitialized) return
-
-    if (wordBanks.length === 0) {
-      navigate('/gallery')
-      return
-    }
-
-    if (!currentWordBankId || !currentWordBank) {
-      const firstWordBank = wordBanks[0]
-      if (firstWordBank) {
-        setCurrentWordBankId(firstWordBank.id)
-      } else {
-        navigate('/gallery')
-      }
-    }
-  }, [isInitialized, currentWordBankId, currentWordBank, wordBanks, navigate, setCurrentWordBankId])
+  useLearningRecordSaver(state)
+  useTypingTimer(state.uiState.isTyping)
+  useKeyboardStartListener(state.uiState.isTyping, false)
+  useWordSync(words, state.uiState.isTyping)
 
   useEffect(() => {
     const handleModeChange = () => {
@@ -108,12 +85,29 @@ const App: React.FC = () => {
   }, [dispatch])
 
   const handleMastered = useCallback(async () => {
-    const currentWord = state.chapterData.words?.[state.chapterData.index]
+    const currentWord = state.wordListData.words?.[state.wordListData.index]
     if (currentWord) {
       await markAsMastered(currentWord.name)
+
+      if (learningType === 'new') {
+        const replacementWord = await getNextNewWord()
+        if (replacementWord) {
+          dispatch({ type: TypingStateActionType.ADD_REPLACEMENT_WORD, payload: replacementWord })
+        }
+      }
+
       dispatch({ type: TypingStateActionType.SKIP_WORD })
     }
-  }, [state.chapterData.words, state.chapterData.index, markAsMastered, dispatch])
+  }, [state.wordListData.words, state.wordListData.index, markAsMastered, dispatch, learningType, getNextNewWord])
+
+  useTypingHotkeys(skipWord, handleMastered, state.isImmersiveMode)
+
+  const { showPopup, handleConfirm, handleDismiss } = useExtraReviewPopup(
+    hasReachedTarget,
+    hasMoreDueWords,
+    isExtraReview,
+    startExtraReview,
+  )
 
   useEffect(() => {
     const onBlur = () => {
@@ -126,102 +120,117 @@ const App: React.FC = () => {
     }
   }, [dispatch])
 
-  useEffect(() => {
-    if (learningType === 'complete') {
-      setIsLoading(false)
-    } else {
-      state.chapterData.words?.length > 0 ? setIsLoading(false) : setIsLoading(true)
-    }
-  }, [state.chapterData.words, learningType])
-
-  useEffect(() => {
-    if (!state.isTyping) {
-      const onKeyDown = (e: KeyboardEvent) => {
-        if (!isLoading && e.key !== 'Enter' && (isLegal(e.key) || e.key === ' ') && !e.altKey && !e.ctrlKey && !e.metaKey) {
-          e.preventDefault()
-          dispatch({ type: TypingStateActionType.SET_IS_TYPING, payload: true })
-        }
-      }
-      window.addEventListener('keydown', onKeyDown)
-
-      return () => window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [state.isTyping, isLoading, dispatch])
-
-  useEffect(() => {
-    if (words !== undefined && words !== wordsRef.current) {
-      wordsRef.current = words
-      dispatch({
-        type: TypingStateActionType.SETUP_CHAPTER,
-        payload: { words, shouldShuffle: randomConfig.isOpen },
-      })
-    }
-  }, [words, randomConfig.isOpen, dispatch])
-
-  useHotkeys(
-    'alt+s',
-    () => {
-      if (state.isShowSkip) {
-        skipWord()
-      }
-    },
-    { preventDefault: true },
-  )
-
-  useHotkeys(
-    'alt+m',
-    () => {
-      if (state.isShowSkip) {
-        handleMastered()
-      }
-    },
-    { preventDefault: true },
-    [state.isShowSkip, handleMastered],
-  )
-
-  useEffect(() => {
-    if (state.isFinished && !state.isSavingRecord) {
-      chapterLogUploader()
-      saveChapterRecord(state)
-
-      window.exportDatabase2UTools()
-      window.migrateLocalStorageToUtools()
-    }
-  }, [state.isFinished, state.isSavingRecord])
-
-  useEffect(() => {
-    let intervalId: number
-    if (state.isTyping) {
-      intervalId = window.setInterval(() => {
-        dispatch({ type: TypingStateActionType.TICK_TIMER })
-      }, 1000)
-    }
-    return () => clearInterval(intervalId)
-  }, [state.isTyping, dispatch])
-
-  useHotkeys(
-    'alt+m',
-    () => {
-      dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE })
-      mixpanel.track('ImmersiveMode', { state: state.isImmersiveMode ? 'open' : 'close' })
-      if (!state.isImmersiveMode)
-        toast('再次按下 Alt + M 可退出沉浸模式🤞', {
-          position: 'top-center',
-          autoClose: 2000,
-          hideProgressBar: true,
-          closeOnClick: false,
-          pauseOnHover: true,
-          draggable: false,
-          progress: undefined,
-          theme: 'light',
-        })
-    },
-    { preventDefault: true },
-  )
-
-  useConfetti(state.isFinished && !state.isImmersiveMode)
+  useConfetti(state.uiState.isFinished && !state.isImmersiveMode)
 
   const typeInfo = LEARNING_TYPE_LABELS[learningType]
+
+  return (
+    <>
+      {state.uiState.isFinished && <ResultScreen />}
+      <Layout>
+        {!state.isImmersiveMode && (
+          <Header>
+            <Tooltip content="切换词库">
+              <NavLink
+                className="block rounded-lg px-3 py-1 text-lg transition-colors duration-300 ease-in-out hover:bg-indigo-400 hover:text-white focus:outline-none text-white text-opacity-60 hover:text-opacity-100"
+                to="/gallery"
+              >
+                {currentWordBank.name}
+              </NavLink>
+            </Tooltip>
+            <div className="flex items-center gap-2 text-sm text-white/80">
+              <span className="rounded bg-white/20 px-2 py-0.5">
+                {typeInfo.icon} {typeInfo.label}
+              </span>
+              {(todayLearned > 0 || todayReviewed > 0) && (
+                <span className="rounded bg-white/20 px-2 py-0.5">今日 {todayLearned + todayReviewed} 词</span>
+              )}
+              {learningType === 'new' && newWordQuota > 0 && (
+                <span className="rounded bg-green-500/30 px-2 py-0.5 text-green-200">新词配额 {newWordQuota}</span>
+              )}
+              {!hasReachedTarget && remainingForTarget > 0 && (
+                <span className="rounded bg-white/10 px-2 py-0.5">距目标 {remainingForTarget} 词</span>
+              )}
+              {hasReachedTarget && (
+                <span className="rounded bg-green-500/30 px-2 py-0.5 text-green-200">✓ 今日目标达成</span>
+              )}
+            </div>
+            <PronunciationSwitcher />
+            <Switcher />
+            <StartButton isLoading={false} />
+            {state.uiState.isShowSkip && (
+              <>
+                <Tooltip content="跳过该词 Alt + S">
+                  <button className="bg-orange-400 btn-primary transition-all duration-300" onClick={skipWord}>
+                    Skip
+                  </button>
+                </Tooltip>
+                <Tooltip content="标记已掌握 Alt + M">
+                  <button className="bg-green-500 btn-primary transition-all duration-300" onClick={handleMastered}>
+                    ✓ 掌握
+                  </button>
+                </Tooltip>
+              </>
+            )}
+          </Header>
+        )}
+        <div className="container mx-auto flex h-full flex-1 flex-col items-center justify-center pb-4">
+          <div className="container relative mx-auto flex h-full flex-col items-center">
+            <div className="container flex flex-grow items-center justify-center">
+              {learningType === 'complete' ? (
+                <div className="flex flex-col items-center justify-center space-y-6">
+                  <div className="text-6xl">🎉</div>
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">今日目标达成！</h2>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    今日学习 <span className="font-bold text-indigo-600 dark:text-indigo-400">{todayLearned + todayReviewed}</span> 个单词
+                    （新词 <span className="font-bold">{todayLearned}</span> 个，复习 <span className="font-bold">{todayReviewed}</span> 个）
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-500">明天继续加油！</p>
+                </div>
+              ) : (
+                !state.uiState.isFinished && <WordPanel />
+              )}
+            </div>
+            {!state.isImmersiveMode && <Speed />}
+          </div>
+        </div>
+      </Layout>
+
+      {!state.isImmersiveMode && <WordList />}
+
+      {showPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800 max-w-md mx-4">
+            <div className="text-center">
+              <div className="mb-4 text-5xl">📚</div>
+              <h3 className="mb-2 text-xl font-bold text-gray-800 dark:text-gray-200">还有 {remainingDueCount} 个单词待复习</h3>
+              <p className="mb-4 text-gray-600 dark:text-gray-400">
+                今日目标已达成，是否继续额外复习？
+                <br />
+                <span className="text-sm text-gray-500">（额外复习不计入今日上限）</span>
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={handleDismiss}
+                  className="rounded-lg bg-gray-200 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                >
+                  稍后再说
+                </button>
+                <button onClick={handleConfirm} className="rounded-lg bg-indigo-500 px-4 py-2 text-white transition-colors hover:bg-indigo-600">
+                  继续复习
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+const App: React.FC = () => {
+  const [state, dispatch] = useImmerReducer(typingReducer, structuredClone(initialState))
+  const { isInitialized, currentWordBank } = useTypingInitializer()
 
   if (!isInitialized || !currentWordBank) {
     return (
@@ -237,103 +246,15 @@ const App: React.FC = () => {
   }
 
   return (
-    <>
-      <TypingContext.Provider value={{ state: state, dispatch }}>
-        {state.isFinished && <ResultScreen />}
-        <Layout>
-          {!state.isImmersiveMode && (
-            <Header>
-              <Tooltip content="切换词库">
-                <NavLink
-                  className="block rounded-lg px-3 py-1 text-lg transition-colors duration-300 ease-in-out hover:bg-indigo-400 hover:text-white focus:outline-none text-white text-opacity-60 hover:text-opacity-100"
-                  to="/gallery"
-                >
-                  {currentWordBank.name}
-                </NavLink>
-              </Tooltip>
-              <div className="flex items-center gap-2 text-sm text-white/80">
-                <span className="rounded bg-white/20 px-2 py-0.5">
-                  {typeInfo.icon} {typeInfo.label}
-                </span>
-                {(todayLearned > 0 || todayReviewed > 0) && (
-                  <span className="rounded bg-white/20 px-2 py-0.5">
-                    今日 {todayLearned + todayReviewed} 词
-                  </span>
-                )}
-                {learningType === 'new' && newWordQuota > 0 && (
-                  <span className="rounded bg-green-500/30 px-2 py-0.5 text-green-200">
-                    新词配额 {newWordQuota}
-                  </span>
-                )}
-                {!hasReachedTarget && remainingForTarget > 0 && (
-                  <span className="rounded bg-white/10 px-2 py-0.5">
-                    距目标 {remainingForTarget} 词
-                  </span>
-                )}
-                {hasReachedTarget && (
-                  <span className="rounded bg-green-500/30 px-2 py-0.5 text-green-200">
-                    ✓ 今日目标达成
-                  </span>
-                )}
-              </div>
-              <PronunciationSwitcher />
-              <Switcher />
-              <StartButton isLoading={isLoading} />
-              {state.isShowSkip && (
-                <>
-                  <Tooltip content="跳过该词 Alt + S">
-                    <button
-                      className="bg-orange-400 btn-primary transition-all duration-300"
-                      onClick={skipWord}
-                    >
-                      Skip
-                    </button>
-                  </Tooltip>
-                  <Tooltip content="标记已掌握 Alt + M">
-                    <button
-                      className="bg-green-500 btn-primary transition-all duration-300"
-                      onClick={handleMastered}
-                    >
-                      ✓ 掌握
-                    </button>
-                  </Tooltip>
-                </>
-              )}
-            </Header>
-          )}
-          <div className="container mx-auto flex h-full flex-1 flex-col items-center justify-center pb-4">
-            <div className="container relative mx-auto flex h-full flex-col items-center">
-              <div className="container flex flex-grow items-center justify-center">
-                {isLoading ? (
-                  <div className="flex flex-col items-center justify-center ">
-                    <div
-                      className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid  border-indigo-400 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
-                      role="status"
-                    ></div>
-                  </div>
-                ) : learningType === 'complete' ? (
-                  <div className="flex flex-col items-center justify-center space-y-6">
-                    <div className="text-6xl">🎉</div>
-                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">今日目标达成！</h2>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      今日学习 <span className="font-bold text-indigo-600 dark:text-indigo-400">{todayLearned + todayReviewed}</span> 个单词
-                      （新词 <span className="font-bold">{todayLearned}</span> 个，复习 <span className="font-bold">{todayReviewed}</span> 个）
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-500">明天继续加油！</p>
-                  </div>
-                ) : (
-                  !state.isFinished && <WordPanel />
-                )}
-              </div>
-              {!state.isImmersiveMode && <Speed />}
-            </div>
-          </div>
-        </Layout>
-
-        {!state.isImmersiveMode && <WordList />}
-      </TypingContext.Provider>
-    </>
+    <TypingContext.Provider value={{ state, dispatch }}>
+      <TypingAppInner currentWordBank={currentWordBank} />
+    </TypingContext.Provider>
   )
+}
+
+function useTypingContext() {
+  const context = useContext(TypingContext)
+  return context
 }
 
 export default App

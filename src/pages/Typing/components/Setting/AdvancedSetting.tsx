@@ -1,9 +1,10 @@
 import styles from './index.module.css'
-import { isIgnoreCaseAtom, isShowAnswerOnHoverAtom, isShowPrevAndNextWordAtom, isTextSelectableAtom, randomConfigAtom } from '@/store'
+import { dailyLimitConfigAtom, isIgnoreCaseAtom, isShowAnswerOnHoverAtom, isShowPrevAndNextWordAtom, isTextSelectableAtom, randomConfigAtom } from '@/store'
+import { setDailyLimit } from '@/utils/db/progress'
 import { Switch } from '@headlessui/react'
 import * as ScrollArea from '@radix-ui/react-scroll-area'
 import { useAtom } from 'jotai'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 
 export default function AdvancedSetting() {
@@ -12,7 +13,12 @@ export default function AdvancedSetting() {
   const [isIgnoreCase, setIsIgnoreCase] = useAtom(isIgnoreCaseAtom)
   const [isTextSelectable, setIsTextSelectable] = useAtom(isTextSelectableAtom)
   const [isShowAnswerOnHover, setIsShowAnswerOnHover] = useAtom(isShowAnswerOnHoverAtom)
+  const [dailyLimitConfig, setDailyLimitConfig] = useAtom(dailyLimitConfigAtom)
   const [showConfirm, setShowConfirm] = useState(false)
+
+  useEffect(() => {
+    setDailyLimit(dailyLimitConfig.dailyLimit)
+  }, [dailyLimitConfig.dailyLimit])
 
   const onToggleRandom = useCallback(
     (checked: boolean) => {
@@ -64,10 +70,41 @@ export default function AdvancedSetting() {
     setShowConfirm(false)
   }, [])
 
+  const handleDailyLimitChange = useCallback(
+    (value: number) => {
+      const limit = Math.max(5, Math.min(100, value))
+      setDailyLimitConfig((prev) => ({
+        ...prev,
+        dailyLimit: limit,
+      }))
+    },
+    [setDailyLimitConfig],
+  )
+
   return (
     <ScrollArea.Root className="flex-1 select-none overflow-y-auto ">
       <ScrollArea.Viewport className="h-full w-full px-3">
         <div className={styles.tabContent}>
+          <div className={styles.section}>
+            <span className={styles.sectionLabel}>每日学习上限</span>
+            <span className={styles.sectionDescription}>
+              每天最多学习的单词数量（复习+新词）。推荐值：轻松模式10个、标准模式20个、进取模式30个
+            </span>
+            <div className="mt-2 flex items-center gap-3">
+              <input
+                type="range"
+                min="5"
+                max="100"
+                step="5"
+                value={dailyLimitConfig.dailyLimit}
+                onChange={(e) => handleDailyLimitChange(Number(e.target.value))}
+                className="h-2 w-40 cursor-pointer appearance-none rounded-lg bg-gray-200 dark:bg-gray-700"
+              />
+              <span className="w-16 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                {dailyLimitConfig.dailyLimit} 个/天
+              </span>
+            </div>
+          </div>
           <div className={styles.section}>
             <span className={styles.sectionLabel}>章节乱序</span>
             <span className={styles.sectionDescription}>开启后，每次练习章节中单词会随机排序。下一章节生效</span>

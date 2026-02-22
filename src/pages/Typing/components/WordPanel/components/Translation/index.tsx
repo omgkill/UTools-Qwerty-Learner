@@ -12,7 +12,12 @@ export type TranslationProps = {
 export default function Translation({ trans, tense }: TranslationProps) {
   const pronunciationConfig = useAtomValue(pronunciationConfigAtom)
   const isShowTransRead = window.speechSynthesis && pronunciationConfig.isTransRead
-  const filteredTrans = useMemo(() => trans.filter((item) => item && item.trim().length > 0), [trans])
+  const filteredTrans = useMemo(() => {
+    if (!trans || !Array.isArray(trans)) return []
+    return trans
+      .map((item) => item?.trim())
+      .filter((item): item is string => !!item && item.length > 0)
+  }, [trans])
   const displayTrans = useMemo(() => filteredTrans.slice(0, 6), [filteredTrans])
   const speechText = useMemo(() => displayTrans.join('；'), [displayTrans])
   const speechOptions = useMemo(() => ({ volume: pronunciationConfig.transVolume }), [pronunciationConfig.transVolume])

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DailyRecord, getNextReviewTime, LEARNING_CONFIG, MASTERY_LEVELS, updateMasteryLevel, type IWordProgress } from '@/utils/db/progress'
-import { determineLearningType, type LearningType } from './learningLogic'
+import type { IWordProgress } from '@/utils/db/progress'
+import { DailyRecord, LEARNING_CONFIG, MASTERY_LEVELS, getNextReviewTime, updateMasteryLevel } from '@/utils/db/progress'
+import type { LearningType } from './learningLogic'
+import { determineLearningType } from './learningLogic'
 
 type SimulatedWord = {
   name: string
@@ -99,7 +101,7 @@ function simulateDay(
 
   let firstLearningType: LearningType | null = null
 
-  while (true) {
+  for (let safety = 0; safety < 1000; safety++) {
     const loopNow = Date.now()
     const dueWords = updatedWords
       .map((w, index) => ({ w, index }))

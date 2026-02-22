@@ -65,7 +65,7 @@ export type WordLogUpload = ModeInfo & {
   wordlist: string
 }
 
-export type ChapterLogUpload = ModeInfo & {
+export type LearningLogUpload = ModeInfo & {
   wordlist: string
   timeEnd: string
   duration: number
@@ -85,7 +85,7 @@ export function useMixPanelWordLogUploader(typingState: TypingState) {
       if (!currentDictInfo) return
       const props: WordLogUpload = {
         ...wordLog,
-        order: typingState.chapterData.index + 1,
+        order: typingState.wordListData.index + 1,
         wordlist: currentDictInfo.name,
         modeDictation: false,
         modeDark: true,
@@ -109,20 +109,20 @@ export function useMixPanelWordLogUploader(typingState: TypingState) {
   return wordLogUploader
 }
 
-export function useMixPanelChapterLogUploader(typingState: TypingState) {
+export function useMixPanelLearningLogUploader(typingState: TypingState) {
   const currentDictInfo = useAtomValue(currentDictInfoAtom)
   const phoneticConfig = useAtomValue(phoneticConfigAtom)
   const pronunciationConfig = useAtomValue(pronunciationConfigAtom)
   const randomConfig = useAtomValue(randomConfigAtom)
 
-  const chapterLogUploader = useCallback(() => {
+  const learningLogUploader = useCallback(() => {
     if (!currentDictInfo) return
-    const props: ChapterLogUpload = {
+    const props: LearningLogUpload = {
       timeEnd: getUtcStringForMixpanel(),
-      duration: typingState.timerData.time,
-      countInput: typingState.chapterData.correctCount + typingState.chapterData.wrongCount,
-      countTypo: typingState.chapterData.wrongCount,
-      countCorrect: typingState.chapterData.correctCount,
+      duration: typingState.statsData.timerData.time,
+      countInput: typingState.statsData.correctCount + typingState.statsData.wrongCount,
+      countTypo: typingState.statsData.wrongCount,
+      countCorrect: typingState.statsData.correctCount,
       wordlist: currentDictInfo.name,
       modeDictation: false,
       modeDark: true,
@@ -131,7 +131,7 @@ export function useMixPanelChapterLogUploader(typingState: TypingState) {
       pronunciationAuto: pronunciationConfig.isOpen,
       pronunciationOption: pronunciationConfig.isOpen === false ? 'none' : pronunciationConfig.type,
     }
-    mixpanel.track('Chapter', props)
+    mixpanel.track('Learning', props)
   }, [
     typingState,
     currentDictInfo,
@@ -140,25 +140,25 @@ export function useMixPanelChapterLogUploader(typingState: TypingState) {
     pronunciationConfig.type,
     randomConfig.isOpen,
   ])
-  return chapterLogUploader
+  return learningLogUploader
 }
 
 export function recordDataAction({
   type,
   size,
   wordCount,
-  chapterCount,
+  learningCount,
 }: {
   type: 'export' | 'import'
   size: number
   wordCount: number
-  chapterCount: number
+  learningCount: number
 }) {
   const props = {
     type,
     size,
     wordCount,
-    chapterCount,
+    learningCount,
   }
 
   mixpanel.track('dataAction', props)

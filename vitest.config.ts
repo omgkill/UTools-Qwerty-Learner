@@ -10,9 +10,15 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     testTimeout: 5000,
     hookTimeout: 5000,
     reporters: ['verbose'],
+    setupFiles: ['src/test/setup.ts'],
+    environmentMatchGlobs: [
+      ['src/**/*.component.test.tsx', 'jsdom'],
+      ['src/pages/**/*.test.tsx', 'jsdom'],
+      ['src/components/**/*.test.tsx', 'jsdom'],
+    ],
   },
 })

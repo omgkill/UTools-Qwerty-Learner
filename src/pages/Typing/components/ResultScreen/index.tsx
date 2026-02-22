@@ -4,37 +4,32 @@ import ConclusionBar from './ConclusionBar'
 import MiniWordChip from './MiniWordChip'
 import RemarkRing from './RemarkRing'
 import WordChip from './WordChip'
-import Tooltip from '@/components/Tooltip'
-import { currentDictInfoAtom, randomConfigAtom, wordDictationConfigAtom } from '@/store'
+import { currentDictInfoAtom } from '@/store'
 import type { WordWithIndex } from '@/typings'
 import { Transition } from '@headlessui/react'
-import { useAtomValue, useSetAtom } from 'jotai'
+import { useAtomValue } from 'jotai'
 import { useCallback, useContext, useEffect, useMemo } from 'react'
-import { useHotkeys } from 'react-hotkeys-hook'
 import IconX from '~icons/tabler/x'
 
 const ResultScreen = () => {
-  // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
   const { state, dispatch } = useContext(TypingContext)!
 
-  const setWordDictationConfig = useSetAtom(wordDictationConfigAtom)
   const currentDictInfo = useAtomValue(currentDictInfoAtom)
-  const randomConfig = useAtomValue(randomConfigAtom)
 
   useEffect(() => {
     dispatch({ type: TypingStateActionType.TICK_TIMER, addTime: 0 })
   }, [dispatch])
 
   const wrongWords = useMemo(() => {
-    const wordList = state.chapterData.wrongWordIndexes.map((index) => state.chapterData.words.find((word) => word.index === index))
+    const wordList = state.statsData.wrongWordIndexes.map((index) => state.wordListData.words.find((word) => word.index === index))
     return wordList.filter((word) => word !== undefined) as WordWithIndex[]
-  }, [state.chapterData.wrongWordIndexes, state.chapterData.words])
+  }, [state.statsData.wrongWordIndexes, state.wordListData.words])
 
   const correctRate = useMemo(() => {
-    const chapterLength = state.chapterData.words.length
-    const correctCount = chapterLength - state.chapterData.wrongWordIndexes.length
-    return Math.floor((correctCount / chapterLength) * 100)
-  }, [state.chapterData.words.length, state.chapterData.wrongWordIndexes])
+    const wordListLength = state.wordListData.words.length
+    const correctCount = wordListLength - state.statsData.wrongWordIndexes.length
+    return Math.floor((correctCount / wordListLength) * 100)
+  }, [state.wordListData.words.length, state.statsData.wrongWordIndexes])
 
   const mistakeLevel = useMemo(() => {
     if (correctRate >= 85) {
@@ -47,43 +42,17 @@ const ResultScreen = () => {
   }, [correctRate])
 
   const timeString = useMemo(() => {
-    const seconds = state.timerData.time
+    const seconds = state.statsData.timerData.time
     const minutes = Math.floor(seconds / 60)
     const minuteString = minutes < 10 ? '0' + minutes : minutes + ''
     const restSeconds = seconds % 60
     const secondString = restSeconds < 10 ? '0' + restSeconds : restSeconds + ''
     return `${minuteString}:${secondString}`
-  }, [state.timerData.time])
+  }, [state.statsData.timerData.time])
 
-  const repeatButtonHandler = useCallback(() => {
-    dispatch({ type: TypingStateActionType.REPEAT_CHAPTER, shouldShuffle: randomConfig.isOpen })
-  }, [dispatch, randomConfig.isOpen])
-
-  const dictationButtonHandler = useCallback(() => {
-    setWordDictationConfig((old) => ({ ...old, isOpen: true }))
-    dispatch({ type: TypingStateActionType.REPEAT_CHAPTER, shouldShuffle: randomConfig.isOpen })
-  }, [dispatch, randomConfig.isOpen, setWordDictationConfig])
-
-  const exitButtonHandler = useCallback(() => {
-    dispatch({ type: TypingStateActionType.REPEAT_CHAPTER, shouldShuffle: false })
+  const closeButtonHandler = useCallback(() => {
+    dispatch({ type: TypingStateActionType.FINISH_LEARNING })
   }, [dispatch])
-
-  useHotkeys(
-    'space',
-    (e) => {
-      e.stopPropagation()
-      repeatButtonHandler()
-    },
-    { preventDefault: true },
-  )
-
-  useHotkeys(
-    'shift+enter',
-    () => {
-      dictationButtonHandler()
-    },
-    { preventDefault: true },
-  )
 
   return (
     <div className="fixed inset-0 z-30 overflow-y-auto">
@@ -112,30 +81,17 @@ const ResultScreen = () => {
               </div>
               <div className="mt-4 flex w-full justify-center gap-12 px-2 text-[.8rem] text-gray-700 dark:text-gray-300">
                 <div>耗时：{timeString}</div>
-                <div>正确率：{state.timerData.accuracy} %</div>
-                <div>WPM：{state.timerData.wpm}</div>
+                <div>正确率：{state.statsData.timerData.accuracy} %</div>
+                <div>WPM：{state.statsData.timerData.wpm}</div>
               </div>
               <div className="mt-4 flex w-full justify-center gap-2 px-2">
-                <Tooltip content="快捷键：shift + enter">
-                  <button
-                    className="btn-primary h-8 border-2 border-solid border-gray-300 bg-white text-[.8rem] text-gray-700 dark:border-gray-700 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-700"
-                    type="button"
-                    onClick={dictationButtonHandler}
-                    title="默写"
-                  >
-                    默写
-                  </button>
-                </Tooltip>
-                <Tooltip content="快捷键：space">
-                  <button
-                    className="btn-primary h-8 border-2 border-solid border-gray-300 bg-white text-[.8rem] text-gray-700 dark:border-gray-700 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-700"
-                    type="button"
-                    onClick={repeatButtonHandler}
-                    title="重复"
-                  >
-                    重复
-                  </button>
-                </Tooltip>
+                <button
+                  className="btn-primary h-8 border-2 border-solid border-gray-300 bg-white text-[.8rem] text-gray-700 dark:border-gray-700 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-700"
+                  type="button"
+                  onClick={closeButtonHandler}
+                >
+                  关闭
+                </button>
               </div>
             </div>
           </div>
@@ -145,14 +101,14 @@ const ResultScreen = () => {
               <div className="text-center font-sans text-xl font-normal text-gray-900 dark:text-gray-400 md:text-2xl">
                 {currentDictInfo?.name}
               </div>
-              <button className="absolute right-7 top-5" onClick={exitButtonHandler}>
+              <button className="absolute right-7 top-5" onClick={closeButtonHandler}>
                 <IconX className="text-gray-400" />
               </button>
               <div className="mt-10 flex flex-row gap-2 overflow-hidden">
                 <div className="flex flex-shrink-0 flex-grow-0 flex-col gap-3 px-4 sm:px-1 md:px-2 lg:px-4">
-                  <RemarkRing remark={`${state.timerData.accuracy}%`} caption="正确率" percentage={state.timerData.accuracy} />
+                  <RemarkRing remark={`${state.statsData.timerData.accuracy}%`} caption="正确率" percentage={state.statsData.timerData.accuracy} />
                   <RemarkRing remark={timeString} caption="耗时" />
-                  <RemarkRing remark={state.timerData.wpm + ''} caption="WPM" />
+                  <RemarkRing remark={state.statsData.timerData.wpm + ''} caption="WPM" />
                 </div>
                 <div className="z-10 ml-6 flex-1 overflow-visible rounded-xl bg-indigo-50 dark:bg-gray-700">
                   <div className="customized-scrollbar z-20 ml-8 mr-1 flex h-80 flex-row flex-wrap content-start gap-4 overflow-y-auto overflow-x-hidden pr-7 pt-9">
@@ -161,34 +117,12 @@ const ResultScreen = () => {
                     ))}
                   </div>
                   <div className="align-center flex w-full flex-row justify-start rounded-b-xl bg-indigo-200 px-4 dark:bg-indigo-400">
-                    <ConclusionBar mistakeLevel={mistakeLevel} mistakeCount={state.chapterData.wrongWordIndexes.length} />
+                    <ConclusionBar mistakeLevel={mistakeLevel} mistakeCount={state.statsData.wrongWordIndexes.length} />
                   </div>
                 </div>
                 <div className="ml-2 flex flex-col items-center justify-end gap-3.5 text-xl">
                   <ShareButton />
                 </div>
-              </div>
-              <div className="mt-10 flex w-full justify-center gap-5 px-5 text-xl">
-                <Tooltip content="快捷键：shift + enter">
-                  <button
-                    className="btn-primary h-12 border-2 border-solid border-gray-300 bg-white text-base text-gray-700 dark:border-gray-700 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-700"
-                    type="button"
-                    onClick={dictationButtonHandler}
-                    title="默写"
-                  >
-                    默写
-                  </button>
-                </Tooltip>
-                <Tooltip content="快捷键：space">
-                  <button
-                    className="btn-primary h-12 border-2 border-solid border-gray-300 bg-white text-base text-gray-700 dark:border-gray-700 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-700"
-                    type="button"
-                    onClick={repeatButtonHandler}
-                    title="重复"
-                  >
-                    重复
-                  </button>
-                </Tooltip>
               </div>
             </div>
           </div>

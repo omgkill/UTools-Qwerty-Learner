@@ -65,12 +65,12 @@ export default function MdxManagePage() {
       const deltaY = prevRect.top - currentRect.top
 
       if (deltaY !== 0) {
-        (item as HTMLElement).style.transform = `translateY(${deltaY}px)`
-        ;(item as HTMLElement).style.transition = 'none'
+        (item as HTMLElement).style.transform = `translateY(${deltaY}px)`;
+        (item as HTMLElement).style.transition = 'none';
 
         requestAnimationFrame(() => {
-          ;(item as HTMLElement).style.transition = 'transform 0.3s ease'
-          ;(item as HTMLElement).style.transform = 'translateY(0)'
+          (item as HTMLElement).style.transition = 'transform 0.3s ease';
+          (item as HTMLElement).style.transform = 'translateY(0)';
         })
       }
     })
@@ -198,7 +198,7 @@ export default function MdxManagePage() {
         <div className="empty">
           <div className="empty-icon">📚</div>
           <p>还没有添加任何词典</p>
-          <p className="empty-hint">点击上方"添加词典"按钮开始使用</p>
+          <p className="empty-hint">点击上方&quot;添加词典&quot;按钮开始使用</p>
         </div>
       )}
     </div>

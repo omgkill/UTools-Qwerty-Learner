@@ -160,7 +160,7 @@ export default function MdxQueryPage() {
   if (dicts.length === 0) {
     return (
       <div className="mdict-page">
-        <div className="no-result">还没有添加词典，请先在 uTools 中输入"管理词典"添加 MDX 词典</div>
+        <div className="no-result">还没有添加词典，请先在 uTools 中输入&quot;管理词典&quot;添加 MDX 词典</div>
       </div>
     )
   }

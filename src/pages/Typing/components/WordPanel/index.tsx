@@ -3,7 +3,7 @@ import PrevAndNextWord from '../PrevAndNextWord'
 import Phonetic from './components/Phonetic'
 import Translation from './components/Translation'
 import WordComponent from './components/Word'
-import { parseMdxEntry } from '../../hooks/useWordList'
+import { parseMdxEntry } from '@/utils/mdxParser'
 import { usePrefetchPronunciationSound } from '@/hooks/usePronunciation'
 import { isShowPrevAndNextWordAtom, phoneticConfigAtom } from '@/store'
 import type { Word } from '@/typings'
@@ -14,36 +14,38 @@ export default function WordPanel() {
   const { state, dispatch } = useContext(TypingContext)!
   const phoneticConfig = useAtomValue(phoneticConfigAtom)
   const isShowPrevAndNextWord = useAtomValue(isShowPrevAndNextWordAtom)
-  const currentWord = state.chapterData.words[state.chapterData.index]
-  const nextWord = state.chapterData.words[state.chapterData.index + 1] as Word | undefined
+  const currentWord = state.wordListData.words[state.wordListData.index]
+  const prevWord = state.wordListData.words[state.wordListData.index - 1] as Word | undefined
+  const nextWord = state.wordListData.words[state.wordListData.index + 1] as Word | undefined
 
   usePrefetchPronunciationSound(currentWord?.name)
+  usePrefetchPronunciationSound(prevWord?.name)
   usePrefetchPronunciationSound(nextWord?.name)
   const queriedWordsRef = useRef(new Set<string>())
 
   const onFinish = useCallback(() => {
-    if (state.chapterData.index < state.chapterData.words.length - 1) {
+    if (state.wordListData.index < state.wordListData.words.length - 1) {
       dispatch({ type: TypingStateActionType.NEXT_WORD })
     } else {
-      dispatch({ type: TypingStateActionType.FINISH_CHAPTER })
+      dispatch({ type: TypingStateActionType.FINISH_WORDS })
     }
-  }, [state.chapterData.index, state.chapterData.words.length, dispatch])
+  }, [state.wordListData.index, state.wordListData.words.length, dispatch])
 
   const requestWordMeaning = useCallback(
-    async (targetIndex: number) => {
-      const target = state.chapterData.words[targetIndex]
-      if (!target) return
+    async (targetWord: Word | undefined) => {
+      if (!targetWord) return
       if (!window.queryFirstMdxWord) return
       const dicts = window.getMdxDictConfig?.() || window.services?.getDictList?.() || []
       if (!dicts[0]) return
-      if (queriedWordsRef.current.has(target.name)) return
+      if (queriedWordsRef.current.has(targetWord.name)) return
 
-      const hasTranslations = target.trans?.some((item) => item && item.trim().length > 0)
-      const hasPhonetics = Boolean(target.ukphone && target.ukphone.trim().length > 0)
+      const existingInfo = state.wordInfoMap[targetWord.name]
+      const hasTranslations = existingInfo?.trans && existingInfo.trans.length > 0
+      const hasPhonetics = Boolean(existingInfo?.ukphone)
       if (hasTranslations && hasPhonetics) return
 
-      queriedWordsRef.current.add(target.name)
-      const result = await window.queryFirstMdxWord(target.name)
+      queriedWordsRef.current.add(targetWord.name)
+      const result = await window.queryFirstMdxWord(targetWord.name)
       if (!result || !result.ok || !result.content) return
 
       const parsed = parseMdxEntry(result.content)
@@ -52,28 +54,38 @@ export default function WordPanel() {
       dispatch({
         type: TypingStateActionType.UPDATE_WORD_INFO,
         payload: {
-          index: targetIndex,
+          wordName: targetWord.name,
           data: {
-            trans: parsed.translations.length > 0 ? parsed.translations : target.trans,
-            ukphone: parsed.phonetics.uk || target.ukphone,
-            tense: parsed.tense || target.tense,
+            trans: parsed.translations.length > 0 ? parsed.translations : undefined,
+            ukphone: parsed.phonetics.uk || undefined,
+            tense: parsed.tense || undefined,
           },
         },
       })
     },
-    [dispatch, state.chapterData.words],
+    [dispatch, state.wordInfoMap],
   )
 
   useEffect(() => {
-    void requestWordMeaning(state.chapterData.index)
-    void requestWordMeaning(state.chapterData.index + 1)
-  }, [requestWordMeaning, state.chapterData.index])
+    void requestWordMeaning(prevWord)
+    void requestWordMeaning(currentWord)
+    void requestWordMeaning(nextWord)
+  }, [requestWordMeaning, prevWord, currentWord, nextWord])
+
+  const wordInfo = currentWord ? state.wordInfoMap[currentWord.name] : undefined
+  const displayTrans = wordInfo?.trans || currentWord?.trans || []
+  const displayUkphone = wordInfo?.ukphone || currentWord?.ukphone || ''
+  const displayTense = wordInfo?.tense || currentWord?.tense
+
+  const wordWithInfo = currentWord
+    ? { ...currentWord, trans: displayTrans, ukphone: displayUkphone, tense: displayTense }
+    : null
 
   return (
     <div className="container flex w-full flex-col items-center justify-center">
       {!state.isImmersiveMode && (
         <div className="container flex h-24 w-full shrink-0 grow-0 justify-between px-12 pt-10">
-          {isShowPrevAndNextWord && state.isTyping && (
+          {isShowPrevAndNextWord && state.uiState.isTyping && (
             <>
               <PrevAndNextWord type="prev" />
               <PrevAndNextWord type="next" />
@@ -84,19 +96,19 @@ export default function WordPanel() {
       <div className="container flex flex-col items-center justify-center">
         {currentWord && (
           <div className="relative flex w-full justify-center">
-            {!state.isTyping && (
+            {!state.uiState.isTyping && (
               <div className="absolute flex h-full w-full justify-center">
                 <div className="z-10 flex w-full items-center backdrop-blur-sm">
                   <p className="w-full select-none text-center text-xl text-gray-600 dark:text-gray-50">
-                    按任意键{state.timerData.time ? '继续' : '开始'}
+                    按任意键{state.statsData.timerData.time ? '继续' : '开始'}
                   </p>
                 </div>
               </div>
             )}
             <div className="relative">
-              <WordComponent word={currentWord} onFinish={onFinish} />
-              {phoneticConfig.isOpen && <Phonetic word={currentWord} />}
-              {state.isTransVisible && <Translation trans={currentWord.trans} tense={currentWord.tense} />}
+              <WordComponent word={currentWord} onFinish={onFinish} isExtraReview={state.uiState.isExtraReview} />
+              {phoneticConfig.isOpen && <Phonetic word={wordWithInfo || currentWord} />}
+              {state.isTransVisible && <Translation trans={displayTrans} tense={displayTense} />}
             </div>
           </div>
         )}

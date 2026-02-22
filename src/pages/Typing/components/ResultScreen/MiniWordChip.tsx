@@ -1,12 +1,18 @@
 import usePronunciationSound from '@/hooks/usePronunciation'
+import { TypingContext } from '@/pages/Typing/store'
 import type { WordWithIndex } from '@/typings'
 import { flip, offset, shift, useFloating, useHover, useInteractions, useRole } from '@floating-ui/react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useContext, useMemo, useState } from 'react'
 
-export default function WordChip({ word }: { word: WordWithIndex }) {
+export default function MiniWordChip({ word }: { word: WordWithIndex }) {
+  const { state } = useContext(TypingContext)!
   const [showTranslation, setShowTranslation] = useState(false)
-  const displayTrans = useMemo(() => word.trans.filter((item) => item && item.trim().length > 0).slice(0, 4), [word.trans])
+  
+  const wordInfo = state.wordInfoMap[word.name]
+  const trans = wordInfo?.trans || word.trans || []
+  const displayTrans = useMemo(() => trans.filter((item) => item && item.trim().length > 0).slice(0, 4), [trans])
   const displayText = useMemo(() => displayTrans.join('；'), [displayTrans])
+  
   const { x, y, strategy, refs, context } = useFloating({
     open: showTranslation,
     onOpenChange: setShowTranslation,

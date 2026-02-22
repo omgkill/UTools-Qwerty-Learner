@@ -5,117 +5,35 @@ import Letter from './Letter'
 import type { LetterState } from './Letter'
 import Notation from './Notation'
 import style from './index.module.css'
-import { EXPLICIT_SPACE } from '@/constants'
 import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
 import {
   currentDictInfoAtom,
-  isIgnoreCaseAtom,
   isShowAnswerOnHoverAtom,
   isTextSelectableAtom,
   pronunciationIsOpenAtom,
   wordDictationConfigAtom,
 } from '@/store'
 import type { Word } from '@/typings'
-import { getUtcStringForMixpanel, useMixPanelWordLogUploader } from '@/utils'
-import { useSaveWordRecord } from '@/utils/db'
-import { useDailyRecord, useWordProgress } from '@/utils/db/useProgress'
-import type { LetterMistakes } from '@/utils/db/record'
 import { useAtomValue } from 'jotai'
-import { useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { useImmer } from 'use-immer'
+import { useCallback, useContext, useEffect, useState } from 'react'
+import { useWordState, useWordInput, useWordCompletion } from './hooks'
 
-type WordState = {
-  wordName: string
-  displayWord: string
-  inputWord: string
-  letterStates: LetterState[]
-  isFinished: boolean
-  hasWrong: boolean
-  hasMadeInputWrong: boolean
-  wrongCount: number
-  startTime: string
-  endTime: string
-  inputCount: number
-  correctCount: number
-  letterTimeArray: number[]
-  letterMistake: LetterMistakes
-}
+export type { LetterState }
+export type { WordState } from './hooks'
 
-const initialWordState: WordState = {
-  wordName: '',
-  displayWord: '',
-  inputWord: '',
-  letterStates: [],
-  isFinished: false,
-  hasWrong: false,
-  hasMadeInputWrong: false,
-  wrongCount: 0,
-  startTime: '',
-  endTime: '',
-  inputCount: 0,
-  correctCount: 0,
-  letterTimeArray: [],
-  letterMistake: {},
-}
-
-export default function WordComponent({ word, onFinish }: { word: Word; onFinish: () => void }) {
+export default function WordComponent({ word, onFinish, isExtraReview = false }: { word: Word; onFinish: () => void; isExtraReview?: boolean }) {
   const { state, dispatch } = useContext(TypingContext)!
-  const [wordState, setWordState] = useImmer<WordState>(structuredClone(initialWordState))
-  const onFinishCalledRef = useRef(false)
-  const lastWordNameRef = useRef<string | null>(null)
+  const { wordState, setWordState } = useWordState(word.name)
 
   const wordDictationConfig = useAtomValue(wordDictationConfigAtom)
   const isTextSelectable = useAtomValue(isTextSelectableAtom)
-  const isIgnoreCase = useAtomValue(isIgnoreCaseAtom)
   const isShowAnswerOnHover = useAtomValue(isShowAnswerOnHoverAtom)
-  const saveWordRecord = useSaveWordRecord()
-  const wordLogUploader = useMixPanelWordLogUploader(state)
   const pronunciationIsOpen = useAtomValue(pronunciationIsOpenAtom)
   const [isHoveringWord, setIsHoveringWord] = useState(false)
   const currentLanguage = useAtomValue(currentDictInfoAtom).language
-  const { updateWordProgress } = useWordProgress()
-  const { incrementReviewed, incrementLearned } = useDailyRecord()
 
-  useEffect(() => {
-    const prevWord = lastWordNameRef.current
-    if (prevWord === word.name) return
-    lastWordNameRef.current = word.name
-    let headword = word.name.replace(new RegExp(' ', 'g'), EXPLICIT_SPACE)
-    headword = headword.replace(new RegExp('…', 'g'), '..')
-
-    const newWordState = structuredClone(initialWordState)
-    newWordState.wordName = word.name
-    newWordState.displayWord = headword
-    newWordState.letterStates = new Array(headword.length).fill('normal')
-    newWordState.startTime = getUtcStringForMixpanel()
-    setWordState(newWordState)
-    onFinishCalledRef.current = false
-  }, [word.name, setWordState])
-
-  const updateInput = useCallback(
-    (updateAction: WordUpdateAction) => {
-      switch (updateAction.type) {
-        case 'add':
-          if (wordState.hasWrong) return
-
-          if (updateAction.value === ' ') {
-            updateAction.event.preventDefault()
-            setWordState((state) => {
-              state.inputWord = state.inputWord + EXPLICIT_SPACE
-            })
-          } else {
-            setWordState((state) => {
-              state.inputWord = state.inputWord + updateAction.value
-            })
-          }
-          break
-
-        default:
-          console.warn('unknown update type', updateAction)
-      }
-    },
-    [wordState.hasWrong, setWordState],
-  )
+  const { updateInput } = useWordInput(wordState, setWordState)
+  useWordCompletion(word, wordState, onFinish, isExtraReview)
 
   const handleHoverWord = useCallback((checked: boolean) => {
     setIsHoveringWord(checked)
@@ -132,121 +50,6 @@ export default function WordComponent({ word, onFinish }: { word: Word; onFinish
     },
     [isHoveringWord, isShowAnswerOnHover, wordDictationConfig.isOpen, wordState.letterStates],
   )
-
-  useEffect(() => {
-    const inputLength = wordState.inputWord.length
-    if (wordState.hasWrong || inputLength === 0 || wordState.displayWord.length === 0) {
-      return
-    }
-
-    const inputChar = wordState.inputWord[inputLength - 1]
-    const correctChar = wordState.displayWord[inputLength - 1]
-
-    let isEqual = false
-    if (inputChar != undefined && correctChar != undefined) {
-      isEqual = isIgnoreCase ? inputChar.toLowerCase() === correctChar.toLowerCase() : inputChar === correctChar
-    }
-
-    if (isEqual) {
-      setWordState((state) => {
-        state.letterTimeArray.push(Date.now())
-        state.correctCount += 1
-      })
-
-      if (inputLength >= wordState.displayWord.length) {
-        setWordState((state) => {
-          state.letterStates[inputLength - 1] = 'correct'
-          state.isFinished = true
-          state.endTime = getUtcStringForMixpanel()
-        })
-      } else {
-        setWordState((state) => {
-          state.letterStates[inputLength - 1] = 'correct'
-        })
-      }
-
-      dispatch({ type: TypingStateActionType.INCREASE_CORRECT_COUNT })
-    } else {
-      setWordState((state) => {
-        state.letterStates[inputLength - 1] = 'wrong'
-        state.hasWrong = true
-        state.hasMadeInputWrong = true
-        state.wrongCount += 1
-        state.letterTimeArray = []
-        if (state.letterMistake[inputLength - 1]) {
-          state.letterMistake[inputLength - 1].push(inputChar)
-        } else {
-          state.letterMistake[inputLength - 1] = [inputChar]
-        }
-      })
-
-      dispatch({ type: TypingStateActionType.INCREASE_WRONG_COUNT })
-      dispatch({ type: TypingStateActionType.REPORT_WRONG_WORD })
-    }
-  }, [wordState.inputWord, wordState.hasWrong, wordState.displayWord.length, isIgnoreCase, setWordState, dispatch])
-
-  useEffect(() => {
-    if (wordState.hasWrong) {
-      const timer = setTimeout(() => {
-        setWordState((state) => {
-          state.inputWord = ''
-          state.letterStates = new Array(state.letterStates.length).fill('normal')
-          state.hasWrong = false
-        })
-      }, 300)
-
-      return () => {
-        clearTimeout(timer)
-      }
-    }
-  }, [wordState.hasWrong, setWordState])
-
-  useEffect(() => {
-    if (wordState.isFinished) {
-      if (onFinishCalledRef.current) return
-      if (wordState.wordName !== word.name) {
-        return
-      }
-      onFinishCalledRef.current = true
-
-      if (!wordState.hasMadeInputWrong) {
-        dispatch({ type: TypingStateActionType.REPORT_CORRECT_WORD })
-      }
-
-      dispatch({ type: TypingStateActionType.SET_IS_SAVING_RECORD, payload: true })
-
-      wordLogUploader({
-        headword: word.name,
-        timeStart: wordState.startTime,
-        timeEnd: wordState.endTime,
-        countInput: wordState.correctCount + wordState.wrongCount,
-        countCorrect: wordState.correctCount,
-        countTypo: wordState.wrongCount,
-      })
-      saveWordRecord({
-        word: word.name,
-        wrongCount: wordState.wrongCount,
-        letterTimeArray: wordState.letterTimeArray,
-        letterMistake: wordState.letterMistake,
-      })
-
-      const isCorrect = !wordState.hasMadeInputWrong
-      updateWordProgress(word.name, isCorrect, wordState.wrongCount)
-        .then((progress) => {
-          const isNewWord = progress.reps === 1
-          if (isNewWord) {
-            incrementLearned()
-          } else {
-            incrementReviewed()
-          }
-        })
-        .catch((e) => {
-          console.error('Failed to update word progress:', e)
-        })
-
-      onFinish()
-    }
-  }, [wordState.isFinished, wordState.hasMadeInputWrong, wordState.startTime, wordState.endTime, wordState.correctCount, wordState.wrongCount, wordState.letterTimeArray, wordState.letterMistake, word.name, dispatch, wordLogUploader, saveWordRecord, updateWordProgress, incrementLearned, incrementReviewed, onFinish])
 
   useEffect(() => {
     if (wordState.wrongCount >= 4) {
