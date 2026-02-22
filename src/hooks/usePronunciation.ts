@@ -52,7 +52,7 @@ export default function usePronunciationSound(word: string) {
     pronunciationSoundCache.set(soundUrl, newSound, (evicted) => evicted.unload())
     soundRef.current = newSound
     setSound(newSound)
-  }, [soundUrl])
+  }, [soundUrl, pronunciationConfig.rate, pronunciationConfig.volume])
 
   useEffect(() => {
     const currentSound = soundRef.current

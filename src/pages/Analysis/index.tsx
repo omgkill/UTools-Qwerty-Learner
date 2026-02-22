@@ -1,16 +1,25 @@
-import HeatmapCharts from './components/HeatmapCharts'
-import LineCharts from './components/LineCharts'
-import { useWordStats } from './hooks/useWordStats'
+import DayList from './components/DayList'
+import DictList from './components/DictList'
+import WordDetailList from './components/WordDetailList'
+import { useDayStats, useStudyStats, useWordDetails } from './hooks/useStudyStats'
 import Layout from '@/components/Layout'
 import * as ScrollArea from '@radix-ui/react-scroll-area'
-import dayjs from 'dayjs'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { useNavigate } from 'react-router-dom'
 import IconX from '~icons/tabler/x'
 
+type ViewState = 'dicts' | 'days' | 'words'
+
 const Analysis = () => {
   const navigate = useNavigate()
+  const [viewState, setViewState] = useState<ViewState>('dicts')
+  const [selectedDictId, setSelectedDictId] = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+
+  const { dictStats, isLoading: isDictLoading } = useStudyStats()
+  const { days, isLoading: isDayLoading } = useDayStats(selectedDictId)
+  const { words, isLoading: isWordLoading } = useWordDetails(selectedDictId, selectedDate)
 
   const onBack = useCallback(() => {
     navigate('/')
@@ -18,10 +27,27 @@ const Analysis = () => {
 
   useHotkeys('enter,esc', onBack, { preventDefault: true })
 
-  const { isEmpty, exerciseRecord, wordRecord, wpmRecord, accuracyRecord } = useWordStats(
-    dayjs().subtract(1, 'year').unix(),
-    dayjs().unix(),
-  )
+  const handleSelectDict = useCallback((dictId: string) => {
+    setSelectedDictId(dictId)
+    setSelectedDate(null)
+    setViewState('days')
+  }, [])
+
+  const handleSelectDate = useCallback((date: string) => {
+    setSelectedDate(date)
+    setViewState('words')
+  }, [])
+
+  const handleBackToDicts = useCallback(() => {
+    setSelectedDictId(null)
+    setSelectedDate(null)
+    setViewState('dicts')
+  }, [])
+
+  const handleBackToDays = useCallback(() => {
+    setSelectedDate(null)
+    setViewState('days')
+  }, [])
 
   return (
     <Layout>
@@ -29,26 +55,33 @@ const Analysis = () => {
         <IconX className="absolute right-20 top-10 mr-2 h-7 w-7 cursor-pointer text-gray-400" onClick={onBack} />
         <ScrollArea.Root className="flex-1 overflow-y-auto">
           <ScrollArea.Viewport className="h-full w-auto pb-[20rem] [&>div]:!block">
-            {isEmpty ? (
-              <div className="align-items-center m-4 grid h-80 w-auto place-content-center overflow-hidden rounded-lg shadow-lg bg-gray-600">
-                <div className="text-2xl text-gray-400">暂无练习数据</div>
-              </div>
-            ) : (
-              <>
-                <div className="mx-4 my-8 h-auto w-auto overflow-hidden rounded-lg p-8 shadow-lg bg-gray-700 bg-opacity-50">
-                  <HeatmapCharts title="过去一年练习次数热力图" data={exerciseRecord} />
-                </div>
-                <div className="mx-4 my-8 h-auto w-auto overflow-hidden rounded-lg p-8 shadow-lg bg-gray-700 bg-opacity-50">
-                  <HeatmapCharts title="过去一年练习词数热力图" data={wordRecord} />
-                </div>
-                <div className="mx-4 my-8 h-80 w-auto overflow-hidden rounded-lg p-8 shadow-lg bg-gray-700 bg-opacity-50">
-                  <LineCharts title="过去一年WPM趋势图" name="WPM" data={wpmRecord} />
-                </div>
-                <div className="mx-4 my-8 h-80 w-auto overflow-hidden rounded-lg p-8 shadow-lg bg-gray-700 bg-opacity-50">
-                  <LineCharts title="过去一年正确率趋势图" name="正确率(%)" data={accuracyRecord} suffix="%" />
-                </div>
-              </>
-            )}
+            <div className="mx-4 my-8 h-auto w-auto overflow-hidden rounded-lg p-8 shadow-lg bg-gray-700 bg-opacity-50">
+              {viewState === 'dicts' && (
+                <DictList
+                  dicts={dictStats}
+                  selectedDictId={selectedDictId}
+                  onSelectDict={handleSelectDict}
+                  isLoading={isDictLoading}
+                />
+              )}
+              {viewState === 'days' && (
+                <DayList
+                  days={days}
+                  selectedDate={selectedDate}
+                  onSelectDate={handleSelectDate}
+                  onBack={handleBackToDicts}
+                  isLoading={isDayLoading}
+                />
+              )}
+              {viewState === 'words' && (
+                <WordDetailList
+                  words={words}
+                  date={selectedDate}
+                  onBack={handleBackToDays}
+                  isLoading={isWordLoading}
+                />
+              )}
+            </div>
           </ScrollArea.Viewport>
           <ScrollArea.Scrollbar className="flex touch-none select-none bg-transparent " orientation="vertical"></ScrollArea.Scrollbar>
         </ScrollArea.Root>

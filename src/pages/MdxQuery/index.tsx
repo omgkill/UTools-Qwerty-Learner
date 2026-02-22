@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import './index.css'
 
 const log = (msg: string) => {
   const timestamp = new Date().toISOString().substr(11, 12)
   const line = `[${timestamp}] [MdxQuery] ${msg}`
   console.log(line)
-  ;(window as any).debugLog?.(`[MdxQuery] ${msg}`)
+  ;(window as unknown as { debugLog?: (message: string) => void }).debugLog?.(`[MdxQuery] ${msg}`)
 }
 
 interface MdxResult {
@@ -35,12 +36,16 @@ declare global {
 }
 
 export default function MdxQueryPage() {
+  const { word: routeWord } = useParams<{ word?: string }>()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [dicts, setDicts] = useState<DictItem[]>([])
   const [results, setResults] = useState<MdxResult[]>([])
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
-  log(`render: loading=${loading}, dicts.length=${dicts.length}, results.length=${results.length}`)
+  const isFromRoute = Boolean(routeWord)
+
+  log(`render: loading=${loading}, dicts.length=${dicts.length}, results.length=${results.length}, routeWord=${routeWord}`)
 
   const loadDicts = useCallback(() => {
     log('loadDicts called')
@@ -83,6 +88,10 @@ export default function MdxQueryPage() {
     setExpanded(prev => ({ ...prev, [dictPath]: !prev[dictPath] }))
   }, [])
 
+  const handleBack = useCallback(() => {
+    navigate(-1)
+  }, [navigate])
+
   useEffect(() => {
     log('useEffect: loadDicts')
     loadDicts()
@@ -103,27 +112,55 @@ export default function MdxQueryPage() {
     }
     window.addEventListener('utools-mode-change', handleModeChange as EventListener)
 
-    const action = window.getAction?.()
-    log(`useEffect: getAction() = ${JSON.stringify(action)}`)
-    if (action?.payload) {
-      const inputWord = String(action.payload).trim()
-      if (inputWord) {
-        handleSearch(inputWord)
+    if (routeWord) {
+      const decodedWord = decodeURIComponent(routeWord)
+      log(`useEffect: routeWord=${decodedWord}`)
+      handleSearch(decodedWord)
+    } else {
+      const action = window.getAction?.()
+      log(`useEffect: getAction() = ${JSON.stringify(action)}`)
+      if (action?.payload) {
+        const inputWord = String(action.payload).trim()
+        if (inputWord) {
+          handleSearch(inputWord)
+        } else {
+          setLoading(false)
+        }
       } else {
         setLoading(false)
       }
-    } else {
-      setLoading(false)
     }
 
     return () => {
       window.removeEventListener('utools-mode-change', handleModeChange as EventListener)
     }
-  }, [handleSearch])
+  }, [handleSearch, routeWord])
+
+  const renderBackButton = () => (
+    <button
+      onClick={handleBack}
+      className="back-btn"
+      title="返回"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M19 12H5M12 19l-7-7 7-7" />
+      </svg>
+    </button>
+  )
+
+  const renderHeader = () => {
+    if (!isFromRoute) return null
+    return (
+      <div className="mdict-header">
+        {renderBackButton()}
+      </div>
+    )
+  }
 
   if (loading) {
     return (
       <div className="mdict-page">
+        {renderHeader()}
         <div className="loading">查询中...</div>
       </div>
     )
@@ -132,6 +169,7 @@ export default function MdxQueryPage() {
   if (results.length > 0) {
     return (
       <div className="mdict-page">
+        {renderHeader()}
         <div className="result-list">
           {results.map((item) => (
             <div key={item.dictPath} className="result-item">
@@ -160,13 +198,15 @@ export default function MdxQueryPage() {
   if (dicts.length === 0) {
     return (
       <div className="mdict-page">
-        <div className="no-result">还没有添加词典，请先在 uTools 中输入&quot;管理词典&quot;添加 MDX 词典</div>
+        {renderHeader()}
+        <div className="no-result">还没有添加词典，请先在 uTools 中输入&ldquo;管理词典&rdquo;添加 MDX 词典</div>
       </div>
     )
   }
 
   return (
     <div className="mdict-page">
+      {renderHeader()}
       <div className="no-result">未查到结果</div>
     </div>
   )

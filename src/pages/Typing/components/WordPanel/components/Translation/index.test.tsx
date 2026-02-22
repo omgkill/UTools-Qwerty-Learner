@@ -1,8 +1,9 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import type * as Jotai from 'jotai'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('jotai', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('jotai')>()
+  const actual = (await importOriginal()) as typeof Jotai
   return {
     ...actual,
     useAtomValue: vi.fn(() => ({ isTransRead: false, transVolume: 1 })),
@@ -119,14 +120,14 @@ describe('Translation Component', () => {
   describe('Null/Undefined Handling (空值处理)', () => {
     it('should handle undefined trans gracefully', async () => {
       const { default: Translation } = await import('./index')
-      const { container } = render(<Translation trans={undefined as any} />)
+      const { container } = render(<Translation trans={undefined as unknown as string[]} />)
 
       expect(container.firstChild).toBeNull()
     })
 
     it('should handle null trans gracefully', async () => {
       const { default: Translation } = await import('./index')
-      const { container } = render(<Translation trans={null as any} />)
+      const { container } = render(<Translation trans={null as unknown as string[]} />)
 
       expect(container.firstChild).toBeNull()
     })

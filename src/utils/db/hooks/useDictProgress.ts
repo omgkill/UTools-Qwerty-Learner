@@ -27,7 +27,9 @@ export function useDictProgress() {
       Object.assign(progress, updates)
       progress.lastStudyTime = Date.now()
 
-      await db.dictProgress.update(progress.id!, progress)
+      const progressId = progress.id ?? (await db.dictProgress.add(progress))
+      progress.id = progressId
+      await db.dictProgress.update(progressId, progress)
     },
     [dictID, getDictProgress],
   )

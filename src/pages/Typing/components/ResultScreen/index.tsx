@@ -1,4 +1,4 @@
-import { TypingContext, TypingStateActionType } from '../../store'
+import { TypingContext, TypingStateActionType, initialState } from '../../store'
 import ShareButton from '../ShareButton'
 import ConclusionBar from './ConclusionBar'
 import MiniWordChip from './MiniWordChip'
@@ -12,11 +12,14 @@ import { useCallback, useContext, useEffect, useMemo } from 'react'
 import IconX from '~icons/tabler/x'
 
 const ResultScreen = () => {
-  const { state, dispatch } = useContext(TypingContext)!
+  const typingContext = useContext(TypingContext)
+  const state = typingContext?.state ?? initialState
+  const dispatch = typingContext?.dispatch
 
   const currentDictInfo = useAtomValue(currentDictInfoAtom)
 
   useEffect(() => {
+    if (!dispatch) return
     dispatch({ type: TypingStateActionType.TICK_TIMER, addTime: 0 })
   }, [dispatch])
 
@@ -51,6 +54,7 @@ const ResultScreen = () => {
   }, [state.statsData.timerData.time])
 
   const closeButtonHandler = useCallback(() => {
+    if (!dispatch) return
     dispatch({ type: TypingStateActionType.FINISH_LEARNING })
   }, [dispatch])
 
@@ -99,7 +103,7 @@ const ResultScreen = () => {
           <div className="flex h-screen items-center justify-center">
             <div className="card fixed flex w-[90vw] max-w-6xl flex-col overflow-hidden rounded-2xl bg-white pb-14 pl-10 pr-5 pt-10 shadow-lg dark:bg-gray-800 md:w-4/5 lg:w-3/5">
               <div className="text-center font-sans text-xl font-normal text-gray-900 dark:text-gray-400 md:text-2xl">
-                {currentDictInfo?.name}
+                ✓ 今日目标达成
               </div>
               <button className="absolute right-7 top-5" onClick={closeButtonHandler}>
                 <IconX className="text-gray-400" />

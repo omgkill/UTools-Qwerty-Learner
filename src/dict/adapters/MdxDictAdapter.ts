@@ -6,6 +6,16 @@ export class MdxDictAdapter extends BaseDictAdapter {
   private _path: string
   private _mdxLookup: ((word: string) => Promise<string[]>) | null = null
   private _mddLookup: ((resource: string) => Promise<Buffer>) | null = null
+  private _dictLoader:
+    | {
+        load: (
+          path: string,
+        ) => Promise<{
+          mdxLookup: (word: string) => Promise<string[]>
+          mddLookup: (resource: string) => Promise<Buffer>
+        }>
+      }
+    | null = null
 
   constructor(id: string, name: string, path: string) {
     super()
@@ -17,8 +27,15 @@ export class MdxDictAdapter extends BaseDictAdapter {
   async load(): Promise<void> {
     if (this._loaded) return
 
-    if (typeof window !== 'undefined' && (window as any).dictMdxLoader) {
-      const result = await (window as any).dictMdxLoader.load(this._path)
+    if (typeof window !== 'undefined') {
+      const loader = (window as unknown as { dictMdxLoader?: typeof this._dictLoader }).dictMdxLoader
+      if (loader) {
+        this._dictLoader = loader
+      }
+    }
+
+    if (this._dictLoader) {
+      const result = await this._dictLoader.load(this._path)
       this._mdxLookup = result.mdxLookup
       this._mddLookup = result.mddLookup
     }
@@ -39,8 +56,11 @@ export class MdxDictAdapter extends BaseDictAdapter {
       if (Array.isArray(definitions) && definitions.length > 0) {
         result = definitions.join('\n<hr>\n')
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (typeof e === 'string' && e.includes('NOT FOUND')) {
+        return null
+      }
+      if (e instanceof Error && e.message.includes('NOT FOUND')) {
         return null
       }
       throw e

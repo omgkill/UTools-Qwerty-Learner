@@ -1,6 +1,5 @@
 import Layout from '../../components/Layout'
 import PronunciationSwitcher from './components/PronunciationSwitcher'
-import ResultScreen from './components/ResultScreen'
 import Speed from './components/Speed'
 import StartButton from './components/StartButton'
 import Switcher from './components/Switcher'
@@ -38,7 +37,7 @@ interface TypingAppInnerProps {
 }
 
 const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
-  const { state, dispatch } = useTypingContext()!
+  const { state, dispatch } = useTypingContext()
   const {
     words,
     learningType,
@@ -126,7 +125,6 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
 
   return (
     <>
-      {state.uiState.isFinished && <ResultScreen />}
       <Layout>
         {!state.isImmersiveMode && (
           <Header>
@@ -177,10 +175,10 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
         <div className="container mx-auto flex h-full flex-1 flex-col items-center justify-center pb-4">
           <div className="container relative mx-auto flex h-full flex-col items-center">
             <div className="container flex flex-grow items-center justify-center">
-              {learningType === 'complete' ? (
+              {(learningType === 'complete' || state.uiState.isFinished) ? (
                 <div className="flex flex-col items-center justify-center space-y-6">
                   <div className="text-6xl">🎉</div>
-                  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">今日目标达成！</h2>
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">✓ 今日目标达成</h2>
                   <p className="text-gray-600 dark:text-gray-400">
                     今日学习 <span className="font-bold text-indigo-600 dark:text-indigo-400">{todayLearned + todayReviewed}</span> 个单词
                     （新词 <span className="font-bold">{todayLearned}</span> 个，复习 <span className="font-bold">{todayReviewed}</span> 个）
@@ -188,7 +186,7 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
                   <p className="text-sm text-gray-500 dark:text-gray-500">明天继续加油！</p>
                 </div>
               ) : (
-                !state.uiState.isFinished && <WordPanel />
+                <WordPanel />
               )}
             </div>
             {!state.isImmersiveMode && <Speed />}
@@ -254,6 +252,9 @@ const App: React.FC = () => {
 
 function useTypingContext() {
   const context = useContext(TypingContext)
+  if (!context) {
+    throw new Error('TypingContext is not available')
+  }
   return context
 }
 

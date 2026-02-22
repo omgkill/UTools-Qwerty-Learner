@@ -1,4 +1,4 @@
-import { isTextSelectableAtom, phoneticConfigAtom } from '@/store'
+import { isTextSelectableAtom } from '@/store'
 import type { WordWithIndex } from '@/typings'
 import { useAtomValue } from 'jotai'
 

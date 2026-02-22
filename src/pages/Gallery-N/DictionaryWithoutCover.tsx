@@ -6,11 +6,10 @@ import Tooltip from '@/components/Tooltip'
 import useIntersectionObserver from '@/hooks/useIntersectionObserver'
 import { currentWordBankIdAtom } from '@/store'
 import type { WordBank } from '@/typings'
-import { calcChapterCount } from '@/utils'
 import * as Progress from '@radix-ui/react-progress'
 import { Dialog, Transition } from '@headlessui/react'
 import { useAtomValue } from 'jotai'
-import { Fragment, useContext, useMemo, useRef, useState } from 'react'
+import { Fragment, useContext, useRef, useState } from 'react'
 import { toast } from 'react-toastify'
 import IconDelete from '~icons/mdi/delete'
 
@@ -28,13 +27,7 @@ export default function DictionaryComponent({ wordBank, onClick }: Props) {
   const entry = useIntersectionObserver(divRef, {})
   const isVisible = !!entry?.isIntersecting
   const dictStats = useDictStats(wordBank.id, isVisible)
-  const chapterCount = useMemo(() => calcChapterCount(wordBank.length), [wordBank.length])
   const isSelected = currentWordBankID === wordBank.id
-
-  const chapterProgress = useMemo(
-    () => (dictStats ? Math.ceil((dictStats.exercisedChapterCount / chapterCount) * 100) : 0),
-    [dictStats, chapterCount],
-  )
 
   const masteryProgress = dictStats?.totalProgress ?? 0
 

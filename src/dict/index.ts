@@ -1,5 +1,5 @@
 import type { DictMeta, DictType, WordInfo } from './types'
-import { BaseDictAdapter } from './BaseDictAdapter'
+import type { BaseDictAdapter } from './BaseDictAdapter'
 import { CustomDictAdapter } from './adapters/CustomDictAdapter'
 import { MdxDictAdapter } from './adapters/MdxDictAdapter'
 

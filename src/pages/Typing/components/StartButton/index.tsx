@@ -1,14 +1,16 @@
-import { TypingContext, TypingStateActionType } from '../../store'
+import { TypingContext, TypingStateActionType, initialState } from '../../store'
 import Tooltip from '@/components/Tooltip'
-import { useAtomValue } from 'jotai'
 import { useCallback, useContext } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
 export default function StartButton({ isLoading }: { isLoading: boolean }) {
-  const { state, dispatch } = useContext(TypingContext)!
+  const typingContext = useContext(TypingContext)
+  const state = typingContext?.state ?? initialState
+  const dispatch = typingContext?.dispatch
 
   const onToggleIsTyping = useCallback(() => {
-    !isLoading && dispatch({ type: TypingStateActionType.TOGGLE_IS_TYPING })
+    if (isLoading || !dispatch) return
+    dispatch({ type: TypingStateActionType.TOGGLE_IS_TYPING })
   }, [isLoading, dispatch])
 
   useHotkeys('enter', onToggleIsTyping, { enableOnFormTags: true, preventDefault: true }, [onToggleIsTyping])

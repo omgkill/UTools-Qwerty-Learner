@@ -11,6 +11,15 @@ interface HeatmapChartsProps {
 }
 
 const HeatmapCharts: FC<HeatmapChartsProps> = ({ data, title }) => {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center">
+        <div className="text-center text-xl font-bold text-white">{title}</div>
+        <div className="mt-6 text-sm text-gray-400">暂无数据</div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col items-center justify-center">
       <div className="text-center text-xl font-bold text-white">{title}</div>
@@ -25,7 +34,8 @@ const HeatmapCharts: FC<HeatmapChartsProps> = ({ data, title }) => {
         colorScheme="dark"
         data={data}
         theme={{
-          dark: ['hsl(0, 0%, 22%)', '#818cf8'],
+          light: ['#2b2b2b', '#3a3f5c', '#4b4f8a', '#6366f1', '#818cf8'],
+          dark: ['#2b2b2b', '#3a3f5c', '#4b4f8a', '#6366f1', '#818cf8'],
         }}
         renderBlock={(block, activity) =>
           React.cloneElement(block, {

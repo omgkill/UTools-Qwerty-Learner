@@ -3,12 +3,14 @@ import { TypingContext, TypingStateActionType } from '../store'
 import { useContext, useEffect, useRef } from 'react'
 
 export function useWordSync(words: WordWithIndex[] | undefined, isTyping: boolean) {
-  const { state, dispatch } = useContext(TypingContext)!
+  const typingContext = useContext(TypingContext)
+  const dispatch = typingContext?.dispatch
   const wordsContentRef = useRef<string>('')
 
   useEffect(() => {
     if (words === undefined) return
 
+    if (!dispatch) return
     const wordNames = words.map((w) => w.name).join(',')
     const prevWordNames = wordsContentRef.current
 

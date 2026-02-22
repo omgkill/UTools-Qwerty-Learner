@@ -45,7 +45,9 @@ export function useDailyRecord() {
       record.reviewedCount++
     }
     record.lastUpdateTime = Date.now()
-    await db.dailyRecords.update(record.id!, record)
+    const recordId = record.id ?? (await db.dailyRecords.add(record))
+    record.id = recordId
+    await db.dailyRecords.update(recordId, record)
     setDailyRecord({ ...record })
   }, [dictID, getTodayRecord, setDailyRecord])
 
@@ -55,7 +57,9 @@ export function useDailyRecord() {
     const record = await getTodayRecord()
     record.learnedCount++
     record.lastUpdateTime = Date.now()
-    await db.dailyRecords.update(record.id!, record)
+    const recordId = record.id ?? (await db.dailyRecords.add(record))
+    record.id = recordId
+    await db.dailyRecords.update(recordId, record)
     setDailyRecord({ ...record })
   }, [dictID, getTodayRecord, setDailyRecord])
 

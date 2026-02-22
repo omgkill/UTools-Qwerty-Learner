@@ -1,10 +1,11 @@
 import type { WordUpdateAction } from '../InputHandler'
-import { TypingContext } from '@/pages/Typing/store'
+import { TypingContext, initialState } from '@/pages/Typing/store'
 import { isChineseSymbol, isLegal } from '@/utils'
 import { useCallback, useContext, useEffect } from 'react'
 
 export default function KeyEventHandler({ updateInput }: { updateInput: (updateObj: WordUpdateAction) => void }) {
-  const { state } = useContext(TypingContext)!
+  const typingContext = useContext(TypingContext)
+  const state = typingContext?.state ?? initialState
 
   const onKeydown = useCallback(
     (e: KeyboardEvent) => {

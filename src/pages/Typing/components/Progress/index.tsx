@@ -1,8 +1,9 @@
-import { TypingContext } from '../../store'
+import { TypingContext, initialState } from '../../store'
 import { useContext, useEffect, useState } from 'react'
 
 export default function Progress({ className }: { className?: string }) {
-  const { state } = useContext(TypingContext)!
+  const typingContext = useContext(TypingContext)
+  const state = typingContext?.state ?? initialState
   const [progress, setProgress] = useState(0)
   const [phase, setPhase] = useState(0)
 

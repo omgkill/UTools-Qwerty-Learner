@@ -1,4 +1,3 @@
-import type { WordUpdateAction } from '../InputHandler'
 import InputHandler from '../InputHandler'
 import WordSound from '../WordSound'
 import Letter from './Letter'
@@ -16,13 +15,14 @@ import {
 import type { Word } from '@/typings'
 import { useAtomValue } from 'jotai'
 import { useCallback, useContext, useEffect, useState } from 'react'
-import { useWordState, useWordInput, useWordCompletion } from './hooks'
+import { useWordCompletion, useWordInput, useWordState } from './hooks'
 
 export type { LetterState }
 export type { WordState } from './hooks'
 
 export default function WordComponent({ word, onFinish, isExtraReview = false }: { word: Word; onFinish: () => void; isExtraReview?: boolean }) {
-  const { state, dispatch } = useContext(TypingContext)!
+  const typingContext = useContext(TypingContext)
+  const dispatch = typingContext?.dispatch
   const { wordState, setWordState } = useWordState(word.name)
 
   const wordDictationConfig = useAtomValue(wordDictationConfigAtom)
@@ -52,6 +52,7 @@ export default function WordComponent({ word, onFinish, isExtraReview = false }:
   )
 
   useEffect(() => {
+    if (!dispatch) return
     if (wordState.wrongCount >= 4) {
       dispatch({ type: TypingStateActionType.SET_IS_SKIP, payload: true })
     }

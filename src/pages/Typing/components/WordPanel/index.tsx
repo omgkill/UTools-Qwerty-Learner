@@ -1,4 +1,4 @@
-import { TypingContext, TypingStateActionType } from '../../store'
+import { TypingContext, TypingStateActionType, initialState } from '../../store'
 import PrevAndNextWord from '../PrevAndNextWord'
 import Phonetic from './components/Phonetic'
 import Translation from './components/Translation'
@@ -9,11 +9,15 @@ import { isShowPrevAndNextWordAtom, phoneticConfigAtom } from '@/store'
 import type { Word } from '@/typings'
 import { useAtomValue } from 'jotai'
 import { useCallback, useContext, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 export default function WordPanel() {
-  const { state, dispatch } = useContext(TypingContext)!
+  const typingContext = useContext(TypingContext)
+  const state = typingContext?.state ?? initialState
+  const dispatch = typingContext?.dispatch
   const phoneticConfig = useAtomValue(phoneticConfigAtom)
   const isShowPrevAndNextWord = useAtomValue(isShowPrevAndNextWordAtom)
+  const navigate = useNavigate()
   const currentWord = state.wordListData.words[state.wordListData.index]
   const prevWord = state.wordListData.words[state.wordListData.index - 1] as Word | undefined
   const nextWord = state.wordListData.words[state.wordListData.index + 1] as Word | undefined
@@ -24,6 +28,7 @@ export default function WordPanel() {
   const queriedWordsRef = useRef(new Set<string>())
 
   const onFinish = useCallback(() => {
+    if (!dispatch) return
     if (state.wordListData.index < state.wordListData.words.length - 1) {
       dispatch({ type: TypingStateActionType.NEXT_WORD })
     } else {
@@ -51,6 +56,7 @@ export default function WordPanel() {
       const parsed = parseMdxEntry(result.content)
       if (parsed.translations.length === 0 && !parsed.phonetics.uk && !parsed.tense) return
 
+      if (!dispatch) return
       dispatch({
         type: TypingStateActionType.UPDATE_WORD_INFO,
         payload: {
@@ -65,6 +71,12 @@ export default function WordPanel() {
     },
     [dispatch, state.wordInfoMap],
   )
+
+  const handleViewDetail = useCallback(() => {
+    if (currentWord) {
+      navigate(`/query/${encodeURIComponent(currentWord.name)}`)
+    }
+  }, [currentWord, navigate])
 
   useEffect(() => {
     void requestWordMeaning(prevWord)
@@ -109,6 +121,14 @@ export default function WordPanel() {
               <WordComponent word={currentWord} onFinish={onFinish} isExtraReview={state.uiState.isExtraReview} />
               {phoneticConfig.isOpen && <Phonetic word={wordWithInfo || currentWord} />}
               {state.isTransVisible && <Translation trans={displayTrans} tense={displayTense} />}
+              {!state.isImmersiveMode && state.uiState.isTyping && (
+                <div
+                  onClick={handleViewDetail}
+                  className="mt-3 cursor-pointer text-center text-xs text-gray-400 hover:text-indigo-400"
+                >
+                  点击查看详细释义
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -25,7 +25,7 @@ export default function GalleryPage() {
   const setWordBanks = useSetAtom(wordBanksAtom)
 
   const [refreshCount, setPageRefresh] = useState(0)
-  const [galleryState, setGalleryState] = useState<GalleryState>({ vipState: localStorage.getItem('x-vipState') || '' })
+  const [galleryState] = useState<GalleryState>({ vipState: localStorage.getItem('x-vipState') || '' })
 
   const loadWordBanks = useCallback(() => {
     const config = window.readLocalWordBankConfig()

@@ -1,5 +1,5 @@
 import { TypingContext, TypingStateActionType } from '../store'
-import { useContext, useCallback } from 'react'
+import { useContext } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import mixpanel from 'mixpanel-browser'
 import { toast } from 'react-toastify'
@@ -9,11 +9,13 @@ export function useTypingHotkeys(
   handleMastered: () => void,
   isImmersiveMode: boolean,
 ) {
-  const { dispatch } = useContext(TypingContext)!
+  const typingContext = useContext(TypingContext)
+  const dispatch = typingContext?.dispatch
 
   useHotkeys(
     'alt+s',
     () => {
+      if (!dispatch) return
       skipWord()
     },
     { preventDefault: true },
@@ -22,6 +24,7 @@ export function useTypingHotkeys(
   useHotkeys(
     'alt+m',
     () => {
+      if (!dispatch) return
       handleMastered()
     },
     { preventDefault: true },
@@ -30,6 +33,7 @@ export function useTypingHotkeys(
   useHotkeys(
     'alt+i',
     () => {
+      if (!dispatch) return
       dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE })
       mixpanel.track('ImmersiveMode', { state: isImmersiveMode ? 'close' : 'open' })
       if (!isImmersiveMode) {

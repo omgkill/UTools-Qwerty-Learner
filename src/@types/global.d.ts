@@ -1,4 +1,7 @@
 import type { Word, WordBank } from '@/typings'
+import type * as fs from 'fs'
+import type * as path from 'path'
+import type * as process from 'process'
 
 declare global {
   interface Window {
@@ -28,9 +31,9 @@ declare global {
     getAction: () => { code: string; payload?: string } | null
     clearAllData: () => boolean
     restartPlugin: () => void
-    fs: typeof import('fs')
-    path: typeof import('path')
-    process: typeof import('process')
+    fs: typeof fs
+    path: typeof path
+    process: typeof process
     _pendingWordList: Word[] | null
   }
 }

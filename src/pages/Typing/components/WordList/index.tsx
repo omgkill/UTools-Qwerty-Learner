@@ -1,4 +1,4 @@
-import { TypingContext, TypingStateActionType } from '../../store'
+import { TypingContext, TypingStateActionType, initialState } from '../../store'
 import WordCard from './WordCard'
 import Drawer from '@/components/Drawer'
 import { currentDictInfoAtom } from '@/store'
@@ -10,7 +10,9 @@ import ListIcon from '~icons/tabler/list'
 import IconX from '~icons/tabler/x'
 
 export default function WordList() {
-  const { state, dispatch } = useContext(TypingContext)!
+  const typingContext = useContext(TypingContext)
+  const state = typingContext?.state ?? initialState
+  const dispatch = typingContext?.dispatch ?? (() => undefined)
 
   const [isOpen, setIsOpen] = useState(false)
   const currentDictInfo = useAtomValue(currentDictInfoAtom)

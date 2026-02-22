@@ -1,10 +1,10 @@
 import type { Word } from '@/typings'
 import type { WordState } from './useWordState'
-import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
+import { TypingContext, TypingStateActionType, initialState } from '@/pages/Typing/store'
 import { useDailyRecord, useWordProgress } from '@/utils/db/useProgress'
 import { useSaveWordRecord } from '@/utils/db'
-import { getUtcStringForMixpanel, useMixPanelWordLogUploader } from '@/utils'
-import { useContext, useEffect, useRef } from 'react'
+import { useMixPanelWordLogUploader } from '@/utils'
+import { useCallback, useContext, useEffect, useRef } from 'react'
 
 export function useWordCompletion(
   word: Word,
@@ -12,7 +12,17 @@ export function useWordCompletion(
   onFinish: () => void,
   isExtraReview: boolean,
 ) {
-  const { state, dispatch } = useContext(TypingContext)!
+  const typingContext = useContext(TypingContext)
+  const state = typingContext?.state ?? initialState
+  const rawDispatch = typingContext?.dispatch
+  const dispatch = useCallback(
+    (action: Parameters<NonNullable<typeof rawDispatch>>[0]) => {
+      if (rawDispatch) {
+        rawDispatch(action)
+      }
+    },
+    [rawDispatch],
+  )
   const onFinishCalledRef = useRef(false)
   const saveWordRecord = useSaveWordRecord()
   const wordLogUploader = useMixPanelWordLogUploader(state)
@@ -77,6 +87,7 @@ export function useWordCompletion(
     wordState.wrongCount,
     wordState.letterTimeArray,
     wordState.letterMistake,
+    wordState.wordName,
     word.name,
     dispatch,
     wordLogUploader,

@@ -11,7 +11,8 @@ export function useWordInput(
   wordState: WordState,
   setWordState: (updater: (draft: WordState) => void) => void,
 ) {
-  const { dispatch } = useContext(TypingContext)!
+  const typingContext = useContext(TypingContext)
+  const dispatch = typingContext?.dispatch
   const isIgnoreCase = useAtomValue(isIgnoreCaseAtom)
 
   const updateInput = useCallback(
@@ -54,6 +55,7 @@ export function useWordInput(
     }
 
     if (isEqual) {
+      if (!dispatch) return
       setWordState((state) => {
         state.letterTimeArray.push(Date.now())
         state.correctCount += 1
@@ -73,6 +75,7 @@ export function useWordInput(
 
       dispatch({ type: TypingStateActionType.INCREASE_CORRECT_COUNT })
     } else {
+      if (!dispatch) return
       setWordState((state) => {
         state.letterStates[inputLength - 1] = 'wrong'
         state.hasWrong = true
@@ -89,7 +92,7 @@ export function useWordInput(
       dispatch({ type: TypingStateActionType.INCREASE_WRONG_COUNT })
       dispatch({ type: TypingStateActionType.REPORT_WRONG_WORD })
     }
-  }, [wordState.inputWord, wordState.hasWrong, wordState.displayWord.length, isIgnoreCase, setWordState, dispatch])
+  }, [wordState.inputWord, wordState.hasWrong, wordState.displayWord, isIgnoreCase, setWordState, dispatch])
 
   useEffect(() => {
     if (wordState.hasWrong) {

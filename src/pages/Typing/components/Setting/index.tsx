@@ -7,7 +7,6 @@ import classNames from 'classnames'
 import { Fragment, useContext, useState } from 'react'
 import IconCog6Tooth from '~icons/heroicons/cog-6-tooth-solid'
 import IconAdjustmentsHorizontal from '~icons/tabler/adjustments-horizontal'
-import IconDatabaseCog from '~icons/tabler/database-cog'
 import IconEar from '~icons/tabler/ear'
 import IconX from '~icons/tabler/x'
 

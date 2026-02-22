@@ -1,4 +1,4 @@
-import type { StatsData, TimerData, UIState, TypingState, WordListData } from './types'
+import type { StatsData, TimerData, TypingState, UIState, WordListData } from './types'
 
 export const initialWordListData: WordListData = {
   words: [],

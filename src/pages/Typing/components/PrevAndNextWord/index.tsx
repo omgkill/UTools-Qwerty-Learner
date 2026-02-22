@@ -1,4 +1,4 @@
-import { TypingContext, TypingStateActionType } from '../../store'
+import { TypingContext, TypingStateActionType, initialState } from '../../store'
 import Tooltip from '@/components/Tooltip'
 import { wordDictationConfigAtom } from '@/store'
 import { useAtomValue } from 'jotai'
@@ -8,7 +8,9 @@ import IconPrev from '~icons/tabler/arrow-narrow-left'
 import IconNext from '~icons/tabler/arrow-narrow-right'
 
 export default function PrevAndNextWord({ type }: LastAndNextWordProps) {
-  const { state, dispatch } = useContext(TypingContext)!
+  const typingContext = useContext(TypingContext)
+  const state = typingContext?.state ?? initialState
+  const dispatch = typingContext?.dispatch
 
   const wordDictationConfig = useAtomValue(wordDictationConfigAtom)
   const newIndex = useMemo(() => state.wordListData.index + (type === 'prev' ? -1 : 1), [state.wordListData.index, type])
@@ -21,6 +23,7 @@ export default function PrevAndNextWord({ type }: LastAndNextWordProps) {
   const onClickWord = useCallback(() => {
     if (!word) return
 
+    if (!dispatch) return
     if (type === 'prev') dispatch({ type: TypingStateActionType.SKIP_2_WORD_INDEX, newIndex })
     if (type === 'next') dispatch({ type: TypingStateActionType.SKIP_2_WORD_INDEX, newIndex })
   }, [type, dispatch, newIndex, word])

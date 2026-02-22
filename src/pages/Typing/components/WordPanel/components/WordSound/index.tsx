@@ -3,14 +3,15 @@ import { SoundIcon } from '../SoundIcon'
 import styles from './index.module.css'
 import Tooltip from '@/components/Tooltip'
 import usePronunciationSound from '@/hooks/usePronunciation'
-import { TypingContext } from '@/pages/Typing/store'
+import { TypingContext, initialState } from '@/pages/Typing/store'
 import { pronunciationIsOpenAtom } from '@/store'
 import { useAtomValue } from 'jotai'
 import { useCallback, useContext, useEffect, useRef } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
 const WordSound = ({ word, inputWord, ...rest }: WordSoundProps) => {
-  const { state } = useContext(TypingContext)!
+  const typingContext = useContext(TypingContext)
+  const state = typingContext?.state ?? initialState
 
   const { play, stop, isPlaying } = usePronunciationSound(word)
   const pronunciationIsOpen = useAtomValue(pronunciationIsOpenAtom)

@@ -1,5 +1,5 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest'
-import { DailyRecord, LEARNING_CONFIG, MASTERY_LEVELS, WordProgress, getNextReviewTime, updateMasteryLevel, setDailyLimit, getDailyLimit, DEFAULT_DAILY_LIMIT } from '@/utils/db/progress'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { DEFAULT_DAILY_LIMIT, DailyRecord, LEARNING_CONFIG, MASTERY_LEVELS, WordProgress, getDailyLimit, getNextReviewTime, setDailyLimit, updateMasteryLevel } from '@/utils/db/progress'
 
 describe('WordProgress', () => {
   it('should create a new word progress with default values', () => {

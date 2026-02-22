@@ -2,7 +2,7 @@ import { EXPLICIT_SPACE } from '@/constants'
 import { getUtcStringForMixpanel } from '@/utils'
 import type { LetterMistakes } from '@/utils/db/record'
 import { useImmer } from 'use-immer'
-import { useRef, useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 export type LetterState = 'normal' | 'correct' | 'wrong'
 

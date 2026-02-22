@@ -1,5 +1,62 @@
 # 变更记录
 
+## 2026-02-22 背单词界面添加查看详细释义功能
+
+- 在 WordPanel 组件添加"详细"按钮，点击后跳转到查词页面
+- 将 MdxQueryPage 添加到路由 `/query/:word?`，支持通过 URL 参数传递单词
+- MdxQueryPage 支持从路由参数获取单词并自动查询
+- 查词页面添加返回按钮，支持返回上一页
+
+## 2026-02-22 重构数据统计页面为三层学习记录视图
+
+- 移除原有的热力图和折线图统计，改为三层导航结构
+- 第一层：词库列表，展示所有学习过的词库及其统计信息（显示词库名称而非ID）
+- 第二层：天数列表，展示选定词库下所有学习过的日期
+- 第三层：单词详情，展示选定日期学习的单词，区分新词和复习
+- 新词/复习判断逻辑：历史首次出现的单词为新词，之前已学过的为复习（修复前一天学习的单词第二天仍显示为新词的问题）
+- 新增 hooks/useStudyStats.ts 提供数据获取逻辑
+- 新增 DictList、DayList、WordDetailList 三个展示组件
+
+## 2026-02-22 修复数据统计热力图 color-mix 校验报错
+
+- 问题：ActivityCalendar 组件只配置了 dark 主题，库内部会为缺失的 light 主题生成默认颜色
+- 默认颜色使用 color-mix() CSS 函数，CSS.supports() 验证失败导致报错
+- 解决：同时提供 light 和 dark 两套颜色数组，避免库自动生成 color-mix 表达式
+- light 和 dark 主题均使用相同的紫蓝色阶梯，通过 colorScheme="dark" 固定使用深色主题
+
+## 2026-02-22 修复数据统计热力图渲染报错
+
+- ActivityCalendar 为空数据时显示占位，避免抛出空数据异常
+- 补齐深色主题热力图颜色阶梯，避免 color-mix 校验失败
+
+## 2026-02-22 修复 lint 报错
+
+- 清理未使用导入与无用代码，修复排序规则
+- 移除非空断言并为缺失上下文提供安全分支
+- 修复记录写入时可能为空的 id 更新路径
+- 修复 WordPanel 测试文件多余分号报错
+- 修复 dict 模块类型导入告警
+- 修复 MdxDictAdapter any 类型告警
+- 清理 Layout 未使用导入告警
+- 修复 global.d.ts import() 类型注解告警
+- 补齐 usePronunciation useEffect 依赖告警
+- 修复 index.tsx 未使用变量与 any 告警
+- 清理 DictionaryWithoutCover 未使用变量告警
+- 清理 Form4AddDict 非空断言告警
+- 清理 ConfirmationDialog 未使用 useState 告警
+- 清理 Gallery 页面未使用 setGalleryState 告警
+- 修复 MdxQuery any 类型告警
+- 清理 PrevAndNextWord 非空断言告警
+- 清理 Progress 非空断言告警
+- 清理 MiniWordChip 非空断言与依赖告警
+- 清理 WordChip 非空断言与依赖告警
+- 清理 ResultScreen 非空断言告警
+- 清理 Setting 未使用 IconDatabaseCog 告警
+- 清理 Speed 非空断言告警
+- 清理 StartButton 未使用导入与非空断言告警
+- 修复 WordPanel 测试文件 import() 类型告警
+- 修复 WordPanel dispatch 依赖告警
+
 ## 2026-02-18 统一学习配置口径
 
 - 更新新词配额公式，计入当日已学习新词数

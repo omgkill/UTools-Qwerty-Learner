@@ -1,9 +1,10 @@
-import { TypingContext } from '../../store'
+import { TypingContext, initialState } from '../../store'
 import InfoBox from './InfoBox'
 import { useContext } from 'react'
 
 export default function Speed() {
-  const { state } = useContext(TypingContext)!
+  const typingContext = useContext(TypingContext)
+  const state = typingContext?.state ?? initialState
   const seconds = state.statsData.timerData.time % 60
   const minutes = Math.floor(state.statsData.timerData.time / 60)
   const secondsString = seconds < 10 ? '0' + seconds : seconds + ''

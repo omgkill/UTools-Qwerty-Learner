@@ -1,13 +1,16 @@
-import { TypingContext } from '@/pages/Typing/store'
+import { TypingContext, initialState } from '@/pages/Typing/store'
 import type { Word } from '@/typings'
 import { useContext, useMemo } from 'react'
 
 export default function WordCard({ word, isActive }: { word: Word; isActive: boolean }) {
-  const { state } = useContext(TypingContext)!
-  
+  const typingContext = useContext(TypingContext)
+  const state = typingContext?.state ?? initialState
+
   const wordInfo = state.wordInfoMap[word.name]
-  const trans = wordInfo?.trans || word.trans || []
-  const displayTrans = useMemo(() => trans.filter((item) => item && item.trim().length > 0), [trans])
+  const displayTrans = useMemo(() => {
+    const trans = wordInfo?.trans ?? word.trans ?? []
+    return trans.filter((item) => item && item.trim().length > 0)
+  }, [wordInfo?.trans, word.trans])
 
   return (
     <div

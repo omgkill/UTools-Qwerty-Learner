@@ -29,7 +29,7 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
 
   const [isOpen, setIsOpen] = useState(false)
 
-  const { state } = useContext(GalleryContext)!
+  const { state } = useContext(GalleryContext)
 
   const closeModal = () => {
     setIsOpen(false)

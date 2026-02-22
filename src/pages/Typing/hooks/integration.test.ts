@@ -1,6 +1,6 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest'
-import { DailyRecord, LEARNING_CONFIG, MASTERY_LEVELS, WordProgress, getNextReviewTime, setDailyLimit, DEFAULT_DAILY_LIMIT, updateMasteryLevel } from '@/utils/db/progress'
-import { determineLearningType, calculateNewWordQuota, calculateRemainingForTarget, hasReachedDailyTarget } from './learningLogic'
+import { describe, expect, it } from 'vitest'
+import { DailyRecord, LEARNING_CONFIG, MASTERY_LEVELS, WordProgress, updateMasteryLevel } from '@/utils/db/progress'
+import { determineLearningType } from './learningLogic'
 
 function createWord(name: string): { name: string; trans: string[]; usphone: string; ukphone: string } {
   return { name, trans: [], usphone: '', ukphone: '' }
@@ -8,21 +8,6 @@ function createWord(name: string): { name: string; trans: string[]; usphone: str
 
 function createWordWithIndex(name: string, index: number): { name: string; trans: string[]; usphone: string; ukphone: string; index: number } {
   return { ...createWord(name), index }
-}
-
-function createProgress(word: string, masteryLevel: number, nextReviewTime: number = Date.now()): { word: string; dict: string; masteryLevel: number; nextReviewTime: number; lastReviewTime: number; correctCount: number; wrongCount: number; streak: number; easeFactor: number; reps: number } {
-  return {
-    word,
-    dict: 'test-dict',
-    masteryLevel,
-    nextReviewTime,
-    lastReviewTime: Date.now(),
-    correctCount: 0,
-    wrongCount: 0,
-    streak: 0,
-    easeFactor: 2.5,
-    reps: masteryLevel > 0 ? 1 : 0,
-  }
 }
 
 describe('Word Completion Integration Tests (单词完成集成测试)', () => {
@@ -36,7 +21,7 @@ describe('Word Completion Integration Tests (单词完成集成测试)', () => {
       expect(progress.reps).toBe(0)
       expect(progress.masteryLevel).toBe(MASTERY_LEVELS.NEW)
       
-      const { newLevel, newEaseFactor } = updateMasteryLevel(progress.masteryLevel, true, 0, progress.easeFactor)
+      const { newLevel } = updateMasteryLevel(progress.masteryLevel, true, 0, progress.easeFactor)
       
       expect(newLevel).toBe(MASTERY_LEVELS.LEARNED)
       
@@ -291,9 +276,6 @@ describe('Critical Bug Scenarios (关键Bug场景)', () => {
 })
 
 describe('Extra Review Button Bug (额外复习按钮无反应Bug)', () => {
-  const dict = 'test-dict'
-  const today = '2026-02-18'
-
   it('should return all due words when isExtraReview is true', () => {
     const dueWords = Array.from({ length: 18 }, (_, i) => createWordWithIndex(`word${i}`, i))
     const reviewedCount = 20

@@ -3,7 +3,7 @@ import './index.css'
 import TypingPage from './pages/Typing'
 import MdxQueryPage from './pages/MdxQuery'
 import MdxManagePage from './pages/MdxManage'
-import { processPayment, setConcealFeature } from '@/utils/utools'
+import { setConcealFeature } from '@/utils/utools'
 import mixpanel from 'mixpanel-browser'
 import React, { Suspense, lazy, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -14,7 +14,7 @@ import 'react-toastify/dist/ReactToastify.css'
 const AnalysisPage = lazy(() => import('./pages/Analysis'))
 const GalleryPage = lazy(() => import('./pages/Gallery-N'))
 
-const disabledMixpanelTrack: typeof mixpanel.track = (..._args: Parameters<typeof mixpanel.track>) => undefined
+const disabledMixpanelTrack: typeof mixpanel.track = () => undefined
 const mixpanelMutable = mixpanel as unknown as { track: typeof mixpanel.track }
 
 if (import.meta.env.DEV || window.utools.isDev()) {
@@ -39,7 +39,7 @@ const log = (msg: string) => {
   const timestamp = new Date().toISOString().substr(11, 12)
   const line = `[${timestamp}] [index.tsx] ${msg}`
   console.log(line)
-  ;(window as any).debugLog?.(`[index.tsx] ${msg}`)
+  ;(window as unknown as { debugLog?: (message: string) => void }).debugLog?.(`[index.tsx] ${msg}`)
 }
 
 function Root() {
@@ -95,7 +95,9 @@ function Root() {
   if (mode === 'mdx-query') {
     return (
       <React.StrictMode>
-        <MdxQueryPage />
+        <HashRouter basename="" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <MdxQueryPage />
+        </HashRouter>
         <ToastContainer
           position="bottom-right"
           autoClose={2500}
@@ -138,6 +140,7 @@ function Root() {
             <Route index element={<TypingPage />} />
             <Route path="/gallery" element={<GalleryPage />} />
             <Route path="/analysis" element={<AnalysisPage />} />
+            <Route path="/query/:word?" element={<MdxQueryPage />} />
             <Route path="/*" element={<Navigate to="/" />} />
           </Routes>
         </Suspense>

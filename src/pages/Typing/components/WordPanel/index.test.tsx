@@ -1,4 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
+import type * as Jotai from 'jotai'
+import type * as React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockDispatch = vi.fn()
@@ -32,7 +34,7 @@ let mockState = {
 }
 
 vi.mock('react', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('react')>()
+  const actual = (await importOriginal()) as typeof React
   return {
     ...actual,
     useContext: vi.fn(() => ({ state: mockState, dispatch: mockDispatch })),
@@ -41,7 +43,7 @@ vi.mock('react', async (importOriginal) => {
 })
 
 vi.mock('jotai', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('jotai')>()
+  const actual = (await importOriginal()) as typeof Jotai
   return {
     ...actual,
     useAtomValue: vi.fn(() => false),
@@ -157,7 +159,7 @@ describe('WordPanel Component', () => {
     })
 
     it('BUG: 当mdx查询失败时，界面应该显示单词但没有释义', async () => {
-      ;(window as unknown as { queryFirstMdxWord: ReturnType<typeof vi.fn> }).queryFirstMdxWord = vi.fn().mockResolvedValue(null)
+    (window as unknown as { queryFirstMdxWord: ReturnType<typeof vi.fn> }).queryFirstMdxWord = vi.fn().mockResolvedValue(null)
       mockState.wordListData.words = [{ name: 'unknownword', trans: [], usphone: '', ukphone: '' }]
 
       const { default: WordPanel } = await import('./index')
@@ -173,7 +175,7 @@ describe('WordPanel Component', () => {
     })
 
     it('BUG: 当没有配置mdx词典时，界面应该显示单词但没有释义', async () => {
-      ;(window as unknown as { getMdxDictConfig: ReturnType<typeof vi.fn> }).getMdxDictConfig = vi.fn().mockReturnValue([])
+    (window as unknown as { getMdxDictConfig: ReturnType<typeof vi.fn> }).getMdxDictConfig = vi.fn().mockReturnValue([])
       mockState.wordListData.words = [{ name: 'nodictword', trans: [], usphone: '', ukphone: '' }]
 
       const { default: WordPanel } = await import('./index')
