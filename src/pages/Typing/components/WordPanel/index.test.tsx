@@ -38,7 +38,15 @@ vi.mock('react', async (importOriginal) => {
   return {
     ...actual,
     useContext: vi.fn(() => ({ state: mockState, dispatch: mockDispatch })),
-    useRef: vi.fn(() => ({ current: new Set() })),
+    useRef: vi.fn((initialValue?: unknown) => ({ current: initialValue ?? new Set() })),
+  }
+})
+
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    useNavigate: vi.fn(() => vi.fn()),
   }
 })
 
