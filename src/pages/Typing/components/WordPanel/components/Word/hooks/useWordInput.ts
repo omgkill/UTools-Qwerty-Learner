@@ -33,6 +33,23 @@ export function useWordInput(
           }
           break
 
+        case 'delete':
+          setWordState((state) => {
+            if (state.inputWord.length > 0) {
+              state.inputWord = state.inputWord.slice(0, -1)
+              state.letterStates = state.letterStates.map((s, i) =>
+                i === state.inputWord.length ? 'normal' : s,
+              )
+            }
+          })
+          break
+
+        case 'composition':
+          setWordState((state) => {
+            state.inputWord = updateAction.value
+          })
+          break
+
         default:
           console.warn('unknown update type', updateAction)
       }

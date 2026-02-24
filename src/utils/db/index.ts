@@ -52,7 +52,7 @@ export function useSaveLearningRecord() {
   const dictID = useAtomValue(currentDictIdAtom)
 
   const saveLearningRecord = useCallback(
-    (typingState: TypingState) => {
+    async (typingState: TypingState) => {
       const {
         statsData: { correctCount, wrongCount, wordCount, correctWordIndexes, wordRecordIds, timerData },
         wordListData: { words },
@@ -69,7 +69,11 @@ export function useSaveLearningRecord() {
         words.length,
         wordRecordIds ?? [],
       )
-      db.learningRecords.add(learningRecord)
+      try {
+        await db.learningRecords.add(learningRecord)
+      } catch (e) {
+        console.error('Failed to save learning record:', e)
+      }
     },
     [dictID],
   )

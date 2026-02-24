@@ -50,8 +50,6 @@ export default function GalleryPage() {
   }, [refreshCount, loadWordBanks])
 
   const { groupedByCategoryAndTag } = useMemo(() => {
-    refreshCount
-
     const groupedByCategory = Object.entries(groupBy(wordBanks, (wb) => wb.category))
     const groupedByCategoryAndTag = groupedByCategory.map(
       ([category, wbs]) => [category, groupByDictTags(wbs)] as [string, Record<string, WordBank[]>],
@@ -59,14 +57,15 @@ export default function GalleryPage() {
     return {
       groupedByCategoryAndTag,
     }
-  }, [refreshCount, wordBanks])
+  }, [wordBanks])
 
   const onBack = useCallback(() => {
     navigate('/')
   }, [navigate])
   const refreshPage = useCallback(() => {
-    setPageRefresh(refreshCount + 1)
-  }, [setPageRefresh, refreshCount])
+    // 使用函数式更新，避免闭包捕获过时的 refreshCount
+    setPageRefresh((prev) => prev + 1)
+  }, [setPageRefresh])
 
   useHotkeys('enter,esc', onBack, { preventDefault: true })
 

@@ -216,26 +216,28 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
     })
   })
 
-  describe('Day 2 - Review day', () => {
-    it('should match Day 2 simulation: 20 due words, 0 new words quota, review 20 words', () => {
+  describe('Day 2 - New word day (LEARNED interval is 2.6 days, no review yet)', () => {
+    it('should match Day 2 simulation: 0 due words, learn 20 new words', () => {
       const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
       vi.setSystemTime(baseTime)
 
       const words: SimulatedWord[] = Array.from({ length: TOTAL_WORDS }, (_, i) => ({ name: `word${i + 1}`, progress: undefined }))
       const day1 = simulateDay(words)
 
+      // Day 2：LEARNED 间隔 = 1天 × easeFactor(2.6) ≈ 2.6天，尚未到期
       vi.setSystemTime(baseTime + DAY_MS)
       const { result, updatedWords } = simulateDay(day1.updatedWords)
 
-      expect(result.dueWordsCount).toBe(20)
-      expect(result.newWordsQuota).toBe(0)
-      expect(result.learningType).toBe('review')
-      expect(result.newWordsLearned).toBe(0)
-      expect(result.wordsReviewed).toBe(20)
+      expect(result.dueWordsCount).toBe(0)
+      expect(result.newWordsQuota).toBe(20)
+      expect(result.learningType).toBe('new')
+      expect(result.newWordsLearned).toBe(20)
+      expect(result.wordsReviewed).toBe(0)
       expect(result.totalToday).toBe(20)
 
-      const level2Words = updatedWords.filter((w) => w.progress?.masteryLevel === MASTERY_LEVELS.FAMILIAR)
-      expect(level2Words.length).toBe(20)
+      // 40 个词已进入 LEARNED 及以上等级
+      const progressedWords = updatedWords.filter((w) => (w.progress?.masteryLevel ?? 0) > MASTERY_LEVELS.NEW)
+      expect(progressedWords.length).toBe(40)
 
       console.log('Day 2:', {
         dueWords: result.dueWordsCount,
@@ -247,8 +249,8 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
     })
   })
 
-  describe('Day 3 - Review day (due to interval rules)', () => {
-    it('should match Day 3 simulation with real scheduling: no due words, learn new words', () => {
+  describe('Day 3 - New word day (still no reviews due)', () => {
+    it('should match Day 3 simulation: 0 due words, learn 20 new words', () => {
       const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
       vi.setSystemTime(baseTime)
 
@@ -258,6 +260,7 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
       vi.setSystemTime(baseTime + DAY_MS)
       const day2 = simulateDay(day1.updatedWords)
 
+      // Day 3：Day1 的词还差 0.6 天到期，仍是新词日
       vi.setSystemTime(baseTime + 2 * DAY_MS)
       const { result, updatedWords } = simulateDay(day2.updatedWords)
 
@@ -267,8 +270,9 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
       expect(result.wordsReviewed).toBe(0)
       expect(result.totalToday).toBe(20)
 
-      const progressedWords = updatedWords.filter((w) => (w.progress?.masteryLevel ?? MASTERY_LEVELS.NEW) > MASTERY_LEVELS.NEW)
-      expect(progressedWords.length).toBe(40)
+      // 60 个词已进入 LEARNED 及以上等级
+      const progressedWords = updatedWords.filter((w) => (w.progress?.masteryLevel ?? 0) > MASTERY_LEVELS.NEW)
+      expect(progressedWords.length).toBe(60)
     })
   })
 

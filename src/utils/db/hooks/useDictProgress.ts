@@ -20,16 +20,18 @@ export function useDictProgress() {
       let progress = await getDictProgress()
 
       if (!progress) {
-        progress = new DictProgress(dictID)
-        progress.id = await db.dictProgress.add(progress)
+        // 新建记录：先合并 updates 再一次性写入，避免先 add 再 update 的双重写入
+        const newProgress = new DictProgress(dictID)
+        Object.assign(newProgress, updates)
+        newProgress.lastStudyTime = Date.now()
+        await db.dictProgress.add(newProgress)
+        return
       }
 
+      // 更新已有记录
       Object.assign(progress, updates)
       progress.lastStudyTime = Date.now()
-
-      const progressId = progress.id ?? (await db.dictProgress.add(progress))
-      progress.id = progressId
-      await db.dictProgress.update(progressId, progress)
+      await db.dictProgress.update(progress.id!, progress)
     },
     [dictID, getDictProgress],
   )
@@ -40,8 +42,9 @@ export function useDictProgress() {
     const progress = await getDictProgress()
     if (!progress) return
 
-    const lastDate = new Date(progress.lastStudyTime).toDateString()
-    const today = new Date().toDateString()
+    // 统一使用 ISO 日期字符串（UTC）比较，与 getTodayDate() 保持一致
+    const lastDate = new Date(progress.lastStudyTime).toISOString().split('T')[0]
+    const today = new Date().toISOString().split('T')[0]
 
     if (lastDate !== today) {
       await updateDictProgress({ studyDays: progress.studyDays + 1 })

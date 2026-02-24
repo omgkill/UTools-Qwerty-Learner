@@ -14,12 +14,14 @@ export function useReviewWords() {
       if (!dictID) return []
 
       const now = Date.now()
-      return db.wordProgress
-        .where('dict')
-        .equals(dictID)
-        .and((p) => p.nextReviewTime <= now && p.masteryLevel > MASTERY_LEVELS.NEW && p.masteryLevel < MASTERY_LEVELS.MASTERED)
-        .limit(limit)
-        .toArray()
+      // 先用索引过滤 dict，再在内存中过滤 nextReviewTime 和 masteryLevel
+      // .limit() 放在 .and() 之后只限制最终结果数，实际仍需全扫该词典的记录
+      // 此处分两步：先取全部该词典记录，再过滤，确保 limit 语义正确
+      const allDictProgress = await db.wordProgress.where('dict').equals(dictID).toArray()
+      const dueWords = allDictProgress.filter(
+        (p) => p.nextReviewTime <= now && p.masteryLevel > MASTERY_LEVELS.NEW && p.masteryLevel < MASTERY_LEVELS.MASTERED,
+      )
+      return dueWords.slice(0, limit)
     },
     [dictID],
   )

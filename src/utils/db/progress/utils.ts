@@ -6,6 +6,8 @@ export function getTodayDate(): string {
 }
 
 export function getNextReviewTime(masteryLevel: MasteryLevel, easeFactor = 2.5): number {
+  // NEW 级别（0）答对后直接升级为 LEARNED，不会停留在 NEW 被复习
+  // 其他级别间隔均 >= 1 天，使用 || 1 作为兜底
   const baseDays = REVIEW_INTERVALS[masteryLevel] || 1
   const adjustedDays = baseDays * easeFactor
   return Date.now() + adjustedDays * 24 * 60 * 60 * 1000

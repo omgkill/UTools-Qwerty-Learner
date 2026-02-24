@@ -53,8 +53,26 @@ export function useLearningStats() {
   }, [dictID])
 
   useEffect(() => {
-    refreshStats()
-  }, [refreshStats])
+    let cancelled = false
+    const run = async () => {
+      if (!dictID) {
+        setStats(initialStats)
+        return
+      }
+      const allProgress = await db.wordProgress.where('dict').equals(dictID).toArray()
+      if (cancelled) return
+      const now = Date.now()
+      const todayStart = new Date().setHours(0, 0, 0, 0)
+      const learnedWords = allProgress.filter((p) => p.masteryLevel > MASTERY_LEVELS.NEW).length
+      const masteredWords = allProgress.filter((p) => p.masteryLevel >= MASTERY_LEVELS.MASTERED).length
+      const dueWords = allProgress.filter((p) => p.nextReviewTime <= now && p.masteryLevel < MASTERY_LEVELS.MASTERED).length
+      const todayLearned = allProgress.filter((p) => p.lastReviewTime >= todayStart && p.reps === 1).length
+      const todayReviewed = allProgress.filter((p) => p.lastReviewTime >= todayStart && p.reps > 1).length
+      setStats({ totalWords: allProgress.length, learnedWords, masteredWords, dueWords, todayLearned, todayReviewed })
+    }
+    run()
+    return () => { cancelled = true }
+  }, [dictID])
 
   return { stats, refreshStats }
 }

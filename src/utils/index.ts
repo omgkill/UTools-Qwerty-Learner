@@ -31,7 +31,7 @@ export const isChineseSymbol = (val: string): boolean =>
     val,
   )
 
-export const IsDesktop = () => {
+export const isDesktop = () => {
   const userAgentInfo = navigator.userAgent
   const Agents = ['Android', 'iPhone', 'SymbianOS', 'Windows Phone', 'iPad', 'iPod']
 
@@ -86,16 +86,6 @@ export function toFixedNumber(number: number, fractionDigits: number) {
 }
 
 export function getUTCUnixTimestamp() {
-  const now = new Date()
-  return Math.floor(
-    Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate(),
-      now.getUTCHours(),
-      now.getUTCMinutes(),
-      now.getUTCSeconds(),
-      now.getUTCMilliseconds(),
-    ) / 1000,
-  )
+  // Date.UTC(...各UTC字段) 等价于 Date.now()，简化实现
+  return Math.floor(Date.now() / 1000)
 }

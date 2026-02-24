@@ -189,30 +189,35 @@ describe('updateMasteryLevel', () => {
 })
 
 describe('getNextReviewTime', () => {
-  it('should return current time for NEW level', () => {
+  it('should return 1 day later for NEW level (fallback, NEW should upgrade immediately)', () => {
     const now = Date.now()
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.NEW)
-    expect(reviewTime).toBeGreaterThanOrEqual(now)
-  })
-
-  it('should return 1 hour later for LEARNED level', () => {
-    const now = Date.now()
-    const reviewTime = getNextReviewTime(MASTERY_LEVELS.LEARNED)
-    const expectedMin = now + (1 / 24) * 24 * 60 * 60 * 1000
+    // NEW 级别间隔为 0，|| 1 兜底，结果为 1天 * easeFactor(2.5) = 2.5天
+    const expectedMin = now + 1 * 2.5 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
-  it('should return 1 day later for FAMILIAR level', () => {
+  it('should return 1 day later for LEARNED level', () => {
+    const now = Date.now()
+    const reviewTime = getNextReviewTime(MASTERY_LEVELS.LEARNED)
+    // LEARNED 间隔 1 天 * easeFactor(2.5) = 2.5 天
+    const expectedMin = now + 1 * 2.5 * 24 * 60 * 60 * 1000
+    expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
+  })
+
+  it('should return 2 days later for FAMILIAR level', () => {
     const now = Date.now()
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.FAMILIAR)
-    const expectedMin = now + 1 * 24 * 60 * 60 * 1000
+    // FAMILIAR 间隔 2 天 * easeFactor(2.5) = 5 天
+    const expectedMin = now + 2 * 2.5 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
   it('should apply ease factor', () => {
     const now = Date.now()
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.FAMILIAR, 2.0)
-    const expectedMin = now + 2 * 24 * 60 * 60 * 1000
+    // FAMILIAR 间隔 2 天 * easeFactor(2.0) = 4 天
+    const expectedMin = now + 2 * 2.0 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 })

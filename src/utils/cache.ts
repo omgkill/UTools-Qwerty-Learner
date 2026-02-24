@@ -9,7 +9,8 @@ export class LruCache<K, V> {
 
   get(key: K): V | undefined {
     const value = this.map.get(key)
-    if (!value) return undefined
+    // 使用 === undefined 而非 !value，避免将合法的 falsy 值（0、false、''）误判为缓存未命中
+    if (value === undefined) return undefined
     this.map.delete(key)
     this.map.set(key, value)
     return value

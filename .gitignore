@@ -4,3 +4,4 @@ build
 .trae
 stats.html
 .husky
+package-lock.json

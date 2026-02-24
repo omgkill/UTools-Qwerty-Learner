@@ -50,6 +50,8 @@ export function useWordList(): UseWordListResult {
   const [isExtraReview, setIsExtraReview] = useState(false)
   const isLoadingRef = useRef(false)
   const lastLearningWordsRef = useRef<WordWithIndex[]>([])
+  // 用于取消过期的异步加载请求
+  const loadVersionRef = useRef(0)
 
   const isLocalWordBank = currentWordBank
     ? currentWordBank.id.startsWith('x-dict-') || currentWordBank.languageCategory === 'custom'
@@ -74,13 +76,12 @@ export function useWordList(): UseWordListResult {
   const todayLearned = dailyRecord?.learnedCount ?? 0
   const todayReviewed = dailyRecord?.reviewedCount ?? 0
 
+  // newWordQuota 和 remainingForTarget 逻辑相同，合并为一个计算
   const newWordQuota = useMemo(() => {
     return Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - todayReviewed - todayLearned)
   }, [todayReviewed, todayLearned])
 
-  const remainingForTarget = useMemo(() => {
-    return Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - todayReviewed - todayLearned)
-  }, [todayReviewed, todayLearned])
+  const remainingForTarget = newWordQuota
 
   const hasReachedTarget = useMemo(() => {
     return todayReviewed + todayLearned >= LEARNING_CONFIG.DAILY_LIMIT
@@ -95,15 +96,24 @@ export function useWordList(): UseWordListResult {
     if (isLoadingRef.current) return
     isLoadingRef.current = true
 
+    // 记录本次请求的版本号，用于检测是否已过期
+    const currentVersion = loadVersionRef.current
+
     try {
       const [dueWords, newWords] = await Promise.all([
         getDueWordsWithInfo(wordList, 100),
         getNewWords(wordList, 100),
       ])
 
+      // 异步操作完成后，检查版本号是否仍有效，防止竞态条件
+      if (currentVersion !== loadVersionRef.current) return
+
       const allProgress = await Promise.all(
         wordList.slice(0, 200).map(async (w) => getWordProgress(w.name))
       )
+
+      if (currentVersion !== loadVersionRef.current) return
+
       const mastered = allProgress.filter((p) => p && p.masteryLevel >= 7).length
 
       setDueCount(dueWords.length)
@@ -151,6 +161,8 @@ export function useWordList(): UseWordListResult {
   ])
 
   const reloadWords = useCallback(() => {
+    // 递增版本号使过期请求失效，同时触发重新加载
+    loadVersionRef.current += 1
     setLoadVersion((v) => v + 1)
   }, [])
 

@@ -87,6 +87,7 @@ export class LearningRecord implements ILearningRecord {
   }
 
   get wpm() {
+    if (this.time === 0) return 0
     return Math.round((this.wordCount / this.time) * 60)
   }
 
@@ -97,6 +98,7 @@ export class LearningRecord implements ILearningRecord {
   }
 
   get wordAccuracy() {
+    if (this.wordNumber === 0) return 0
     return Math.round((this.correctWordIndexes.length / this.wordNumber) * 100)
   }
 }

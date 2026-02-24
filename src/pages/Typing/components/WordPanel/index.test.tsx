@@ -37,8 +37,8 @@ vi.mock('react', async (importOriginal) => {
   const actual = (await importOriginal()) as typeof React
   return {
     ...actual,
+    // 只 mock useContext，不 mock useRef（mock React 内部 hook 会破坏 React 运行时）
     useContext: vi.fn(() => ({ state: mockState, dispatch: mockDispatch })),
-    useRef: vi.fn((initialValue?: unknown) => ({ current: initialValue ?? new Set() })),
   }
 })
 
@@ -131,21 +131,19 @@ describe('WordPanel Component', () => {
     })
   })
 
-  describe('BUG场景测试 - 应该失败', () => {
-    it('BUG: 当单词没有释义时，应该通过mdx查询获取释义', async () => {
+  describe('MDX查询场景测试', () => {
+    it('当单词没有释义时，应该通过mdx查询获取释义', async () => {
       mockState.wordListData.words = [{ name: 'newword', trans: [], usphone: '', ukphone: '' }]
 
       const { default: WordPanel } = await import('./index')
       render(<WordPanel />)
 
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 200))
-      })
-
-      expect(window.queryFirstMdxWord).toHaveBeenCalledWith('newword')
+      await waitFor(() => {
+        expect(window.queryFirstMdxWord).toHaveBeenCalledWith('newword')
+      }, { timeout: 1000 })
     })
 
-    it('BUG: mdx查询成功后，应该更新单词释义到wordInfoMap', async () => {
+    it('mdx查询成功后，应该更新单词释义到wordInfoMap', async () => {
       mockState.wordListData.words = [{ name: 'newword', trans: [], usphone: '', ukphone: '' }]
 
       const { default: WordPanel } = await import('./index')
@@ -166,53 +164,47 @@ describe('WordPanel Component', () => {
       )
     })
 
-    it('BUG: 当mdx查询失败时，界面应该显示单词但没有释义', async () => {
-    (window as unknown as { queryFirstMdxWord: ReturnType<typeof vi.fn> }).queryFirstMdxWord = vi.fn().mockResolvedValue(null)
+    it('当mdx查询失败时，界面应该显示单词但没有释义', async () => {
+      ;(window as unknown as { queryFirstMdxWord: ReturnType<typeof vi.fn> }).queryFirstMdxWord = vi.fn().mockResolvedValue(null)
       mockState.wordListData.words = [{ name: 'unknownword', trans: [], usphone: '', ukphone: '' }]
 
       const { default: WordPanel } = await import('./index')
       const { container } = render(<WordPanel />)
 
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 200))
-      })
-
-      expect(screen.getByTestId('word')).toBeInTheDocument()
-      expect(screen.getByText('unknownword')).toBeInTheDocument()
-      expect(container.querySelector('[data-testid="translation"]')).not.toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByTestId('word')).toBeInTheDocument()
+        expect(screen.getByText('unknownword')).toBeInTheDocument()
+        expect(container.querySelector('[data-testid="translation"]')).not.toBeInTheDocument()
+      }, { timeout: 1000 })
     })
 
-    it('BUG: 当没有配置mdx词典时，界面应该显示单词但没有释义', async () => {
-    (window as unknown as { getMdxDictConfig: ReturnType<typeof vi.fn> }).getMdxDictConfig = vi.fn().mockReturnValue([])
+    it('当没有配置mdx词典时，界面应该显示单词但没有释义', async () => {
+      ;(window as unknown as { getMdxDictConfig: ReturnType<typeof vi.fn> }).getMdxDictConfig = vi.fn().mockReturnValue([])
       mockState.wordListData.words = [{ name: 'nodictword', trans: [], usphone: '', ukphone: '' }]
 
       const { default: WordPanel } = await import('./index')
       const { container } = render(<WordPanel />)
 
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 200))
-      })
-
-      expect(screen.getByTestId('word')).toBeInTheDocument()
-      expect(container.querySelector('[data-testid="translation"]')).not.toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByTestId('word')).toBeInTheDocument()
+        expect(container.querySelector('[data-testid="translation"]')).not.toBeInTheDocument()
+      }, { timeout: 1000 })
     })
   })
 
   describe('期望行为测试', () => {
-    it('期望：单词没有释义时，应该调用mdx查询', async () => {
+    it('单词没有释义时，应该调用mdx查询', async () => {
       mockState.wordListData.words = [{ name: 'testword', trans: [], usphone: '', ukphone: '' }]
 
       const { default: WordPanel } = await import('./index')
       render(<WordPanel />)
 
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 200))
-      })
-
-      expect(window.queryFirstMdxWord).toHaveBeenCalled()
+      await waitFor(() => {
+        expect(window.queryFirstMdxWord).toHaveBeenCalled()
+      }, { timeout: 1000 })
     })
 
-    it('期望：mdx查询成功后，dispatch应该被调用', async () => {
+    it('mdx查询成功后，dispatch应该被调用', async () => {
       mockState.wordListData.words = [{ name: 'testword', trans: [], usphone: '', ukphone: '' }]
 
       const { default: WordPanel } = await import('./index')

@@ -1,8 +1,5 @@
 import Loading from './components/Loading'
 import './index.css'
-import TypingPage from './pages/Typing'
-import MdxQueryPage from './pages/MdxQuery'
-import MdxManagePage from './pages/MdxManage'
 import { setConcealFeature } from '@/utils/utools'
 import mixpanel from 'mixpanel-browser'
 import React, { Suspense, lazy, useEffect, useState } from 'react'
@@ -11,13 +8,33 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
+const TypingPage = lazy(() => import('./pages/Typing'))
+const MdxQueryPage = lazy(() => import('./pages/MdxQuery'))
+const MdxManagePage = lazy(() => import('./pages/MdxManage'))
 const AnalysisPage = lazy(() => import('./pages/Analysis'))
 const GalleryPage = lazy(() => import('./pages/Gallery-N'))
+
+// 提取为组件，避免在三处分支中重复配置
+function AppToastContainer() {
+  return (
+    <ToastContainer
+      position="bottom-right"
+      autoClose={2500}
+      hideProgressBar
+      newestOnTop={false}
+      closeOnClick
+      rtl={false}
+      pauseOnFocusLoss
+      draggable={false}
+      pauseOnHover
+    />
+  )
+}
 
 const disabledMixpanelTrack: typeof mixpanel.track = () => undefined
 const mixpanelMutable = mixpanel as unknown as { track: typeof mixpanel.track }
 
-if (import.meta.env.DEV || window.utools.isDev()) {
+if (import.meta.env.DEV || window.utools?.isDev()) {
   const devKey = import.meta.env.VITE_MIXPANEL_KEY_DEV
   if (devKey) {
     mixpanel.init(devKey, { debug: true })
@@ -25,9 +42,9 @@ if (import.meta.env.DEV || window.utools.isDev()) {
     mixpanelMutable.track = disabledMixpanelTrack
   }
 } else {
-  const devKey = import.meta.env.VITE_MIXPANEL_KEY_DEV
-  if (devKey) {
-    mixpanel.init(devKey, { debug: true })
+  const prodKey = import.meta.env.VITE_MIXPANEL_KEY_PROD
+  if (prodKey) {
+    mixpanel.init(prodKey)
   } else {
     mixpanelMutable.track = disabledMixpanelTrack
   }
@@ -46,7 +63,7 @@ function Root() {
   const [mode, setMode] = useState<string | null>(null)
   const [isModeReady, setIsModeReady] = useState(false)
 
-  log(`Root render: mode=${mode}, isModeReady=${isModeReady}`)
+  // log() 不应在组件体中直接调用（每次渲染都触发），只在 effect 中使用
 
   useEffect(() => {
     document.documentElement.classList.add('dark')
@@ -96,19 +113,11 @@ function Root() {
     return (
       <React.StrictMode>
         <HashRouter basename="" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <MdxQueryPage />
+          <Suspense fallback={<Loading />}>
+            <MdxQueryPage />
+          </Suspense>
         </HashRouter>
-        <ToastContainer
-          position="bottom-right"
-          autoClose={2500}
-          hideProgressBar
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable={false}
-          pauseOnHover
-        />
+        <AppToastContainer />
       </React.StrictMode>
     )
   }
@@ -116,18 +125,10 @@ function Root() {
   if (mode === 'mdx-manage') {
     return (
       <React.StrictMode>
-        <MdxManagePage />
-        <ToastContainer
-          position="bottom-right"
-          autoClose={2500}
-          hideProgressBar
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable={false}
-          pauseOnHover
-        />
+        <Suspense fallback={<Loading />}>
+          <MdxManagePage />
+        </Suspense>
+        <AppToastContainer />
       </React.StrictMode>
     )
   }
@@ -145,17 +146,7 @@ function Root() {
           </Routes>
         </Suspense>
       </HashRouter>
-      <ToastContainer
-        position="bottom-right"
-        autoClose={2500}
-        hideProgressBar
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable={false}
-        pauseOnHover
-      />
+      <AppToastContainer />
     </React.StrictMode>
   )
 }

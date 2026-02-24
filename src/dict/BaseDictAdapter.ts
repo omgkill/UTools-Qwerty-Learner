@@ -12,6 +12,7 @@ export abstract class BaseDictAdapter implements DictAdapter {
 
   unload(): void {
     this._loaded = false
+    // 子类应重写此方法以清理具体资源（如 _mdxLookup、_mddLookup 等引用）
   }
 
   isLoaded(): boolean {

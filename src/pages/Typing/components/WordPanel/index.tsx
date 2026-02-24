@@ -36,6 +36,11 @@ export default function WordPanel() {
     }
   }, [state.wordListData.index, state.wordListData.words.length, dispatch])
 
+  // 用 ref 持有最新的 wordInfoMap，避免将整个对象放入 useCallback 依赖
+  // 从而防止每次任意词更新都重建函数并触发 effect
+  const wordInfoMapRef = useRef(state.wordInfoMap)
+  wordInfoMapRef.current = state.wordInfoMap
+
   const requestWordMeaning = useCallback(
     async (targetWord: Word | undefined) => {
       if (!targetWord) return
@@ -44,32 +49,37 @@ export default function WordPanel() {
       if (!dicts[0]) return
       if (queriedWordsRef.current.has(targetWord.name)) return
 
-      const existingInfo = state.wordInfoMap[targetWord.name]
+      // 通过 ref 读取最新 wordInfoMap，不将其加入依赖
+      const existingInfo = wordInfoMapRef.current[targetWord.name]
       const hasTranslations = existingInfo?.trans && existingInfo.trans.length > 0
       const hasPhonetics = Boolean(existingInfo?.ukphone)
       if (hasTranslations && hasPhonetics) return
 
       queriedWordsRef.current.add(targetWord.name)
-      const result = await window.queryFirstMdxWord(targetWord.name)
-      if (!result || !result.ok || !result.content) return
+      try {
+        const result = await window.queryFirstMdxWord(targetWord.name)
+        if (!result || !result.ok || !result.content) return
 
-      const parsed = parseMdxEntry(result.content)
-      if (parsed.translations.length === 0 && !parsed.phonetics.uk && !parsed.tense) return
+        const parsed = parseMdxEntry(result.content)
+        if (parsed.translations.length === 0 && !parsed.phonetics.uk && !parsed.tense) return
 
-      if (!dispatch) return
-      dispatch({
-        type: TypingStateActionType.UPDATE_WORD_INFO,
-        payload: {
-          wordName: targetWord.name,
-          data: {
-            trans: parsed.translations.length > 0 ? parsed.translations : undefined,
-            ukphone: parsed.phonetics.uk || undefined,
-            tense: parsed.tense || undefined,
+        if (!dispatch) return
+        dispatch({
+          type: TypingStateActionType.UPDATE_WORD_INFO,
+          payload: {
+            wordName: targetWord.name,
+            data: {
+              trans: parsed.translations.length > 0 ? parsed.translations : undefined,
+              ukphone: parsed.phonetics.uk || undefined,
+              tense: parsed.tense || undefined,
+            },
           },
-        },
-      })
+        })
+      } catch (e) {
+        console.error('Failed to query word meaning:', targetWord.name, e)
+      }
     },
-    [dispatch, state.wordInfoMap],
+    [dispatch],
   )
 
   const handleViewDetail = useCallback(() => {

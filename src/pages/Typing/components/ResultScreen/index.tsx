@@ -30,6 +30,7 @@ const ResultScreen = () => {
 
   const correctRate = useMemo(() => {
     const wordListLength = state.wordListData.words.length
+    if (wordListLength === 0) return 0
     const correctCount = wordListLength - state.statsData.wrongWordIndexes.length
     return Math.floor((correctCount / wordListLength) * 100)
   }, [state.wordListData.words.length, state.statsData.wrongWordIndexes])

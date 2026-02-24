@@ -21,7 +21,11 @@ export function useWordProgress() {
       const progressMap = new Map<string, IWordProgress>()
       if (!dictID || words.length === 0) return progressMap
 
-      const progressList = await db.wordProgress.where('dict').equals(dictID).and((p) => words.includes(p.word)).toArray()
+      // 使用复合索引 [dict+word] 批量精确查询，避免全表扫描 + 内存过滤
+      const progressList = await db.wordProgress
+        .where('[dict+word]')
+        .anyOf(words.map((w) => [dictID, w]))
+        .toArray()
 
       for (const progress of progressList) {
         progressMap.set(progress.word, progress)
@@ -47,9 +51,9 @@ export function useWordProgress() {
       progress.easeFactor = newEaseFactor
       progress.nextReviewTime = getNextReviewTime(newLevel, newEaseFactor)
       progress.lastReviewTime = Date.now()
-      progress.reps = (progress.reps || 0) + 1
-
+      // 只在答对时递增 reps，用于区分"新学"(reps===1)和"复习"(reps>1)
       if (isCorrect) {
+        progress.reps = (progress.reps || 0) + 1
         progress.correctCount++
         progress.streak++
       } else {
@@ -108,7 +112,8 @@ export function useWordProgress() {
       }
 
       progress.masteryLevel = MASTERY_LEVELS.MASTERED
-      progress.nextReviewTime = Date.now() + 365 * 24 * 60 * 60 * 1000
+      // MASTERED 级别间隔与 REVIEW_INTERVALS[7] 保持一致（30天）
+      progress.nextReviewTime = Date.now() + 30 * 24 * 60 * 60 * 1000
       progress.lastReviewTime = Date.now()
       progress.correctCount++
       progress.streak++

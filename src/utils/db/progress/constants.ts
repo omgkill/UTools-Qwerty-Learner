@@ -1,12 +1,12 @@
 export const REVIEW_INTERVALS = [
-  0,
-  1 / 24,
-  1,
-  2,
-  4,
-  7,
-  15,
-  30,
+  0,  // NEW (0级)：答对后升级，不停留在此级别被复习
+  1,  // LEARNED (1级)：1天后
+  2,  // FAMILIAR (2级)：2天后
+  4,  // KNOWN (3级)：4天后
+  7,  // PROFICIENT (4级)：7天后
+  15, // ADVANCED (5级)：15天后
+  21, // EXPERT (6级)：21天后
+  30, // MASTERED (7级)：30天后
 ]
 
 export const MASTERY_LEVELS = {

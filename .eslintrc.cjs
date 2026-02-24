@@ -48,6 +48,19 @@ module.exports = {
         },
       },
     },
+    {
+      // 测试文件：添加 vitest 全局变量，避免 describe/it/expect/vi 被报未定义
+      files: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/**/*.spec.ts', 'src/**/*.spec.tsx', 'src/test/**/*.ts'],
+      env: {
+        browser: true,
+        'vitest/globals': true,
+      },
+      plugins: ['vitest'],
+      rules: {
+        'vitest/no-disabled-tests': 'warn',
+        'vitest/no-focused-tests': 'error',
+      },
+    },
   ],
   rules: {
     'sort-imports': ['error', { ignoreDeclarationSort: true }],
