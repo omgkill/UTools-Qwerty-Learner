@@ -45,13 +45,17 @@ export function useWordProgress() {
         progress = new WordProgress(word, dictID)
       }
 
+      const wasFirstAttempt = (progress.reps || 0) === 0
       const { newLevel } = updateMasteryLevel(progress.masteryLevel, isCorrect, wrongCount)
 
       progress.masteryLevel = newLevel
       progress.nextReviewTime = getNextReviewTime(newLevel)
       progress.lastReviewTime = Date.now()
+      progress.reps = (progress.reps || 0) + 1
+      if (wasFirstAttempt && !isCorrect) {
+        progress.nextReviewTime = Date.now() + 24 * 60 * 60 * 1000
+      }
       if (isCorrect) {
-        progress.reps = (progress.reps || 0) + 1
         progress.correctCount++
         progress.streak++
       } else {

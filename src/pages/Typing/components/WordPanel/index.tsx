@@ -3,6 +3,7 @@ import PrevAndNextWord from '../PrevAndNextWord'
 import Phonetic from './components/Phonetic'
 import Translation from './components/Translation'
 import WordComponent from './components/Word'
+import Tooltip from '@/components/Tooltip'
 import { parseMdxEntry } from '@/utils/mdxParser'
 import { usePrefetchPronunciationSound } from '@/hooks/usePronunciation'
 import { isShowPrevAndNextWordAtom, phoneticConfigAtom } from '@/store'
@@ -11,7 +12,8 @@ import { useAtomValue } from 'jotai'
 import { useCallback, useContext, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-export default function WordPanel() {
+export default function WordPanel({ onMastered }: { onMastered?: () => void }) {
+  const handleMastered = onMastered ?? (() => undefined)
   const typingContext = useContext(TypingContext)
   const state = typingContext?.state ?? initialState
   const dispatch = typingContext?.dispatch
@@ -117,7 +119,7 @@ export default function WordPanel() {
       )}
       <div className="container flex flex-col items-center justify-center">
         {currentWord && (
-          <div className="relative flex w-full justify-center">
+          <div className="group relative flex w-full justify-center">
             {!state.uiState.isTyping && (
               <div className="absolute flex h-full w-full justify-center">
                 <div className="z-10 flex w-full items-center backdrop-blur-sm">
@@ -140,6 +142,15 @@ export default function WordPanel() {
                 </div>
               )}
             </div>
+            {!state.isImmersiveMode && (
+              <div className="absolute bottom-2 right-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                <Tooltip content="标记已掌握 Alt + M">
+                  <button className="btn-primary bg-green-500/80 shadow transition-all duration-300 hover:bg-green-500" onClick={handleMastered}>
+                    ✓ 掌握
+                  </button>
+                </Tooltip>
+              </div>
+            )}
           </div>
         )}
       </div>

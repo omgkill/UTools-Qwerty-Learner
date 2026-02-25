@@ -79,10 +79,6 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
     }
   }, [dispatch])
 
-  const skipWord = useCallback(() => {
-    dispatch({ type: TypingStateActionType.SKIP_WORD })
-  }, [dispatch])
-
   const handleMastered = useCallback(async () => {
     const currentWord = state.wordListData.words?.[state.wordListData.index]
     if (currentWord) {
@@ -97,7 +93,7 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
     }
   }, [state.wordListData.words, state.wordListData.index, markAsMastered, dispatch, getNextNewWord])
 
-  useTypingHotkeys(skipWord, handleMastered, state.isImmersiveMode)
+  useTypingHotkeys(handleMastered, state.isImmersiveMode)
 
   const { showPopup, handleConfirm, handleDismiss } = useExtraReviewPopup(
     hasReachedTarget,
@@ -154,20 +150,6 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
             <PronunciationSwitcher />
             <Switcher />
             <StartButton isLoading={false} />
-            {state.uiState.isShowSkip && (
-              <>
-                <Tooltip content="跳过该词 Alt + S">
-                  <button className="bg-orange-400 btn-primary transition-all duration-300" onClick={skipWord}>
-                    Skip
-                  </button>
-                </Tooltip>
-                <Tooltip content="标记已掌握 Alt + M">
-                  <button className="bg-green-500 btn-primary transition-all duration-300" onClick={handleMastered}>
-                    ✓ 掌握
-                  </button>
-                </Tooltip>
-              </>
-            )}
           </Header>
         )}
         <div className="container mx-auto flex h-full flex-1 flex-col items-center justify-center pb-4">
@@ -184,7 +166,7 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
                   <p className="text-sm text-gray-500 dark:text-gray-500">明天继续加油！</p>
                 </div>
               ) : (
-                <WordPanel />
+                <WordPanel onMastered={handleMastered} />
               )}
             </div>
             {!state.isImmersiveMode && <Speed />}

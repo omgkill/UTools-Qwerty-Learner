@@ -5,21 +5,11 @@ import mixpanel from 'mixpanel-browser'
 import { toast } from 'react-toastify'
 
 export function useTypingHotkeys(
-  skipWord: () => void,
   handleMastered: () => void,
   isImmersiveMode: boolean,
 ) {
   const typingContext = useContext(TypingContext)
   const dispatch = typingContext?.dispatch
-
-  useHotkeys(
-    'alt+s',
-    () => {
-      if (!dispatch) return
-      skipWord()
-    },
-    { preventDefault: true },
-  )
 
   useHotkeys(
     'alt+m',

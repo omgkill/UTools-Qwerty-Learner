@@ -20,6 +20,8 @@ type DayResult = {
   cumulativeNewWords: number
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
 function createInitialProgress(word: string, dict: string): IWordProgress {
   return {
     word,
@@ -58,6 +60,9 @@ function applyProgressUpdate(params: { word: string; dict: string; progress: IWo
     nextReviewTime: getNextReviewTime(newLevel),
     lastReviewTime: Date.now(),
     reps: (base.reps || 0) + 1,
+  }
+  if ((base.reps || 0) === 0 && !params.isCorrect) {
+    next.nextReviewTime = Date.now() + DAY_MS
   }
 
   if (params.isCorrect) {
@@ -174,7 +179,6 @@ function simulateDay(
 describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', () => {
   const TOTAL_WORDS = 100
   const dict = 'test-dict'
-  const DAY_MS = 24 * 60 * 60 * 1000
 
   beforeEach(() => {
     vi.useFakeTimers()
@@ -182,6 +186,24 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  describe('First Attempt With Wrong Inputs', () => {
+    it('should schedule next review to tomorrow for a new word with wrong inputs', () => {
+      const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
+      vi.setSystemTime(baseTime)
+
+      const progress = applyProgressUpdate({
+        word: 'word1',
+        dict,
+        progress: undefined,
+        isCorrect: false,
+        wrongCount: 2,
+      })
+
+      expect(progress.reps).toBe(1)
+      expect(progress.nextReviewTime).toBe(baseTime + DAY_MS)
+    })
   })
 
   describe('Day 1 - First day learning', () => {
@@ -203,13 +225,7 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
       const learnedWords = updatedWords.filter((w) => w.progress?.masteryLevel === MASTERY_LEVELS.LEARNED)
       expect(learnedWords.length).toBe(20)
 
-      console.log('Day 1:', {
-        dueWords: result.dueWordsCount,
-        newWordsQuota: result.newWordsQuota,
-        newWordsLearned: result.newWordsLearned,
-        wordsReviewed: result.wordsReviewed,
-        total: result.totalToday
-      })
+      expect(result.totalToday).toBe(20)
     })
   })
 
@@ -231,13 +247,7 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
       expect(result.wordsReviewed).toBe(20)
       expect(result.totalToday).toBe(20)
 
-      console.log('Day 2:', {
-        dueWords: result.dueWordsCount,
-        newWordsQuota: result.newWordsQuota,
-        newWordsLearned: result.newWordsLearned,
-        wordsReviewed: result.wordsReviewed,
-        total: result.totalToday
-      })
+      expect(result.totalToday).toBe(20)
     })
   })
 
@@ -267,7 +277,7 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
   })
 
   describe('First 15 Days Summary', () => {
-    it('should match the first 15 days summary table from 学习模拟案例.md', () => {
+    it('should match the first 15 days summary table from 学习配置方案.md', () => {
       const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
       vi.setSystemTime(baseTime)
 
@@ -285,28 +295,43 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
         result.day = day
         result.cumulativeNewWords = cumulativeNewWords
         dayResults.push(result)
-
-        console.log(`Day ${day}: dueWords=${result.dueWordsCount}, quota=${result.newWordsQuota}, newWords=${result.newWordsLearned}, reviewed=${result.wordsReviewed}, total=${result.totalToday}, cumulative=${cumulativeNewWords}`)
       }
 
-      expect(dayResults[0].day).toBe(1)
-      expect(dayResults[0].dueWordsCount).toBe(0)
-      expect(dayResults[0].newWordsQuota).toBe(20)
-      expect(dayResults[0].newWordsLearned).toBe(20)
-      expect(dayResults[0].wordsReviewed).toBe(0)
-      expect(dayResults[0].totalToday).toBe(20)
-      expect(dayResults[0].cumulativeNewWords).toBe(20)
+      const expected = [
+        { day: 1, dueWordsCount: 0, newWordsQuota: 20, newWordsLearned: 20, wordsReviewed: 0, totalToday: 20, cumulativeNewWords: 20 },
+        { day: 2, dueWordsCount: 20, newWordsQuota: 0, newWordsLearned: 0, wordsReviewed: 20, totalToday: 20, cumulativeNewWords: 20 },
+        { day: 3, dueWordsCount: 0, newWordsQuota: 20, newWordsLearned: 20, wordsReviewed: 0, totalToday: 20, cumulativeNewWords: 40 },
+        { day: 4, dueWordsCount: 40, newWordsQuota: 0, newWordsLearned: 0, wordsReviewed: 20, totalToday: 20, cumulativeNewWords: 40 },
+        { day: 5, dueWordsCount: 20, newWordsQuota: 0, newWordsLearned: 0, wordsReviewed: 20, totalToday: 20, cumulativeNewWords: 40 },
+        { day: 6, dueWordsCount: 0, newWordsQuota: 20, newWordsLearned: 20, wordsReviewed: 0, totalToday: 20, cumulativeNewWords: 60 },
+        { day: 7, dueWordsCount: 40, newWordsQuota: 0, newWordsLearned: 0, wordsReviewed: 20, totalToday: 20, cumulativeNewWords: 60 },
+        { day: 8, dueWordsCount: 40, newWordsQuota: 0, newWordsLearned: 0, wordsReviewed: 20, totalToday: 20, cumulativeNewWords: 60 },
+        { day: 9, dueWordsCount: 20, newWordsQuota: 0, newWordsLearned: 0, wordsReviewed: 20, totalToday: 20, cumulativeNewWords: 60 },
+        { day: 10, dueWordsCount: 0, newWordsQuota: 20, newWordsLearned: 20, wordsReviewed: 0, totalToday: 20, cumulativeNewWords: 80 },
+        { day: 11, dueWordsCount: 60, newWordsQuota: 0, newWordsLearned: 0, wordsReviewed: 20, totalToday: 20, cumulativeNewWords: 80 },
+        { day: 12, dueWordsCount: 40, newWordsQuota: 0, newWordsLearned: 0, wordsReviewed: 20, totalToday: 20, cumulativeNewWords: 80 },
+        { day: 13, dueWordsCount: 20, newWordsQuota: 0, newWordsLearned: 0, wordsReviewed: 20, totalToday: 20, cumulativeNewWords: 80 },
+        { day: 14, dueWordsCount: 0, newWordsQuota: 20, newWordsLearned: 20, wordsReviewed: 0, totalToday: 20, cumulativeNewWords: 100 },
+        { day: 15, dueWordsCount: 60, newWordsQuota: 0, newWordsLearned: 0, wordsReviewed: 20, totalToday: 20, cumulativeNewWords: 100 },
+      ]
 
-      console.log('\n=== First 15 Days Summary ===')
-      console.log('| Day | Due Words | Quota | New Words | Reviewed | Total | Cumulative |')
-      dayResults.forEach(r => {
-        console.log(`| Day ${r.day} | ${r.dueWordsCount} | ${r.newWordsQuota} | ${r.newWordsLearned} | ${r.wordsReviewed} | ${r.totalToday} | ${r.cumulativeNewWords} |`)
+      expect(dayResults.length).toBe(expected.length)
+
+      expected.forEach((entry, index) => {
+        const result = dayResults[index]
+        expect(result.day).toBe(entry.day)
+        expect(result.dueWordsCount).toBe(entry.dueWordsCount)
+        expect(result.newWordsQuota).toBe(entry.newWordsQuota)
+        expect(result.newWordsLearned).toBe(entry.newWordsLearned)
+        expect(result.wordsReviewed).toBe(entry.wordsReviewed)
+        expect(result.totalToday).toBe(entry.totalToday)
+        expect(result.cumulativeNewWords).toBe(entry.cumulativeNewWords)
       })
     })
   })
 
   describe('Learning Timeline - 100 Words', () => {
-    it('should complete 100 new words within 18 days', () => {
+    it('should complete 100 new words on day 14 with the expected new word days', () => {
       const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
       vi.setSystemTime(baseTime)
 
@@ -326,15 +351,102 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
         if (result.newWordsLearned > 0) {
           cumulativeNewWords += result.newWordsLearned
           newWordDays.push(day)
-          console.log(`Day ${day}: Learned ${result.newWordsLearned} new words, cumulative: ${cumulativeNewWords}`)
         }
       }
 
-      console.log(`\nTotal days to learn 100 words: ${day}`)
-      console.log(`Days with new words: ${newWordDays.join(', ')}`)
-
       expect(cumulativeNewWords).toBe(100)
-      expect(day).toBeLessThanOrEqual(18)
+      expect(day).toBe(14)
+      expect(newWordDays).toEqual([1, 3, 6, 10, 14])
+    })
+  })
+
+  describe('Consolidate Stability - No New Words', () => {
+    it('should stay in consolidate mode across consecutive days', () => {
+      const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
+      vi.setSystemTime(baseTime)
+
+      const words: SimulatedWord[] = Array.from({ length: LEARNING_CONFIG.DAILY_LIMIT }, (_, i) => ({
+        name: `word${i + 1}`,
+        progress: createExistingProgress({
+          word: `word${i + 1}`,
+          dict,
+          masteryLevel: MASTERY_LEVELS.EXPERT,
+          nextReviewTime: baseTime + 10 * DAY_MS,
+        }),
+      }))
+
+      const results: DayResult[] = []
+
+      for (let day = 1; day <= 3; day++) {
+        vi.setSystemTime(baseTime + (day - 1) * DAY_MS)
+        const { result, updatedWords } = simulateDay(words, { doConsolidate: true })
+        words.splice(0, words.length, ...updatedWords)
+        results.push(result)
+      }
+
+      results.forEach((result) => {
+        expect(result.learningType).toBe('consolidate')
+        expect(result.dueWordsCount).toBe(0)
+        expect(result.newWordsLearned).toBe(0)
+        expect(result.wordsReviewed).toBe(LEARNING_CONFIG.DAILY_LIMIT)
+        expect(result.totalToday).toBe(LEARNING_CONFIG.DAILY_LIMIT)
+      })
+    })
+  })
+
+  describe('Review Interval Golden Cases (4/7/15/21/30 days)', () => {
+    it('should schedule next review at 4/7/15/21/30 days after correct review', () => {
+      const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
+      vi.setSystemTime(baseTime)
+
+      const words: SimulatedWord[] = [
+        {
+          name: 'word1',
+          progress: createExistingProgress({ word: 'word1', dict, masteryLevel: MASTERY_LEVELS.FAMILIAR, nextReviewTime: baseTime - 1 }),
+        },
+        {
+          name: 'word2',
+          progress: createExistingProgress({ word: 'word2', dict, masteryLevel: MASTERY_LEVELS.KNOWN, nextReviewTime: baseTime - 1 }),
+        },
+        {
+          name: 'word3',
+          progress: createExistingProgress({ word: 'word3', dict, masteryLevel: MASTERY_LEVELS.PROFICIENT, nextReviewTime: baseTime - 1 }),
+        },
+        {
+          name: 'word4',
+          progress: createExistingProgress({ word: 'word4', dict, masteryLevel: MASTERY_LEVELS.ADVANCED, nextReviewTime: baseTime - 1 }),
+        },
+        {
+          name: 'word5',
+          progress: createExistingProgress({ word: 'word5', dict, masteryLevel: MASTERY_LEVELS.EXPERT, nextReviewTime: baseTime - 1 }),
+        },
+      ]
+
+      const { result, updatedWords } = simulateDay(words)
+
+      expect(result.dueWordsCount).toBe(5)
+      expect(result.wordsReviewed).toBe(5)
+
+      const progressByWord = new Map(updatedWords.map((w) => [w.name, w.progress]))
+
+      const word1 = progressByWord.get('word1')
+      const word2 = progressByWord.get('word2')
+      const word3 = progressByWord.get('word3')
+      const word4 = progressByWord.get('word4')
+      const word5 = progressByWord.get('word5')
+
+      expect(word1?.masteryLevel).toBe(MASTERY_LEVELS.KNOWN)
+      expect(word2?.masteryLevel).toBe(MASTERY_LEVELS.PROFICIENT)
+      expect(word3?.masteryLevel).toBe(MASTERY_LEVELS.ADVANCED)
+      expect(word4?.masteryLevel).toBe(MASTERY_LEVELS.EXPERT)
+      expect(word5?.masteryLevel).toBe(MASTERY_LEVELS.EXPERT)
+
+      expect(word1?.nextReviewTime).toBe(baseTime + 4 * DAY_MS)
+      expect(word2?.nextReviewTime).toBe(baseTime + 7 * DAY_MS)
+      expect(word3?.nextReviewTime).toBe(baseTime + 15 * DAY_MS)
+      expect(word4?.nextReviewTime).toBe(baseTime + 21 * DAY_MS)
+      expect(word5?.nextReviewTime).toBe(baseTime + 21 * DAY_MS)
+      expect(getNextReviewTime(MASTERY_LEVELS.MASTERED)).toBe(baseTime + 30 * DAY_MS)
     })
   })
 
@@ -361,11 +473,28 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
       })
       expect(remainingDueWords.length).toBe(15)
 
-      console.log('\n=== Extra Review Scenario ===')
-      console.log(`Due words: 35`)
-      console.log(`Reviewed (counted): ${result.wordsReviewed}`)
-      console.log(`Remaining due words: ${remainingDueWords.length}`)
-      console.log(`New words quota after review: ${Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - result.wordsReviewed)}`)
+      expect(result.totalToday).toBe(20)
+    })
+
+    it('should keep remaining due words for the next day with reduced quota', () => {
+      const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
+      vi.setSystemTime(baseTime)
+
+      const words: SimulatedWord[] = Array.from({ length: 35 }, (_, i) => ({
+        name: `word${i + 1}`,
+        progress: createExistingProgress({ word: `word${i + 1}`, dict, masteryLevel: MASTERY_LEVELS.LEARNED, nextReviewTime: baseTime - 1 }),
+      }))
+
+      const day1 = simulateDay(words)
+
+      vi.setSystemTime(baseTime + DAY_MS)
+      const { result } = simulateDay(day1.updatedWords)
+
+      expect(result.dueWordsCount).toBe(15)
+      expect(result.newWordsQuota).toBe(5)
+      expect(result.learningType).toBe('review')
+      expect(result.wordsReviewed).toBe(15)
+      expect(result.totalToday).toBe(15)
     })
   })
 })

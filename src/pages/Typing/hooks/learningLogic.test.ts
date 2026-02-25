@@ -292,6 +292,200 @@ describe('calculateRemainingForTarget', () => {
   })
 })
 
+describe('规则不变式', () => {
+  const wordList: Word[] = [createWord('apple'), createWord('banana'), createWord('cherry'), createWord('date')]
+
+  it('should keep review priority over new words regardless of quota', () => {
+    const dueWords = [createWordWithIndex('apple', 0), createWordWithIndex('banana', 1)]
+    const newWords = [createWordWithIndex('cherry', 2), createWordWithIndex('date', 3)]
+    const result = determineLearningType({
+      dueWords,
+      newWords,
+      reviewedCount: 0,
+      learnedCount: 0,
+      allProgress: [],
+      wordList,
+    })
+
+    expect(result.learningType).toBe('review')
+    expect(result.learningWords.length).toBe(2)
+  })
+
+  it('should return complete with empty list when target reached and no due words', () => {
+    const result = determineLearningType({
+      dueWords: [],
+      newWords: [createWordWithIndex('apple', 0)],
+      reviewedCount: 10,
+      learnedCount: 10,
+      allProgress: [],
+      wordList,
+    })
+
+    expect(result.learningType).toBe('complete')
+    expect(result.learningWords).toEqual([])
+  })
+
+  it('should keep remainingDueCount aligned with hasMoreDueWords', () => {
+    const dueWords = Array.from({ length: 12 }, (_, i) => createWordWithIndex(`word${i}`, i))
+    const result = determineLearningType({
+      dueWords,
+      newWords: [],
+      reviewedCount: 15,
+      learnedCount: 0,
+      allProgress: [],
+      wordList,
+    })
+
+    expect(result.learningType).toBe('review')
+    expect(result.learningWords.length).toBe(5)
+    expect(result.hasMoreDueWords).toBe(true)
+    expect(result.remainingDueCount).toBe(7)
+  })
+
+  it('should set remainingDueCount to 0 when all due words fit', () => {
+    const dueWords = Array.from({ length: 3 }, (_, i) => createWordWithIndex(`word${i}`, i))
+    const result = determineLearningType({
+      dueWords,
+      newWords: [],
+      reviewedCount: 10,
+      learnedCount: 5,
+      allProgress: [],
+      wordList,
+    })
+
+    expect(result.learningType).toBe('review')
+    expect(result.learningWords.length).toBe(3)
+    expect(result.hasMoreDueWords).toBe(false)
+    expect(result.remainingDueCount).toBe(0)
+  })
+
+  it('should cap review words by remaining slots when not extra review', () => {
+    const dueWords = Array.from({ length: 30 }, (_, i) => createWordWithIndex(`word${i}`, i))
+    const result = determineLearningType({
+      dueWords,
+      newWords: [],
+      reviewedCount: 12,
+      learnedCount: 5,
+      allProgress: [],
+      wordList,
+    })
+
+    expect(result.learningType).toBe('review')
+    expect(result.learningWords.length).toBe(3)
+    expect(result.hasMoreDueWords).toBe(true)
+  })
+
+  it('should return all due words when extra review is enabled', () => {
+    const dueWords = Array.from({ length: 8 }, (_, i) => createWordWithIndex(`word${i}`, i))
+    const result = determineLearningType({
+      dueWords,
+      newWords: [],
+      reviewedCount: 30,
+      learnedCount: 10,
+      allProgress: [],
+      wordList,
+      isExtraReview: true,
+    })
+
+    expect(result.learningType).toBe('review')
+    expect(result.learningWords.length).toBe(8)
+    expect(result.hasMoreDueWords).toBe(false)
+    expect(result.remainingDueCount).toBe(0)
+  })
+
+  it('should limit new words by remaining slots when no due words', () => {
+    const newWords = Array.from({ length: 50 }, (_, i) => createWordWithIndex(`word${i}`, i))
+    const result = determineLearningType({
+      dueWords: [],
+      newWords,
+      reviewedCount: 7,
+      learnedCount: 8,
+      allProgress: [],
+      wordList,
+    })
+
+    expect(result.learningType).toBe('new')
+    expect(result.learningWords.length).toBe(5)
+  })
+
+  it('should return complete when no due words and no new words and target reached', () => {
+    const result = determineLearningType({
+      dueWords: [],
+      newWords: [],
+      reviewedCount: 20,
+      learnedCount: 0,
+      allProgress: [],
+      wordList,
+    })
+
+    expect(result.learningType).toBe('complete')
+    expect(result.learningWords.length).toBe(0)
+  })
+
+  it('should keep quota and remainingForTarget consistent', () => {
+    const scenarios = [
+      { reviewed: 0, learned: 0, expected: 20 },
+      { reviewed: 3, learned: 2, expected: 15 },
+      { reviewed: 10, learned: 5, expected: 5 },
+      { reviewed: 15, learned: 10, expected: 0 },
+    ]
+
+    for (const scenario of scenarios) {
+      expect(calculateNewWordQuota(scenario.reviewed, scenario.learned)).toBe(scenario.expected)
+      expect(calculateRemainingForTarget(scenario.reviewed, scenario.learned)).toBe(scenario.expected)
+    }
+  })
+
+  it('should match hasReachedDailyTarget with total counts', () => {
+    const scenarios = [
+      { reviewed: 0, learned: 0, expected: false },
+      { reviewed: 10, learned: 9, expected: false },
+      { reviewed: 10, learned: 10, expected: true },
+      { reviewed: 25, learned: 0, expected: true },
+    ]
+
+    for (const scenario of scenarios) {
+      expect(hasReachedDailyTarget(scenario.reviewed, scenario.learned)).toBe(scenario.expected)
+    }
+  })
+
+  it('should return empty consolidate list when no learned words exist', () => {
+    const result = determineLearningType({
+      dueWords: [],
+      newWords: [],
+      reviewedCount: 5,
+      learnedCount: 10,
+      allProgress: [],
+      wordList,
+    })
+
+    expect(result.learningType).toBe('consolidate')
+    expect(result.learningWords.length).toBe(0)
+  })
+
+  it('should cap consolidate words by remaining slots', () => {
+    const allProgress = [
+      createProgress('apple', 2),
+      createProgress('banana', 3),
+      createProgress('cherry', 4),
+      createProgress('date', 5),
+    ]
+    const fullList: Word[] = [createWord('apple'), createWord('banana'), createWord('cherry'), createWord('date')]
+
+    const result = determineLearningType({
+      dueWords: [],
+      newWords: [],
+      reviewedCount: 18,
+      learnedCount: 0,
+      allProgress,
+      wordList: fullList,
+    })
+
+    expect(result.learningType).toBe('consolidate')
+    expect(result.learningWords.length).toBe(2)
+  })
+})
+
 describe('hasReachedDailyTarget', () => {
   it('should return false when target not reached', () => {
     expect(hasReachedDailyTarget(0, 0)).toBe(false)

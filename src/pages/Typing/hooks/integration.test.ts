@@ -103,6 +103,77 @@ describe('Word Completion Integration Tests', () => {
 
       expect(dailyRecord.extraReviewedCount).toBe(5)
     })
+
+    it('should keep quota unchanged while extraReviewedCount increases', () => {
+      const dailyRecord = new DailyRecord(dict, today)
+      dailyRecord.reviewedCount = 20
+      dailyRecord.learnedCount = 0
+
+      expect(dailyRecord.getNewWordQuota()).toBe(0)
+
+      dailyRecord.extraReviewedCount += 3
+
+      expect(dailyRecord.reviewedCount).toBe(20)
+      expect(dailyRecord.extraReviewedCount).toBe(3)
+      expect(dailyRecord.getNewWordQuota()).toBe(0)
+      expect(dailyRecord.totalReviewed).toBe(23)
+    })
+
+    it('should keep counts separated after extra review flow', () => {
+      const dueWords = createWordWithIndexList(5)
+      const reviewedCount = 20
+      const learnedCount = 0
+
+      const beforeClick = determineLearningType({
+        dueWords,
+        newWords: [],
+        reviewedCount,
+        learnedCount,
+        allProgress: [],
+        wordList: dueWords,
+        isExtraReview: false,
+      })
+
+      expect(beforeClick.learningType).toBe('complete')
+      expect(beforeClick.hasMoreDueWords).toBe(true)
+
+      const afterClick = determineLearningType({
+        dueWords,
+        newWords: [],
+        reviewedCount,
+        learnedCount,
+        allProgress: [],
+        wordList: dueWords,
+        isExtraReview: true,
+      })
+
+      expect(afterClick.learningType).toBe('review')
+      expect(afterClick.learningWords.length).toBe(5)
+
+      const dailyRecord = new DailyRecord(dict, today)
+      dailyRecord.reviewedCount = 20
+      dailyRecord.extraReviewedCount = 0
+      dailyRecord.extraReviewedCount += afterClick.learningWords.length
+
+      expect(dailyRecord.reviewedCount).toBe(20)
+      expect(dailyRecord.extraReviewedCount).toBe(5)
+      expect(dailyRecord.getNewWordQuota()).toBe(0)
+      expect(dailyRecord.totalReviewed).toBe(25)
+    })
+
+    it('should keep target reached state unchanged after extra review', () => {
+      const dailyRecord = new DailyRecord(dict, today)
+      dailyRecord.reviewedCount = 20
+      dailyRecord.learnedCount = 0
+
+      expect(dailyRecord.hasReachedTarget).toBe(true)
+
+      dailyRecord.extraReviewedCount += 4
+
+      expect(dailyRecord.hasReachedTarget).toBe(true)
+      expect(dailyRecord.getNewWordQuota()).toBe(0)
+      expect(dailyRecord.totalReviewed).toBe(24)
+    })
   })
 
   describe('Daily Limit Scenarios', () => {

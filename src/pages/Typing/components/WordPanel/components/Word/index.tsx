@@ -4,7 +4,6 @@ import Letter from './Letter'
 import type { LetterState } from './Letter'
 import Notation from './Notation'
 import style from './index.module.css'
-import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
 import {
   currentDictInfoAtom,
   isShowAnswerOnHoverAtom,
@@ -14,15 +13,13 @@ import {
 } from '@/store'
 import type { Word } from '@/typings'
 import { useAtomValue } from 'jotai'
-import { useCallback, useContext, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useWordCompletion, useWordInput, useWordState } from './hooks'
 
 export type { LetterState }
 export type { WordState } from './hooks'
 
 export default function WordComponent({ word, onFinish, isExtraReview = false }: { word: Word; onFinish: () => void; isExtraReview?: boolean }) {
-  const typingContext = useContext(TypingContext)
-  const dispatch = typingContext?.dispatch
   const { wordState, setWordState } = useWordState(word.name)
 
   const wordDictationConfig = useAtomValue(wordDictationConfigAtom)
@@ -50,13 +47,6 @@ export default function WordComponent({ word, onFinish, isExtraReview = false }:
     },
     [isHoveringWord, isShowAnswerOnHover, wordDictationConfig.isOpen, wordState.letterStates],
   )
-
-  useEffect(() => {
-    if (!dispatch) return
-    if (wordState.wrongCount >= 4) {
-      dispatch({ type: TypingStateActionType.SET_IS_SKIP, payload: true })
-    }
-  }, [wordState.wrongCount, dispatch])
 
   return (
     <>
