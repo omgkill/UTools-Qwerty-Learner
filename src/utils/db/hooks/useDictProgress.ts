@@ -17,7 +17,7 @@ export function useDictProgress() {
     async (updates: Partial<IDictProgress>): Promise<void> => {
       if (!dictID) return
 
-      let progress = await getDictProgress()
+      const progress = await getDictProgress()
 
       if (!progress) {
         // 新建记录：先合并 updates 再一次性写入，避免先 add 再 update 的双重写入
@@ -31,7 +31,11 @@ export function useDictProgress() {
       // 更新已有记录
       Object.assign(progress, updates)
       progress.lastStudyTime = Date.now()
-      await db.dictProgress.update(progress.id!, progress)
+      if (!progress.id) {
+        progress.id = await db.dictProgress.add(progress)
+        return
+      }
+      await db.dictProgress.update(progress.id, progress)
     },
     [dictID, getDictProgress],
   )

@@ -26,6 +26,10 @@ declare global {
     queryFirstMdxWord: (word: string) => Promise<{ dictPath: string; dictName: string; ok: boolean; content?: string; error?: string } | null>
     services: {
       getDictList: () => Array<{ path: string; name: string }>
+      queryWord?: (word: string) => Promise<Array<{ dictPath: string; dictName: string; ok: boolean; content?: string; error?: string }>>
+      selectDictFiles?: () => Array<{ path: string; name: string }> | null
+      removeDict?: (filePath: string) => Array<{ path: string; name: string }>
+      updateDictOrder?: (dicts: Array<{ path: string; name: string }>) => Array<{ path: string; name: string }>
     }
     getMode: () => string
     getAction: () => { code: string; payload?: string } | null
@@ -35,6 +39,20 @@ declare global {
     path: typeof path
     process: typeof process
     _pendingWordList: Word[] | null
+    postUToolsUserData: (data: Uint8Array) => Promise<unknown> | void
+    getUToolsUserData: () => Promise<Uint8Array> | Uint8Array
+    exportDatabase2UTools: () => Promise<boolean> | boolean
+    importDatabase2UTools: () => Promise<boolean> | boolean
+    migrateLocalStorageToUtools: () => void
+    utools?: {
+      setFeature: (feature: { code: string; explain: string; cmds: string[] }) => void
+      isDev?: () => boolean
+      db: {
+        get: (id: string) => { _rev?: string; data?: unknown } | null
+        put: (doc: { _id: string; data: unknown; _rev?: string }) => { ok?: boolean }
+        remove: (id: string) => { ok?: boolean }
+      }
+    }
   }
 }
 

@@ -14,7 +14,12 @@ class DictService {
 
     if (typeof window !== 'undefined' && window.utools) {
       const doc = window.utools.db.get(DICT_CONFIG_KEY)
-      this._config = doc ? doc.data : { dicts: [] }
+      if (doc && doc.data && typeof doc.data === 'object' && 'dicts' in doc.data) {
+        const dicts = (doc.data as { dicts?: unknown }).dicts
+        this._config = { dicts: Array.isArray(dicts) ? (dicts as DictMeta[]) : [] }
+      } else {
+        this._config = { dicts: [] }
+      }
     } else {
       this._config = { dicts: [] }
     }

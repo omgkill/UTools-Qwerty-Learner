@@ -3,71 +3,75 @@ import { InnerContext } from '../index'
 import ConfirmDialog from './ConfirmationDialog'
 import { Dialog, Transition } from '@headlessui/react'
 import mixpanel from 'mixpanel-browser'
+import type { ChangeEvent, FC, FormEvent, MouseEvent } from 'react'
 import { Fragment, useContext, useState } from 'react'
 import { toast } from 'react-toastify'
 import IconDelete from '~icons/mdi/delete'
 import IconX from '~icons/tabler/x'
 import EditIcon from '~icons/uil/edit-alt'
+import type { LanguageType, WordBank } from '@/typings'
 
 type Form4EditDictProps = {
   wordBankId: string
 }
 
-const Form4EditDict: React.FC<Form4EditDictProps> = ({ wordBankId }) => {
-  const [formData, setFormData] = useState({ name: '', language: '' })
+type FormData = WordBank & { language: LanguageType }
 
-  const [wordBanksList, setWordBanksList] = useState([])
+const Form4EditDict: FC<Form4EditDictProps> = ({ wordBankId }) => {
+  const [formData, setFormData] = useState<FormData>({ name: '', language: 'en' } as FormData)
+
+  const [wordBanksList, setWordBanksList] = useState<WordBank[]>([])
   const [wordBankIndex, setWordBankIndex] = useState(0)
 
   const handleRefresh = useContext(InnerContext)
 
   const [isOpen, setIsOpen] = useState(false)
   function closeModal() {
-    event.stopPropagation()
     setIsOpen(false)
-    setFormData({ name: '', language: '', description: '' })
+    setFormData({ name: '', language: 'en' } as FormData)
   }
-  async function openModal(event) {
+  async function openModal(event: MouseEvent<HTMLButtonElement>) {
     event.stopPropagation()
     const config = await window.readLocalWordBankConfig()
     setWordBanksList([...config])
     for (let i = 0; i < config.length; i++) {
       if (config[i].id === wordBankId) {
         setWordBankIndex(i)
-        setFormData({ ...config[i] })
+        setFormData({ ...config[i] } as FormData)
         break
       }
     }
     setIsOpen(true)
   }
 
-  async function handleSubmit(event) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (formData.name.trim().length <= 0) {
       toast.info('词库名称不能为空')
-      return false
+      return
     }
     if (formData.name.trim().length >= 10) {
       toast.info('词库名称过长(应少于10个字)')
-      return false
+      return
     }
-    if (formData.description.trim().length >= 10) {
+    if ((formData.description || '').trim().length >= 10) {
       toast.info('词库描述过长(应少于10个字)')
-      return false
+      return
     }
 
     const newWordBankInfo = Object.assign({}, wordBanksList[wordBankIndex], {
       ...formData,
     })
-    wordBanksList[wordBankIndex] = newWordBankInfo
-    await window.writeLocalWordBankConfig(wordBanksList)
+    const nextList = [...wordBanksList]
+    nextList[wordBankIndex] = newWordBankInfo
+    await window.writeLocalWordBankConfig(nextList)
     window.initLocalWordBanks()
     handleRefresh()
 
     setIsOpen(false)
   }
 
-  function handleChange(event) {
+  function handleChange(event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setFormData({
       ...formData,
       [event.target.name]: event.target.value,
@@ -75,8 +79,8 @@ const Form4EditDict: React.FC<Form4EditDictProps> = ({ wordBankId }) => {
   }
 
   const [confirmIsOpen, setConfirmIsOpen] = useState(false)
-  async function handleDelClick() {
-    event.preventDefault()
+  async function handleDelClick(event?: MouseEvent<HTMLButtonElement>) {
+    event?.preventDefault()
 
     const result = await window.delLocalWordBank(wordBankId)
     if (result) {
@@ -122,7 +126,14 @@ const Form4EditDict: React.FC<Form4EditDictProps> = ({ wordBankId }) => {
                 leaveTo="opacity-0 scale-95"
               >
                 <Dialog.Panel className="w-200  transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all dark:bg-gray-800">
-                  <button type="button" onClick={() => setIsOpen(false)} title="关闭对话框">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      closeModal()
+                    }}
+                    title="关闭对话框"
+                  >
                     <IconX className="absolute right-7 top-5 cursor-pointer text-gray-400" />
                   </button>
                   <Dialog.Title as="h2" className="mb-8 text-center text-xl font-medium leading-6 text-gray-800 dark:text-gray-200">
@@ -197,15 +208,17 @@ const Form4EditDict: React.FC<Form4EditDictProps> = ({ wordBankId }) => {
           </div>
         </Dialog>
       </Transition>
-      <ConfirmDialog
+    <ConfirmDialog
         isOpen={confirmIsOpen}
         onCancel={() => {
           setConfirmIsOpen(false)
         }}
         onDelete={() => {
-          handleDelClick()
+        handleDelClick()
         }}
-      />
+    >
+      确认删除此词库？
+    </ConfirmDialog>
     </>
   )
 }

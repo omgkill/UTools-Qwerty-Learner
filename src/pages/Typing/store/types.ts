@@ -33,6 +33,7 @@ export type UIState = {
   isTyping: boolean
   isFinished: boolean
   isShowSkip: boolean
+  isExtraReview: boolean
   isCurrentWordMastered: boolean
   isSavingRecord: boolean
 }

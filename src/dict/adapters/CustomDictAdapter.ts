@@ -1,11 +1,13 @@
 import type { DictMeta, WordInfo } from '../types'
 import { BaseDictAdapter } from '../BaseDictAdapter'
 
+type CustomDictEntry = { name: string; trans: string[]; usphone?: string; ukphone?: string }
+
 export class CustomDictAdapter extends BaseDictAdapter {
   type = 'custom' as const
-  private _data: Array<{ name: string; trans: string[]; usphone?: string; ukphone?: string }> = []
+  private _data: CustomDictEntry[] = []
 
-  constructor(id: string, name: string, data?: Array<{ name: string; trans: string[]; usphone?: string; ukphone?: string }>) {
+  constructor(id: string, name: string, data?: CustomDictEntry[]) {
     super()
     this._id = id
     this._name = name
@@ -17,8 +19,8 @@ export class CustomDictAdapter extends BaseDictAdapter {
 
     if (typeof window !== 'undefined' && window.utools) {
       const doc = window.utools.db.get(this._id)
-      if (doc && doc.data) {
-        this._data = doc.data
+      if (doc && Array.isArray(doc.data)) {
+        this._data = doc.data as CustomDictEntry[]
       }
     }
 

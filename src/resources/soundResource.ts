@@ -10,4 +10,22 @@ export const LANG_PRON_MAP: LanguagePronunciationMap = {
       },
     ],
   },
+  romaji: {
+    defaultPronIndex: 0,
+    pronunciation: [
+      {
+        name: '英音',
+        pron: 'uk',
+      },
+    ],
+  },
+  code: {
+    defaultPronIndex: 0,
+    pronunciation: [
+      {
+        name: '英音',
+        pron: 'uk',
+      },
+    ],
+  },
 }

@@ -25,6 +25,7 @@ export const initialUIState: UIState = {
   isTyping: false,
   isFinished: false,
   isShowSkip: false,
+  isExtraReview: false,
   isCurrentWordMastered: false,
   isSavingRecord: false,
 }

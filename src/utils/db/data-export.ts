@@ -21,14 +21,14 @@ export async function exportDatabase(callback: (exportProgress: ExportProgress) 
       return callback({ totalRows, completedRows, done })
     },
   })
-  const [wordCount, chapterCount] = await Promise.all([db.wordRecords.count(), db.chapterRecords.count()])
+  const [wordCount, learningCount] = await Promise.all([db.wordRecords.count(), db.learningRecords.count()])
 
   const json = await blob.text()
   const compressed = pako.gzip(json)
   const compressedBlob = new Blob([compressed])
   const currentDate = getCurrentDate()
   saveAs(compressedBlob, `User-Data-${currentDate}.gz`)
-  recordDataAction({ type: 'export', size: compressedBlob.size, wordCount, chapterCount })
+  recordDataAction({ type: 'export', size: compressedBlob.size, wordCount, learningCount })
 }
 
 export async function importDatabase(onStart: () => void, callback: (importProgress: ImportProgress) => boolean) {
@@ -59,8 +59,8 @@ export async function importDatabase(onStart: () => void, callback: (importProgr
       },
     })
 
-    const [wordCount, chapterCount] = await Promise.all([db.wordRecords.count(), db.chapterRecords.count()])
-    recordDataAction({ type: 'import', size: file.size, wordCount, chapterCount })
+    const [wordCount, learningCount] = await Promise.all([db.wordRecords.count(), db.learningRecords.count()])
+    recordDataAction({ type: 'import', size: file.size, wordCount, learningCount })
   })
 
   input.click()
@@ -79,11 +79,16 @@ export async function exportDatabase2UTools() {
   await window.postUToolsUserData(uint8Array)
   return true
 }
-async function blobToUint8Array(blob) {
+async function blobToUint8Array(blob: Blob): Promise<Uint8Array> {
   const fileReader = new FileReader()
-  const promise = new Promise((resolve, reject) => {
+  const promise = new Promise<Uint8Array>((resolve, reject) => {
     fileReader.onload = () => {
-      resolve(new Uint8Array(fileReader.result))
+      const result = fileReader.result
+      if (result instanceof ArrayBuffer) {
+        resolve(new Uint8Array(result))
+        return
+      }
+      reject(new Error('Failed to read blob as ArrayBuffer'))
     }
     fileReader.onerror = () => {
       reject(new Error('Failed to read blob as Uint8Array'))

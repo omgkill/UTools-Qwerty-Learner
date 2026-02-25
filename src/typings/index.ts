@@ -2,7 +2,7 @@ export * from './resource'
 
 export type PronunciationType = 'us' | 'uk'
 export type PhoneticType = 'us' | 'uk'
-export type LanguageType = 'en'
+export type LanguageType = 'en' | 'romaji' | 'code'
 export type LanguageCategoryType = 'en' | 'custom'
 
 type Pronunciation2PhoneticMap = Record<PronunciationType, PhoneticType>

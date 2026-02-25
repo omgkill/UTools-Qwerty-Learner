@@ -22,19 +22,6 @@ interface DictItem {
   name: string
 }
 
-declare global {
-  interface Window {
-    queryMdxWord: (word: string) => Promise<MdxResult[]>
-    getMdxDictConfig: () => DictItem[]
-    getMode: () => string
-    getAction: () => { code: string; payload?: string } | null
-    services: {
-      queryWord: (word: string) => Promise<MdxResult[]>
-      getDictList: () => DictItem[]
-    }
-  }
-}
-
 export default function MdxQueryPage() {
   const { word: routeWord } = useParams<{ word?: string }>()
   const navigate = useNavigate()

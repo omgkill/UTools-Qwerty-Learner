@@ -34,7 +34,7 @@ function AppToastContainer() {
 const disabledMixpanelTrack: typeof mixpanel.track = () => undefined
 const mixpanelMutable = mixpanel as unknown as { track: typeof mixpanel.track }
 
-if (import.meta.env.DEV || window.utools?.isDev()) {
+if (import.meta.env.DEV || window.utools?.isDev?.()) {
   const devKey = import.meta.env.VITE_MIXPANEL_KEY_DEV
   if (devKey) {
     mixpanel.init(devKey, { debug: true })

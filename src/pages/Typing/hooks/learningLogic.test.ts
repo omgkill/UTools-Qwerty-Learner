@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { IWordProgress } from '@/utils/db/progress'
+import type { IWordProgress, MasteryLevel } from '@/utils/db/progress'
 import type { Word, WordWithIndex } from '@/typings'
 import {
   calculateNewWordQuota,
@@ -16,7 +16,7 @@ function createWordWithIndex(name: string, index: number): WordWithIndex {
   return { ...createWord(name), index }
 }
 
-function createProgress(word: string, masteryLevel: number, nextReviewTime: number = Date.now()): IWordProgress {
+function createProgress(word: string, masteryLevel: MasteryLevel, nextReviewTime: number = Date.now()): IWordProgress {
   return {
     word,
     dict: 'test-dict',

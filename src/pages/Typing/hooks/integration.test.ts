@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DailyRecord, LEARNING_CONFIG, MASTERY_LEVELS, WordProgress, updateMasteryLevel } from '@/utils/db/progress'
+import type { MasteryLevel } from '@/utils/db/progress'
 import type { WordWithIndex } from '@/typings'
 import { determineLearningType } from './learningLogic'
 
@@ -7,7 +8,7 @@ function createWordWithIndex(name: string, index: number): WordWithIndex {
   return { name, trans: [], usphone: '', ukphone: '', index }
 }
 
-function createWordWithIndexList(count: number, startIndex: number = 0): WordWithIndex[] {
+function createWordWithIndexList(count: number, startIndex = 0): WordWithIndex[] {
   return Array.from({ length: count }, (_, i) => createWordWithIndex(`word${startIndex + i + 1}`, startIndex + i))
 }
 
@@ -201,7 +202,7 @@ describe('Daily Record State Transitions', () => {
 
 describe('Word Progress State Transitions', () => {
   it('should correctly transition through mastery levels', () => {
-    let masteryLevel = MASTERY_LEVELS.NEW
+    let masteryLevel: MasteryLevel = MASTERY_LEVELS.NEW
 
     const transitions = [
       { expectedLevel: MASTERY_LEVELS.LEARNED, description: 'NEW -> LEARNED' },

@@ -21,7 +21,7 @@ function baseRange(start: number, end: number, step: number): number[] {
   return result
 }
 
-export default function range(start: number, end: number, step: number): number[] {
+export default function range(start: number, end?: number, step?: number): number[] {
   // Ensure the sign of `-0` is preserved.
   start = toFinite(start)
   if (end === undefined) {

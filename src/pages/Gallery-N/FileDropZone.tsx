@@ -1,8 +1,9 @@
-import type { DragEvent, FC } from 'react'
+import type { DragEvent, FC, ReactNode } from 'react'
 import { useState } from 'react'
 
 interface Props {
   onFilesSelected: (files: File[]) => void
+  children?: ReactNode
 }
 
 const FileDropZone: FC<Props> = ({ onFilesSelected, children }) => {

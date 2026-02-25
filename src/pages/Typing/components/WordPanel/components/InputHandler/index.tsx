@@ -7,8 +7,7 @@ import type { FormEvent } from 'react'
 export default function InputHandler({ updateInput }: { updateInput: (updateObj: WordUpdateAction) => void }) {
   const dictInfo = useAtomValue(currentDictInfoAtom)
 
-  // code 语言使用 TextAreaHandler，其余语言使用 KeyEventHandler
-  const useTextArea = dictInfo.language === 'code'
+  const useTextArea = dictInfo?.language === 'code'
   return useTextArea
     ? <TextAreaHandler updateInput={updateInput} />
     : <KeyEventHandler updateInput={updateInput} />

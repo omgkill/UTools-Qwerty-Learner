@@ -17,7 +17,7 @@ const PronunciationSwitcher = () => {
         name: '英音',
       }))
     }
-  }, [currentDictInfo.defaultPronIndex, currentDictInfo.language, pronunciationConfig.name, pronunciationConfig.type, setPronunciationConfig])
+  }, [currentDictInfo?.defaultPronIndex, currentDictInfo?.language, pronunciationConfig.name, pronunciationConfig.type, setPronunciationConfig])
 
   useEffect(() => {
     if (phoneticConfig.type !== 'uk') {

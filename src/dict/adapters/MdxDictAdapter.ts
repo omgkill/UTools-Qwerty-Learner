@@ -1,21 +1,21 @@
 import type { DictMeta, WordInfo } from '../types'
 import { BaseDictAdapter } from '../BaseDictAdapter'
 
+type DictLoader = {
+  load: (
+    path: string,
+  ) => Promise<{
+    mdxLookup: (word: string) => Promise<string[]>
+    mddLookup: (resource: string) => Promise<Buffer>
+  }>
+}
+
 export class MdxDictAdapter extends BaseDictAdapter {
   type = 'mdx' as const
   private _path: string
   private _mdxLookup: ((word: string) => Promise<string[]>) | null = null
   private _mddLookup: ((resource: string) => Promise<Buffer>) | null = null
-  private _dictLoader:
-    | {
-        load: (
-          path: string,
-        ) => Promise<{
-          mdxLookup: (word: string) => Promise<string[]>
-          mddLookup: (resource: string) => Promise<Buffer>
-        }>
-      }
-    | null = null
+  private _dictLoader: DictLoader | null = null
 
   constructor(id: string, name: string, path: string) {
     super()
@@ -28,7 +28,7 @@ export class MdxDictAdapter extends BaseDictAdapter {
     if (this._loaded) return
 
     if (typeof window !== 'undefined') {
-      const loader = (window as unknown as { dictMdxLoader?: typeof this._dictLoader }).dictMdxLoader
+      const loader = (window as unknown as { dictMdxLoader?: DictLoader }).dictMdxLoader
       if (loader) {
         this._dictLoader = loader
       }

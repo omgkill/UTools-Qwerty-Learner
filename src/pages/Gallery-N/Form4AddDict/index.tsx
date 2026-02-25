@@ -1,12 +1,14 @@
 import { GalleryContext } from '../'
 import FileDropZone from '../FileDropZone'
 import { languageType } from '../constants'
-import type { ParsedWordList } from './parseWordList.ts'
-import { parseWordList, parseWordListFile } from './parseWordList.ts'
+import type { ParsedWordList } from './parseWordList'
+import { parseWordList, parseWordListFile } from './parseWordList'
 import LoadingIndicator from '@/components/LoadingIndicator'
 import Tooltip from '@/components/Tooltip'
+import type { LanguageCategoryType, LanguageType, Word, WordBank } from '@/typings'
 import { Dialog, Transition } from '@headlessui/react'
 import mixpanel from 'mixpanel-browser'
+import type { ChangeEvent, FC, FormEvent } from 'react'
 import { Fragment, useContext, useState } from 'react'
 import { toast } from 'react-toastify'
 import IconX from '~icons/tabler/x'
@@ -16,8 +18,10 @@ interface Props {
   onSaveDictSuccess: () => void
 }
 
-const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
-  const [formData, setFormData] = useState({ name: '', language: 'en' })
+type FormData = { name: string; language: LanguageType }
+
+const Form4AddDict: FC<Props> = ({ onSaveDictSuccess }) => {
+  const [formData, setFormData] = useState<FormData>({ name: '', language: 'en' })
   const [fileInfo, setFileInfo] = useState({ name: '', type: '', msg: '' })
   const [wordCount, setWordCount] = useState(0)
   const [alertMessage, setAlertMessage] = useState({ loadDictMsg: '', resolveDictMsg: '' })
@@ -57,7 +61,7 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
     }
     setIsOpen(true)
   }
-  const handleChange = (event) => {
+  const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [event.target.name]: event.target.value,
@@ -99,7 +103,7 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
 
     let skippedNoExplain = 0
     const skippedNoExplainWords: string[] = []
-    const validWords = []
+    const validWords: Word[] = []
     for (const word of parsed.words) {
       try {
         const result = await window.queryFirstMdxWord(word.name)
@@ -129,7 +133,7 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
     setAlertMessage({ loadDictMsg: `解析完毕，有效 ${validCount} 个单词`, resolveDictMsg: '' })
   }
 
-  const handleFilesSelected = async (files) => {
+  const handleFilesSelected = async (files: File[]) => {
     const file = files[0]
     if (!file) return
 
@@ -160,7 +164,8 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
       const parsed = await parseWordListFile(file)
       await resolveWordList(parsed)
     } catch (error) {
-      setAlertMessage({ loadDictMsg: '', resolveDictMsg: '解析失败：' + error.message })
+      const message = error instanceof Error ? error.message : '未知错误'
+      setAlertMessage({ loadDictMsg: '', resolveDictMsg: '解析失败：' + message })
     }
   }
 
@@ -170,31 +175,31 @@ const Form4AddDict: React.FC<Props> = ({ onSaveDictSuccess }) => {
     await resolveWordList(parsed)
   }
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (formData.name.trim().length <= 0) {
       toast.info('词库名称不能为空')
-      return false
+      return
     }
     if (formData.name.trim().length >= 10) {
       toast.info('词库名称过长(应少于10个字)')
-      return false
+      return
     }
     if (!window._pendingWordList || window._pendingWordList.length === 0) {
       toast.info('未导入词库文件或文件无有效单词')
-      return false
+      return
     }
 
     if (alertMessage.resolveDictMsg) {
       toast.error('词库解析异常')
-      return false
+      return
     }
 
     const config = window.readLocalWordBankConfig()
     const isNameExists = config.some((wb) => wb.name.trim() === formData.name.trim())
     if (isNameExists) {
       toast.error('词库名称已存在，请使用其他名称')
-      return false
+      return
     }
 
     saveWordBank(formData, window._pendingWordList)
@@ -433,8 +438,8 @@ Form4AddDict.propTypes = {
 
 export default Form4AddDict
 
-const saveWordBank = (formData, wordList) => {
-  const createWordBankMeta = (formData) => {
+const saveWordBank = (formData: FormData, wordList: Word[]) => {
+  const createWordBankMeta = (formData: FormData): WordBank => {
     const { name, language } = formData
     const uuid = crypto.randomUUID()
     return {
@@ -447,7 +452,7 @@ const saveWordBank = (formData, wordList) => {
       tags: ['Default'],
       length: wordList.length,
       chapterCount: Math.ceil(wordList.length / 20),
-      languageCategory: 'custom',
+      languageCategory: 'custom' as LanguageCategoryType,
     }
   }
 

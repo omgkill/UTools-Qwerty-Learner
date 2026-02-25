@@ -30,7 +30,7 @@ export default function WordComponent({ word, onFinish, isExtraReview = false }:
   const isShowAnswerOnHover = useAtomValue(isShowAnswerOnHoverAtom)
   const pronunciationIsOpen = useAtomValue(pronunciationIsOpenAtom)
   const [isHoveringWord, setIsHoveringWord] = useState(false)
-  const currentLanguage = useAtomValue(currentDictInfoAtom).language
+  const currentLanguage = useAtomValue(currentDictInfoAtom)?.language ?? 'en'
 
   const { updateInput } = useWordInput(wordState, setWordState)
   useWordCompletion(word, wordState, onFinish, isExtraReview)

@@ -61,6 +61,7 @@ export function useWordList(): UseWordListResult {
     data: wordList,
     error,
     isLoading: isWordListLoading,
+    mutate,
   } = useSWR(
     currentWordBank ? (isLocalWordBank ? currentWordBank.id : currentWordBank.url) : null,
     isLocalWordBank ? localWordListFetcher : wordListFetcher,
@@ -86,6 +87,8 @@ export function useWordList(): UseWordListResult {
   const hasReachedTarget = useMemo(() => {
     return todayReviewed + todayLearned >= LEARNING_CONFIG.DAILY_LIMIT
   }, [todayReviewed, todayLearned])
+
+  const retryWordListRef = useRef<string | null>(null)
 
   const loadLearningWords = useCallback(async () => {
     if (!wordList || wordList.length === 0 || !currentWordBank) {
@@ -199,6 +202,21 @@ export function useWordList(): UseWordListResult {
       reloadWords()
     }
   }, [isExtraReview, reloadWords])
+
+  useEffect(() => {
+    if (!currentWordBank) return
+    if (isWordListLoading) return
+    if (!wordList) return
+    if (wordList.length > 0) {
+      retryWordListRef.current = null
+      return
+    }
+    if (currentWordBank.length === 0) return
+    const retryKey = currentWordBank.id
+    if (retryWordListRef.current === retryKey) return
+    retryWordListRef.current = retryKey
+    void mutate()
+  }, [currentWordBank, isWordListLoading, wordList, mutate])
 
   useEffect(() => {
     if (

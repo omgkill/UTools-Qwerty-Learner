@@ -6,21 +6,6 @@ interface DictItem {
   name: string
 }
 
-declare global {
-  interface Window {
-    getMdxDictConfig: () => DictItem[]
-    selectMdxFiles: () => DictItem[] | null
-    removeMdxDict: (filePath: string) => DictItem[]
-    updateMdxDictOrder: (dicts: DictItem[]) => DictItem[]
-    services: {
-      getDictList: () => DictItem[]
-      selectDictFiles: () => DictItem[] | null
-      removeDict: (filePath: string) => DictItem[]
-      updateDictOrder: (dicts: DictItem[]) => DictItem[]
-    }
-  }
-}
-
 export default function MdxManagePage() {
   const [dicts, setDicts] = useState<DictItem[]>([])
   const listRef = useRef<HTMLDivElement>(null)

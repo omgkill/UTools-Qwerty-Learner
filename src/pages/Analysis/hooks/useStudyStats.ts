@@ -128,11 +128,13 @@ export function useDayStats(dictId: string | null): DayStatsData {
       return
     }
 
+    const currentDictId = dictId
+
     setData((prev) => ({ ...prev, isLoading: true }))
 
     async function fetchDays() {
       try {
-        const dailyRecords = await db.dailyRecords.where('dict').equals(dictId).toArray()
+        const dailyRecords = await db.dailyRecords.where('dict').equals(currentDictId).toArray()
 
         const days: DayStats[] = dailyRecords
           .filter((r) => r.learnedCount > 0 || r.reviewedCount > 0)
@@ -183,6 +185,8 @@ export function useWordDetails(dictId: string | null, date: string | null): Word
       return
     }
 
+    const currentDictId = dictId
+
     setData((prev) => ({ ...prev, isLoading: true }))
 
     async function fetchWords() {
@@ -190,7 +194,7 @@ export function useWordDetails(dictId: string | null, date: string | null): Word
         const startOfDay = dayjs(date).startOf('day').unix()
         const endOfDay = dayjs(date).endOf('day').unix()
 
-        const allWordRecords = await db.wordRecords.where('dict').equals(dictId).toArray()
+        const allWordRecords = await db.wordRecords.where('dict').equals(currentDictId).toArray()
 
         const wordFirstTimeMap = new Map<string, number>()
         const sortedAllRecords = [...allWordRecords].sort((a, b) => a.timeStamp - b.timeStamp)

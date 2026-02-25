@@ -1,14 +1,23 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import type * as Jotai from 'jotai'
 import type * as React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { TypingState } from '@/pages/Typing/store'
+import type { WordWithIndex } from '@/typings'
+import type * as ReactRouterDom from 'react-router-dom'
 
 const mockDispatch = vi.fn()
-let mockState = {
+const createWord = (name: string, trans: string[] = [], index = 0): WordWithIndex => ({
+  name,
+  trans,
+  usphone: '',
+  ukphone: '',
+  tense: '',
+  index,
+})
+let mockState: TypingState = {
   wordListData: {
-    words: [
-      { name: 'apple', trans: ['n. 苹果'], usphone: 'ˈæpl', ukphone: 'ˈæpl', tense: 'pl. apples' },
-    ],
+    words: [createWord('apple', ['n. 苹果'])],
     index: 0,
   },
   statsData: {
@@ -20,7 +29,7 @@ let mockState = {
     wordRecordIds: [],
     timerData: { time: 0, accuracy: 0, wpm: 0 },
   },
-  wordInfoMap: {} as Record<string, { trans?: string[]; ukphone?: string; tense?: string }>,
+  wordInfoMap: {},
   uiState: {
     isTyping: true,
     isFinished: false,
@@ -43,7 +52,7 @@ vi.mock('react', async (importOriginal) => {
 })
 
 vi.mock('react-router-dom', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual = await importOriginal<typeof ReactRouterDom>()
   return {
     ...actual,
     useNavigate: vi.fn(() => vi.fn()),
@@ -90,7 +99,7 @@ describe('WordPanel Component', () => {
     vi.clearAllMocks()
     mockState = {
       wordListData: {
-        words: [{ name: 'apple', trans: ['n. 苹果'], usphone: '', ukphone: '' }],
+        words: [createWord('apple', ['n. 苹果'], 0)],
         index: 0,
       },
       statsData: {
@@ -133,7 +142,7 @@ describe('WordPanel Component', () => {
 
   describe('MDX查询场景测试', () => {
     it('当单词没有释义时，应该通过mdx查询获取释义', async () => {
-      mockState.wordListData.words = [{ name: 'newword', trans: [], usphone: '', ukphone: '' }]
+      mockState.wordListData.words = [createWord('newword', [], 0)]
 
       const { default: WordPanel } = await import('./index')
       render(<WordPanel />)
@@ -144,7 +153,7 @@ describe('WordPanel Component', () => {
     })
 
     it('mdx查询成功后，应该更新单词释义到wordInfoMap', async () => {
-      mockState.wordListData.words = [{ name: 'newword', trans: [], usphone: '', ukphone: '' }]
+      mockState.wordListData.words = [createWord('newword', [], 0)]
 
       const { default: WordPanel } = await import('./index')
       render(<WordPanel />)
@@ -165,8 +174,8 @@ describe('WordPanel Component', () => {
     })
 
     it('当mdx查询失败时，界面应该显示单词但没有释义', async () => {
-      ;(window as unknown as { queryFirstMdxWord: ReturnType<typeof vi.fn> }).queryFirstMdxWord = vi.fn().mockResolvedValue(null)
-      mockState.wordListData.words = [{ name: 'unknownword', trans: [], usphone: '', ukphone: '' }]
+      (window as unknown as { queryFirstMdxWord: ReturnType<typeof vi.fn> }).queryFirstMdxWord = vi.fn().mockResolvedValue(null)
+      mockState.wordListData.words = [createWord('unknownword', [], 0)]
 
       const { default: WordPanel } = await import('./index')
       const { container } = render(<WordPanel />)
@@ -179,8 +188,8 @@ describe('WordPanel Component', () => {
     })
 
     it('当没有配置mdx词典时，界面应该显示单词但没有释义', async () => {
-      ;(window as unknown as { getMdxDictConfig: ReturnType<typeof vi.fn> }).getMdxDictConfig = vi.fn().mockReturnValue([])
-      mockState.wordListData.words = [{ name: 'nodictword', trans: [], usphone: '', ukphone: '' }]
+      (window as unknown as { getMdxDictConfig: ReturnType<typeof vi.fn> }).getMdxDictConfig = vi.fn().mockReturnValue([])
+      mockState.wordListData.words = [createWord('nodictword', [], 0)]
 
       const { default: WordPanel } = await import('./index')
       const { container } = render(<WordPanel />)
@@ -194,7 +203,7 @@ describe('WordPanel Component', () => {
 
   describe('期望行为测试', () => {
     it('单词没有释义时，应该调用mdx查询', async () => {
-      mockState.wordListData.words = [{ name: 'testword', trans: [], usphone: '', ukphone: '' }]
+      mockState.wordListData.words = [createWord('testword', [], 0)]
 
       const { default: WordPanel } = await import('./index')
       render(<WordPanel />)
@@ -205,7 +214,7 @@ describe('WordPanel Component', () => {
     })
 
     it('mdx查询成功后，dispatch应该被调用', async () => {
-      mockState.wordListData.words = [{ name: 'testword', trans: [], usphone: '', ukphone: '' }]
+      mockState.wordListData.words = [createWord('testword', [], 0)]
 
       const { default: WordPanel } = await import('./index')
       render(<WordPanel />)
@@ -221,7 +230,7 @@ describe('WordPanel Component', () => {
 
   describe('新架构测试 - wordInfoMap', () => {
     it('当wordInfoMap有释义时，应该优先使用wordInfoMap的释义', async () => {
-      mockState.wordListData.words = [{ name: 'testword', trans: [], usphone: '', ukphone: '' }]
+      mockState.wordListData.words = [createWord('testword', [], 0)]
       mockState.wordInfoMap = {
         testword: { trans: ['n. 来自wordInfoMap的释义'], ukphone: 'test' },
       }

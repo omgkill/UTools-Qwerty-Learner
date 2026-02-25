@@ -1,5 +1,15 @@
 # 变更记录
 
+## 2026-02-25 修复类型声明与词库管理表单类型问题
+
+- 扩展 global.d.ts 的 services 与 utools 类型声明，补齐词典服务能力
+- 规范 CustomDict/MdxDictAdapter 类型守卫，避免 unknown 写入
+- 补齐 Typing UIState 的 isExtraReview 与初始状态
+- 修正 WordPanel 测试与学习逻辑测试的类型使用
+- 强化 FileDropZone、Form4AddDict、Form4EditDict 的事件与数据类型
+- 调整 range 可选参数类型与 useChapterStats 占位参数使用
+- 扩展语言类型并补齐发音映射、修正 isDev 可选调用与删除确认弹窗内容
+
 ## 2026-02-22 背单词界面添加查看详细释义功能
 
 - 在 WordPanel 组件添加"详细"按钮，点击后跳转到查词页面

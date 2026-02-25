@@ -222,7 +222,7 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
       const day1 = simulateDay(words)
 
       vi.setSystemTime(baseTime + DAY_MS)
-      const { result, updatedWords } = simulateDay(day1.updatedWords)
+      const { result } = simulateDay(day1.updatedWords)
 
       expect(result.dueWordsCount).toBe(20)
       expect(result.newWordsQuota).toBe(0)

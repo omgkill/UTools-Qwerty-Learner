@@ -32,4 +32,10 @@ export interface IDailyRecord {
   learnedCount: number
   extraReviewedCount: number
   lastUpdateTime: number
+  totalToday: number
+  totalReviewed: number
+  getNewWordQuota: () => number
+  remainingForTarget: number
+  hasReachedTarget: boolean
+  hasExtraReviewQuota: boolean
 }
