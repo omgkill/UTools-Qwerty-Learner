@@ -30,7 +30,6 @@ function createInitialProgress(word: string, dict: string): IWordProgress {
     correctCount: 0,
     wrongCount: 0,
     streak: 0,
-    easeFactor: 2.5,
     reps: 0,
   }
 }
@@ -45,20 +44,18 @@ function createExistingProgress(params: { word: string; dict: string; masteryLev
     correctCount: 0,
     wrongCount: 0,
     streak: 0,
-    easeFactor: 2.5,
     reps: 1,
   }
 }
 
 function applyProgressUpdate(params: { word: string; dict: string; progress: IWordProgress | undefined; isCorrect: boolean; wrongCount: number }): IWordProgress {
   const base = params.progress ?? createInitialProgress(params.word, params.dict)
-  const { newLevel, newEaseFactor } = updateMasteryLevel(base.masteryLevel, params.isCorrect, params.wrongCount, base.easeFactor)
+  const { newLevel } = updateMasteryLevel(base.masteryLevel, params.isCorrect, params.wrongCount)
 
   const next: IWordProgress = {
     ...base,
     masteryLevel: newLevel,
-    easeFactor: newEaseFactor,
-    nextReviewTime: getNextReviewTime(newLevel, newEaseFactor),
+    nextReviewTime: getNextReviewTime(newLevel),
     lastReviewTime: Date.now(),
     reps: (base.reps || 0) + 1,
   }
@@ -87,7 +84,7 @@ function simulateDay(
     .map((w, index) => ({ w, index }))
     .filter(({ w }) => {
       const p = w.progress
-      return p && p.masteryLevel > MASTERY_LEVELS.NEW && p.masteryLevel < MASTERY_LEVELS.MASTERED && p.nextReviewTime <= now
+      return p && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED && p.nextReviewTime <= now
     })
     .map(({ index }) => wordList[index])
 
@@ -107,7 +104,7 @@ function simulateDay(
       .map((w, index) => ({ w, index }))
       .filter(({ w }) => {
         const p = w.progress
-        return p && p.masteryLevel > MASTERY_LEVELS.NEW && p.masteryLevel < MASTERY_LEVELS.MASTERED && p.nextReviewTime <= loopNow
+        return p && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED && p.nextReviewTime <= loopNow
       })
       .map(({ index }) => wordList[index])
 
@@ -216,28 +213,23 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
     })
   })
 
-  describe('Day 2 - New word day (LEARNED interval is 2.6 days, no review yet)', () => {
-    it('should match Day 2 simulation: 0 due words, learn 20 new words', () => {
+  describe('Day 2 - Review day (LEARNED interval is 1 day)', () => {
+    it('should match Day 2 simulation: 20 due words, review 20 words', () => {
       const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
       vi.setSystemTime(baseTime)
 
       const words: SimulatedWord[] = Array.from({ length: TOTAL_WORDS }, (_, i) => ({ name: `word${i + 1}`, progress: undefined }))
       const day1 = simulateDay(words)
 
-      // Day 2：LEARNED 间隔 = 1天 × easeFactor(2.6) ≈ 2.6天，尚未到期
       vi.setSystemTime(baseTime + DAY_MS)
       const { result, updatedWords } = simulateDay(day1.updatedWords)
 
-      expect(result.dueWordsCount).toBe(0)
-      expect(result.newWordsQuota).toBe(20)
-      expect(result.learningType).toBe('new')
-      expect(result.newWordsLearned).toBe(20)
-      expect(result.wordsReviewed).toBe(0)
+      expect(result.dueWordsCount).toBe(20)
+      expect(result.newWordsQuota).toBe(0)
+      expect(result.learningType).toBe('review')
+      expect(result.newWordsLearned).toBe(0)
+      expect(result.wordsReviewed).toBe(20)
       expect(result.totalToday).toBe(20)
-
-      // 40 个词已进入 LEARNED 及以上等级
-      const progressedWords = updatedWords.filter((w) => (w.progress?.masteryLevel ?? 0) > MASTERY_LEVELS.NEW)
-      expect(progressedWords.length).toBe(40)
 
       console.log('Day 2:', {
         dueWords: result.dueWordsCount,
@@ -249,7 +241,7 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
     })
   })
 
-  describe('Day 3 - New word day (still no reviews due)', () => {
+  describe('Day 3 - New word day (FAMILIAR interval is 2 days)', () => {
     it('should match Day 3 simulation: 0 due words, learn 20 new words', () => {
       const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
       vi.setSystemTime(baseTime)
@@ -260,7 +252,6 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
       vi.setSystemTime(baseTime + DAY_MS)
       const day2 = simulateDay(day1.updatedWords)
 
-      // Day 3：Day1 的词还差 0.6 天到期，仍是新词日
       vi.setSystemTime(baseTime + 2 * DAY_MS)
       const { result, updatedWords } = simulateDay(day2.updatedWords)
 
@@ -270,9 +261,8 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
       expect(result.wordsReviewed).toBe(0)
       expect(result.totalToday).toBe(20)
 
-      // 60 个词已进入 LEARNED 及以上等级
       const progressedWords = updatedWords.filter((w) => (w.progress?.masteryLevel ?? 0) > MASTERY_LEVELS.NEW)
-      expect(progressedWords.length).toBe(60)
+      expect(progressedWords.length).toBe(40)
     })
   })
 
@@ -316,7 +306,7 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
   })
 
   describe('Learning Timeline - 100 Words', () => {
-    it('should complete 100 new words within 30 days', () => {
+    it('should complete 100 new words within 18 days', () => {
       const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
       vi.setSystemTime(baseTime)
 
@@ -344,7 +334,7 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
       console.log(`Days with new words: ${newWordDays.join(', ')}`)
 
       expect(cumulativeNewWords).toBe(100)
-      expect(day).toBeLessThanOrEqual(30)
+      expect(day).toBeLessThanOrEqual(18)
     })
   })
 
@@ -367,7 +357,7 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
 
       const remainingDueWords = updatedWords.filter((w) => {
         const p = w.progress
-        return p && p.masteryLevel > MASTERY_LEVELS.NEW && p.masteryLevel < MASTERY_LEVELS.MASTERED && p.nextReviewTime <= baseTime
+        return p && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED && p.nextReviewTime <= baseTime
       })
       expect(remainingDueWords.length).toBe(15)
 

@@ -88,16 +88,14 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
     if (currentWord) {
       await markAsMastered(currentWord.name)
 
-      if (learningType === 'new') {
-        const replacementWord = await getNextNewWord()
-        if (replacementWord) {
-          dispatch({ type: TypingStateActionType.ADD_REPLACEMENT_WORD, payload: replacementWord })
-        }
+      const replacementWord = await getNextNewWord()
+      if (replacementWord) {
+        dispatch({ type: TypingStateActionType.ADD_REPLACEMENT_WORD, payload: replacementWord })
       }
 
       dispatch({ type: TypingStateActionType.SKIP_WORD })
     }
-  }, [state.wordListData.words, state.wordListData.index, markAsMastered, dispatch, learningType, getNextNewWord])
+  }, [state.wordListData.words, state.wordListData.index, markAsMastered, dispatch, getNextNewWord])
 
   useTypingHotkeys(skipWord, handleMastered, state.isImmersiveMode)
 

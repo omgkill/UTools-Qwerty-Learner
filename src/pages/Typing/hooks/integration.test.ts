@@ -22,7 +22,7 @@ describe('Word Completion Integration Tests', () => {
       expect(progress.reps).toBe(0)
       expect(progress.masteryLevel).toBe(MASTERY_LEVELS.NEW)
 
-      const { newLevel } = updateMasteryLevel(progress.masteryLevel, true, 0, progress.easeFactor)
+      const { newLevel } = updateMasteryLevel(progress.masteryLevel, true, 0)
 
       expect(newLevel).toBe(MASTERY_LEVELS.LEARNED)
 
@@ -36,10 +36,9 @@ describe('Word Completion Integration Tests', () => {
     it('should count as learned even when new word has wrong inputs', () => {
       const progress = new WordProgress('apple', dict)
 
-      const { newLevel, newEaseFactor } = updateMasteryLevel(progress.masteryLevel, true, 2, progress.easeFactor)
+      const { newLevel } = updateMasteryLevel(progress.masteryLevel, true, 2)
 
       expect(newLevel).toBe(MASTERY_LEVELS.LEARNED)
-      expect(newEaseFactor).toBeLessThan(2.5)
     })
 
     it('should count as learned when reps is 0 even if progress exists', () => {
@@ -74,7 +73,7 @@ describe('Word Completion Integration Tests', () => {
       const progress = new WordProgress('apple', dict)
       progress.masteryLevel = MASTERY_LEVELS.LEARNED
 
-      const { newLevel } = updateMasteryLevel(progress.masteryLevel, true, 0, progress.easeFactor)
+      const { newLevel } = updateMasteryLevel(progress.masteryLevel, true, 0)
 
       expect(newLevel).toBe(MASTERY_LEVELS.FAMILIAR)
     })
@@ -133,7 +132,7 @@ describe('Word Completion Integration Tests', () => {
     it('should handle wrong answer on new word (still counts as learned)', () => {
       const progress = new WordProgress('apple', dict)
 
-      const { newLevel } = updateMasteryLevel(progress.masteryLevel, false, 3, progress.easeFactor)
+      const { newLevel } = updateMasteryLevel(progress.masteryLevel, false, 3)
 
       expect(newLevel).toBe(MASTERY_LEVELS.NEW)
 
@@ -144,10 +143,9 @@ describe('Word Completion Integration Tests', () => {
     it('should handle multiple wrong inputs followed by correct', () => {
       const progress = new WordProgress('apple', dict)
 
-      const { newLevel, newEaseFactor } = updateMasteryLevel(progress.masteryLevel, true, 4, progress.easeFactor)
+      const { newLevel } = updateMasteryLevel(progress.masteryLevel, true, 4)
 
       expect(newLevel).toBe(MASTERY_LEVELS.LEARNED)
-      expect(newEaseFactor).toBeLessThan(2.5)
     })
   })
 })
@@ -204,7 +202,6 @@ describe('Daily Record State Transitions', () => {
 describe('Word Progress State Transitions', () => {
   it('should correctly transition through mastery levels', () => {
     let masteryLevel = MASTERY_LEVELS.NEW
-    let easeFactor = 2.5
 
     const transitions = [
       { expectedLevel: MASTERY_LEVELS.LEARNED, description: 'NEW -> LEARNED' },
@@ -213,26 +210,25 @@ describe('Word Progress State Transitions', () => {
     ]
 
     for (const transition of transitions) {
-      const result = updateMasteryLevel(masteryLevel, true, 0, easeFactor)
+      const result = updateMasteryLevel(masteryLevel, true, 0)
       masteryLevel = result.newLevel
-      easeFactor = result.newEaseFactor
       expect(masteryLevel).toBe(transition.expectedLevel)
     }
   })
 
   it('should decrease mastery level on wrong answer', () => {
-    const result = updateMasteryLevel(MASTERY_LEVELS.FAMILIAR, false, 0, 2.5)
+    const result = updateMasteryLevel(MASTERY_LEVELS.FAMILIAR, false, 0)
     expect(result.newLevel).toBe(MASTERY_LEVELS.LEARNED)
   })
 
   it('should not decrease below NEW level', () => {
-    const result = updateMasteryLevel(MASTERY_LEVELS.NEW, false, 0, 2.5)
+    const result = updateMasteryLevel(MASTERY_LEVELS.NEW, false, 0)
     expect(result.newLevel).toBe(MASTERY_LEVELS.NEW)
   })
 
-  it('should not increase above MASTERED level', () => {
-    const result = updateMasteryLevel(MASTERY_LEVELS.MASTERED, true, 0, 2.5)
-    expect(result.newLevel).toBe(MASTERY_LEVELS.MASTERED)
+  it('should not increase above EXPERT level (6)', () => {
+    const result = updateMasteryLevel(6, true, 0)
+    expect(result.newLevel).toBe(6)
   })
 })
 

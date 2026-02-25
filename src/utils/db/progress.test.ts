@@ -11,7 +11,6 @@ describe('WordProgress', () => {
     expect(progress.correctCount).toBe(0)
     expect(progress.wrongCount).toBe(0)
     expect(progress.streak).toBe(0)
-    expect(progress.easeFactor).toBe(2.5)
     expect(progress.reps).toBe(0)
   })
 
@@ -150,74 +149,94 @@ describe('DailyRecord', () => {
 
 describe('updateMasteryLevel', () => {
   it('should increase level when correct with no wrongs', () => {
-    const result = updateMasteryLevel(MASTERY_LEVELS.NEW, true, 0, 2.5)
+    const result = updateMasteryLevel(MASTERY_LEVELS.NEW, true, 0)
     expect(result.newLevel).toBe(MASTERY_LEVELS.LEARNED)
-    expect(result.newEaseFactor).toBe(2.6)
   })
 
   it('should advance from NEW when correct but with wrongs', () => {
-    const result = updateMasteryLevel(MASTERY_LEVELS.NEW, true, 2, 2.5)
+    const result = updateMasteryLevel(MASTERY_LEVELS.NEW, true, 2)
     expect(result.newLevel).toBe(MASTERY_LEVELS.LEARNED)
-    expect(result.newEaseFactor).toBe(2.4)
   })
 
   it('should decrease level when wrong', () => {
-    const result = updateMasteryLevel(MASTERY_LEVELS.FAMILIAR, false, 0, 2.5)
+    const result = updateMasteryLevel(MASTERY_LEVELS.FAMILIAR, false, 0)
     expect(result.newLevel).toBe(MASTERY_LEVELS.LEARNED)
-    expect(result.newEaseFactor).toBe(2.3)
   })
 
   it('should not decrease below NEW level', () => {
-    const result = updateMasteryLevel(MASTERY_LEVELS.NEW, false, 0, 2.5)
+    const result = updateMasteryLevel(MASTERY_LEVELS.NEW, false, 0)
     expect(result.newLevel).toBe(MASTERY_LEVELS.NEW)
   })
 
-  it('should not increase above MASTERED level', () => {
-    const result = updateMasteryLevel(MASTERY_LEVELS.MASTERED, true, 0, 2.5)
-    expect(result.newLevel).toBe(MASTERY_LEVELS.MASTERED)
+  it('should not increase above EXPERT level (6)', () => {
+    const result = updateMasteryLevel(6, true, 0)
+    expect(result.newLevel).toBe(6)
   })
 
-  it('should cap ease factor at 3.0', () => {
-    const result = updateMasteryLevel(MASTERY_LEVELS.NEW, true, 0, 2.95)
-    expect(result.newEaseFactor).toBe(3.0)
+  it('should stay at current level when correct with wrongs', () => {
+    const result = updateMasteryLevel(MASTERY_LEVELS.FAMILIAR, true, 2)
+    expect(result.newLevel).toBe(MASTERY_LEVELS.FAMILIAR)
   })
 
-  it('should not decrease ease factor below 1.3', () => {
-    const result = updateMasteryLevel(MASTERY_LEVELS.NEW, false, 0, 1.4)
-    expect(result.newEaseFactor).toBe(1.3)
+  it('should not go below LEARNED when correct with wrongs', () => {
+    const result = updateMasteryLevel(MASTERY_LEVELS.LEARNED, true, 2)
+    expect(result.newLevel).toBe(MASTERY_LEVELS.LEARNED)
   })
 })
 
 describe('getNextReviewTime', () => {
-  it('should return 1 day later for NEW level (fallback, NEW should upgrade immediately)', () => {
+  it('should return 0 days later for NEW level (immediate upgrade, no review needed)', () => {
     const now = Date.now()
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.NEW)
-    // NEW 级别间隔为 0，|| 1 兜底，结果为 1天 * easeFactor(2.5) = 2.5天
-    const expectedMin = now + 1 * 2.5 * 24 * 60 * 60 * 1000
-    expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
+    expect(reviewTime).toBeGreaterThanOrEqual(now - 1000)
   })
 
   it('should return 1 day later for LEARNED level', () => {
     const now = Date.now()
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.LEARNED)
-    // LEARNED 间隔 1 天 * easeFactor(2.5) = 2.5 天
-    const expectedMin = now + 1 * 2.5 * 24 * 60 * 60 * 1000
+    const expectedMin = now + 1 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
   it('should return 2 days later for FAMILIAR level', () => {
     const now = Date.now()
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.FAMILIAR)
-    // FAMILIAR 间隔 2 天 * easeFactor(2.5) = 5 天
-    const expectedMin = now + 2 * 2.5 * 24 * 60 * 60 * 1000
+    const expectedMin = now + 2 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
-  it('should apply ease factor', () => {
+  it('should return 4 days later for KNOWN level', () => {
     const now = Date.now()
-    const reviewTime = getNextReviewTime(MASTERY_LEVELS.FAMILIAR, 2.0)
-    // FAMILIAR 间隔 2 天 * easeFactor(2.0) = 4 天
-    const expectedMin = now + 2 * 2.0 * 24 * 60 * 60 * 1000
+    const reviewTime = getNextReviewTime(MASTERY_LEVELS.KNOWN)
+    const expectedMin = now + 4 * 24 * 60 * 60 * 1000
+    expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
+  })
+
+  it('should return 7 days later for PROFICIENT level', () => {
+    const now = Date.now()
+    const reviewTime = getNextReviewTime(MASTERY_LEVELS.PROFICIENT)
+    const expectedMin = now + 7 * 24 * 60 * 60 * 1000
+    expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
+  })
+
+  it('should return 15 days later for ADVANCED level', () => {
+    const now = Date.now()
+    const reviewTime = getNextReviewTime(MASTERY_LEVELS.ADVANCED)
+    const expectedMin = now + 15 * 24 * 60 * 60 * 1000
+    expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
+  })
+
+  it('should return 21 days later for EXPERT level', () => {
+    const now = Date.now()
+    const reviewTime = getNextReviewTime(MASTERY_LEVELS.EXPERT)
+    const expectedMin = now + 21 * 24 * 60 * 60 * 1000
+    expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
+  })
+
+  it('should return 30 days later for MASTERED level', () => {
+    const now = Date.now()
+    const reviewTime = getNextReviewTime(MASTERY_LEVELS.MASTERED)
+    const expectedMin = now + 30 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 })

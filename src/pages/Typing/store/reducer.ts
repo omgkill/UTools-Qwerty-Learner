@@ -220,12 +220,6 @@ export function typingReducer(state: TypingState, action: TypingStateAction): Ty
         uiState: { ...state.uiState, isSavingRecord: action.payload },
       }
 
-    case TypingStateActionType.SET_IS_EXTRA_REVIEW:
-      return {
-        ...state,
-        uiState: { ...state.uiState, isExtraReview: action.payload },
-      }
-
     case TypingStateActionType.SET_IS_CURRENT_WORD_MASTERED:
       return {
         ...state,

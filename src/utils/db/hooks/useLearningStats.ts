@@ -38,7 +38,7 @@ export function useLearningStats() {
 
     const learnedWords = allProgress.filter((p) => p.masteryLevel > MASTERY_LEVELS.NEW).length
     const masteredWords = allProgress.filter((p) => p.masteryLevel >= MASTERY_LEVELS.MASTERED).length
-    const dueWords = allProgress.filter((p) => p.nextReviewTime <= now && p.masteryLevel < MASTERY_LEVELS.MASTERED).length
+    const dueWords = allProgress.filter((p) => p.nextReviewTime <= now && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED).length
     const todayLearned = allProgress.filter((p) => p.lastReviewTime >= todayStart && p.reps === 1).length
     const todayReviewed = allProgress.filter((p) => p.lastReviewTime >= todayStart && p.reps > 1).length
 
@@ -65,7 +65,7 @@ export function useLearningStats() {
       const todayStart = new Date().setHours(0, 0, 0, 0)
       const learnedWords = allProgress.filter((p) => p.masteryLevel > MASTERY_LEVELS.NEW).length
       const masteredWords = allProgress.filter((p) => p.masteryLevel >= MASTERY_LEVELS.MASTERED).length
-      const dueWords = allProgress.filter((p) => p.nextReviewTime <= now && p.masteryLevel < MASTERY_LEVELS.MASTERED).length
+      const dueWords = allProgress.filter((p) => p.nextReviewTime <= now && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED).length
       const todayLearned = allProgress.filter((p) => p.lastReviewTime >= todayStart && p.reps === 1).length
       const todayReviewed = allProgress.filter((p) => p.lastReviewTime >= todayStart && p.reps > 1).length
       setStats({ totalWords: allProgress.length, learnedWords, masteredWords, dueWords, todayLearned, todayReviewed })

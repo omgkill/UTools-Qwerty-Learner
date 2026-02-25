@@ -45,13 +45,11 @@ export function useWordProgress() {
         progress = new WordProgress(word, dictID)
       }
 
-      const { newLevel, newEaseFactor } = updateMasteryLevel(progress.masteryLevel, isCorrect, wrongCount, progress.easeFactor)
+      const { newLevel } = updateMasteryLevel(progress.masteryLevel, isCorrect, wrongCount)
 
       progress.masteryLevel = newLevel
-      progress.easeFactor = newEaseFactor
-      progress.nextReviewTime = getNextReviewTime(newLevel, newEaseFactor)
+      progress.nextReviewTime = getNextReviewTime(newLevel)
       progress.lastReviewTime = Date.now()
-      // 只在答对时递增 reps，用于区分"新学"(reps===1)和"复习"(reps>1)
       if (isCorrect) {
         progress.reps = (progress.reps || 0) + 1
         progress.correctCount++

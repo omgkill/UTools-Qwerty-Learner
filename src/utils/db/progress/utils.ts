@@ -1,37 +1,31 @@
-import { MASTERY_LEVELS, REVIEW_INTERVALS } from './constants'
+import { REVIEW_INTERVALS } from './constants'
 import type { MasteryLevel } from './types'
 
 export function getTodayDate(): string {
   return new Date().toISOString().split('T')[0]
 }
 
-export function getNextReviewTime(masteryLevel: MasteryLevel, easeFactor = 2.5): number {
-  // NEW 级别（0）答对后直接升级为 LEARNED，不会停留在 NEW 被复习
-  // 其他级别间隔均 >= 1 天，使用 || 1 作为兜底
-  const baseDays = REVIEW_INTERVALS[masteryLevel] || 1
-  const adjustedDays = baseDays * easeFactor
-  return Date.now() + adjustedDays * 24 * 60 * 60 * 1000
+export function getNextReviewTime(masteryLevel: MasteryLevel): number {
+  const baseDays = REVIEW_INTERVALS[masteryLevel] ?? 1
+  return Date.now() + baseDays * 24 * 60 * 60 * 1000
 }
 
 export function updateMasteryLevel(
   currentLevel: MasteryLevel,
   isCorrect: boolean,
   wrongCount: number,
-  easeFactor: number,
-): { newLevel: MasteryLevel; newEaseFactor: number } {
+): { newLevel: MasteryLevel } {
   let newLevel = currentLevel
-  let newEaseFactor = easeFactor
 
-  if (isCorrect && wrongCount === 0) {
-    newLevel = Math.min(currentLevel + 1, MASTERY_LEVELS.MASTERED) as MasteryLevel
-    newEaseFactor = Math.min(easeFactor + 0.1, 3.0)
-  } else if (isCorrect && wrongCount > 0) {
-    newLevel = Math.max(currentLevel, MASTERY_LEVELS.LEARNED) as MasteryLevel
-    newEaseFactor = Math.max(easeFactor - 0.1, 1.3)
+  if (isCorrect) {
+    if (wrongCount === 0) {
+      newLevel = Math.min(currentLevel + 1, 6) as MasteryLevel
+    } else {
+      newLevel = Math.max(currentLevel, 1) as MasteryLevel
+    }
   } else {
-    newLevel = Math.max(currentLevel - 1, MASTERY_LEVELS.NEW) as MasteryLevel
-    newEaseFactor = Math.max(easeFactor - 0.2, 1.3)
+    newLevel = Math.max(currentLevel - 1, 0) as MasteryLevel
   }
 
-  return { newLevel, newEaseFactor }
+  return { newLevel }
 }

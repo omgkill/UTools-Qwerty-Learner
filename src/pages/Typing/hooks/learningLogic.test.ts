@@ -26,7 +26,6 @@ function createProgress(word: string, masteryLevel: number, nextReviewTime: numb
     correctCount: 0,
     wrongCount: 0,
     streak: 0,
-    easeFactor: 2.5,
     reps: 0,
   }
 }

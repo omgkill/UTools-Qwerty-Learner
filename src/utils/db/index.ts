@@ -29,9 +29,6 @@ class RecordDB extends Dexie {
       })
       .upgrade((tx) => {
         tx.table('wordProgress').toCollection().modify((record: IWordProgress) => {
-          if (record.easeFactor === undefined) {
-            record.easeFactor = 2.5
-          }
           if (record.reps === undefined) {
             record.reps = record.masteryLevel > 0 ? 1 : 0
           }

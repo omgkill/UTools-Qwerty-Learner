@@ -10,7 +10,6 @@ export interface IWordProgress {
   correctCount: number
   wrongCount: number
   streak: number
-  easeFactor: number
   reps: number
 }
 

@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 export function useTypingInitializer() {
-  const [isLoading, setIsLoading] = useState(true)
   const [isInitialized, setIsInitialized] = useState(false)
   const [currentWordBankId, setCurrentWordBankId] = useAtom(currentWordBankIdAtom)
   const currentWordBank = useAtomValue(currentWordBankAtom)
@@ -45,8 +44,6 @@ export function useTypingInitializer() {
   }, [isInitialized, currentWordBankId, currentWordBank, wordBanks, navigate, setCurrentWordBankId])
 
   return {
-    isLoading,
-    setIsLoading,
     isInitialized,
     currentWordBank,
   }

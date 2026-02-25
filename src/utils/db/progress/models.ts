@@ -11,7 +11,6 @@ export class WordProgress implements IWordProgress {
   correctCount: number
   wrongCount: number
   streak: number
-  easeFactor: number
   reps: number
 
   constructor(word: string, dict: string) {
@@ -23,7 +22,6 @@ export class WordProgress implements IWordProgress {
     this.correctCount = 0
     this.wrongCount = 0
     this.streak = 0
-    this.easeFactor = 2.5
     this.reps = 0
   }
 

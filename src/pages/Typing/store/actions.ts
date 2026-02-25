@@ -22,7 +22,6 @@ export enum TypingStateActionType {
   SET_IS_SAVING_RECORD = 'SET_IS_SAVING_RECORD',
   TOGGLE_IMMERSIVE_MODE = 'TOGGLE_IMMERSIVE_MODE',
   UPDATE_WORD_INFO = 'UPDATE_WORD_INFO',
-  SET_IS_EXTRA_REVIEW = 'SET_IS_EXTRA_REVIEW',
   SET_IS_CURRENT_WORD_MASTERED = 'SET_IS_CURRENT_WORD_MASTERED',
   ADD_REPLACEMENT_WORD = 'ADD_REPLACEMENT_WORD',
   CLEAR_WORD_INFO_MAP = 'CLEAR_WORD_INFO_MAP',
@@ -50,7 +49,6 @@ export type TypingStateAction =
   | { type: TypingStateActionType.ADD_WORD_RECORD_ID; payload: number }
   | { type: TypingStateActionType.SET_IS_SAVING_RECORD; payload: boolean }
   | { type: TypingStateActionType.UPDATE_WORD_INFO; payload: { wordName: string; data: WordInfo } }
-  | { type: TypingStateActionType.SET_IS_EXTRA_REVIEW; payload: boolean }
   | { type: TypingStateActionType.SET_IS_CURRENT_WORD_MASTERED; payload: boolean }
   | { type: TypingStateActionType.ADD_REPLACEMENT_WORD; payload: WordWithIndex }
   | { type: TypingStateActionType.CLEAR_WORD_INFO_MAP }
