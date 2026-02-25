@@ -1,5 +1,36 @@
 # 变更记录
 
+## 2026-02-25 优化快捷键功能
+
+- 移除掌握按钮的快捷键（Alt + M）：从 `useTypingHotkeys` hook中移除 `alt+m` 快捷键，同时移除 `handleMastered` 参数，更新调用处
+- 为"查看详细释义"添加快捷键（默认 Ctrl + 1）：在 `WordPanel` 组件中添加快捷键支持，使用 `useHotkeys` 监听配置的快捷键，在提示文字中显示当前快捷键
+- 在MdxQueryPage添加返回快捷键（默认 Ctrl + 2）：在查词页面添加返回快捷键支持，仅在从背单词页面跳转过来时生效，在返回按钮的title中显示当前快捷键
+- 在设置中添加自定义快捷键选项：在高级设置中新增"快捷键设置"区域，允许用户自定义"查看详细释义"和"返回"的快捷键，配置存储在 `hotkeyConfigAtom` 中
+- 优化MdxQueryPage词典展开状态：从背单词界面跳转过去时，默认第一个词典是折叠的；独立查词时所有词典默认展开
+- 修复MdxQueryPage键盘事件无响应问题：给页面容器添加 `tabIndex={0}` 和 `ref`，在加载完成后自动聚焦到页面，添加 `outline-none` 移除焦点外框，确保键盘事件（如向下、PageDown）能够正常响应且界面美观
+- 优化MdxQueryPage滚动条样式：将滚动条颜色改为背景色（#111827），滚动条轨道也使用背景色，滚动条滑块使用深灰色（#2a2a3a），hover时变为稍深的颜色（#3a3a4a），由于是在utools的webview中使用，只使用通用的CSS标准属性（`scrollbar-width` 和 `scrollbar-color`），移除浏览器特定的样式（`-webkit-`、`-moz-`、`-ms-`），最后将 `scrollbar-width` 设置为 `none` 完全隐藏滚动条，使滚动条与背景融合，不再突兀
+- 优化背单词界面释义布局：为释义和时态元素添加 `w-4/5` 类，使内容占据中间80%宽度，两边各留10%空白，避免释义贴到边框不好看；修改释义显示方式，将多个释义分行显示而不是用分号连接，使用 `flex flex-col` 布局和 `space-y-1` 间距，每个释义单独一行；将释义宽度调整为 `w-[90%]`，使内容占据中间90%宽度，两边各留5%空白；恢复原来的样式，移除中间90%宽度限制，保留 `break-words` 换行逻辑和 `max-w-4xl` 最大宽度限制；最终修改为每个释义单独一行显示，使用 `flex flex-col` 布局和 `space-y-1` 间距，移除 `break-words` 和分号连接逻辑
+- 新增 `hotkeyConfigAtom` 配置项：包含 `viewDetail`（查看详细释义）和 `goBack`（返回）两个快捷键配置，默认值分别为 `ctrl+1` 和 `ctrl+2`
+- 修改文件：
+  - `src/store/index.ts`：新增 `hotkeyConfigAtom`
+  - `src/pages/Typing/hooks/useTypingHotkeys.ts`：移除 `alt+m` 快捷键
+  - `src/pages/Typing/index.tsx`：更新 `useTypingHotkeys` 调用
+  - `src/pages/Typing/components/WordPanel/index.tsx`：添加查看详细释义快捷键支持
+  - `src/pages/MdxQuery/index.tsx`：添加返回快捷键支持，优化词典展开状态，修复键盘事件无响应问题，移除焦点外框
+  - `src/pages/Typing/components/WordPanel/components/Translation/index.tsx`：优化释义布局
+  - `src/pages/MdxQuery/index.css`：优化滚动条样式
+  - `src/pages/Typing/components/Setting/AdvancedSetting.tsx`：添加快捷键设置UI
+
+## 2026-02-25 修复背单词界面UI问题
+
+- 修复掌握按钮样式问题：
+  - 问题原因：第一次修复时只调整了按钮颜色，但用户需求是完全移除按钮样式，只保留文字；第二次修复时使用了绿色，但用户要求颜色与单词一致；第三次修复时字体太小且展示格式与上一个单词/下一个单词不一致；第四次修复时距离边框太近
+  - 解决方案：将 `<button>` 改为 `<span>`，只保留文字"掌握"，样式改为与上一个单词/下一个单词一致：使用 `font-mono text-2xl font-normal` 字体样式，颜色使用 `text-gray-700 dark:text-gray-400`，透明度从 `opacity-0 group-hover:opacity-100` 改为 `opacity-60 hover:opacity-100`，位置从 `bottom-2 right-2` 改为 `bottom-4 right-4` 增加与边框的距离，移除所有按钮背景、阴影等样式
+- 修复Start/Pause按钮逃出背景板问题：
+  - 问题原因：第一次修复时只移除了 `box-content` 并调整宽度，但Tooltip上的 `px-6 py-1` padding才是导致容器宽度超出按钮的根本原因
+  - 解决方案：移除Tooltip上的所有className（包括 `h-7 w-20 px-6 py-1`），移除按钮上的固定宽度 `w-20`，让按钮自然根据内容宽度调整，确保不会超出Header背景板边界
+- 修改文件：`src/pages/Typing/components/WordPanel/index.tsx` 和 `src/pages/Typing/components/StartButton/index.tsx`
+
 ## 2026-02-25 修复类型声明与词库管理表单类型问题
 
 - 扩展 global.d.ts 的 services 与 utools 类型声明，补齐词典服务能力

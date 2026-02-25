@@ -5,20 +5,10 @@ import mixpanel from 'mixpanel-browser'
 import { toast } from 'react-toastify'
 
 export function useTypingHotkeys(
-  handleMastered: () => void,
   isImmersiveMode: boolean,
 ) {
   const typingContext = useContext(TypingContext)
   const dispatch = typingContext?.dispatch
-
-  useHotkeys(
-    'alt+m',
-    () => {
-      if (!dispatch) return
-      handleMastered()
-    },
-    { preventDefault: true },
-  )
 
   useHotkeys(
     'alt+i',

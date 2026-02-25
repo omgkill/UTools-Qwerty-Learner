@@ -79,3 +79,8 @@ export const dailyLimitConfigAtom = atomForConfig('dailyLimitConfig', {
 export const dismissStartCardDateAtom = atomWithStorage<Date | null>(DISMISS_START_CARD_DATE_KEY, null)
 
 export const shouldShowProgressAtom = atomWithStorage('shouldShowProgress', true)
+
+export const hotkeyConfigAtom = atomForConfig('hotkeyConfig', {
+  viewDetail: 'ctrl+1',
+  goBack: 'ctrl+2',
+})

@@ -16,9 +16,9 @@ export default function StartButton({ isLoading }: { isLoading: boolean }) {
   useHotkeys('enter', onToggleIsTyping, { enableOnFormTags: true, preventDefault: true }, [onToggleIsTyping])
 
   return (
-    <Tooltip content="快捷键 Enter" className="box-content h-7 w-8 px-6 py-1">
+    <Tooltip content="快捷键 Enter">
       <button
-        className={`${state.uiState.isTyping ? 'bg-gray-400 shadow-gray-200 dark:bg-gray-700' : 'bg-indigo-600 shadow-indigo-200'} btn-primary w-20`}
+        className={`${state.uiState.isTyping ? 'bg-gray-400 shadow-gray-200 dark:bg-gray-700' : 'bg-indigo-600 shadow-indigo-200'} btn-primary`}
         type="button"
         onClick={onToggleIsTyping}
         aria-label={state.uiState.isTyping ? '暂停' : '开始'}

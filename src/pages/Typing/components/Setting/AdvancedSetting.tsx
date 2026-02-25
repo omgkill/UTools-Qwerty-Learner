@@ -1,5 +1,5 @@
 import styles from './index.module.css'
-import { dailyLimitConfigAtom, isIgnoreCaseAtom, isShowAnswerOnHoverAtom, isShowPrevAndNextWordAtom, isTextSelectableAtom, randomConfigAtom } from '@/store'
+import { dailyLimitConfigAtom, hotkeyConfigAtom, isIgnoreCaseAtom, isShowAnswerOnHoverAtom, isShowPrevAndNextWordAtom, isTextSelectableAtom, randomConfigAtom } from '@/store'
 import { setDailyLimit } from '@/utils/db/progress'
 import { Switch } from '@headlessui/react'
 import * as ScrollArea from '@radix-ui/react-scroll-area'
@@ -14,6 +14,7 @@ export default function AdvancedSetting() {
   const [isTextSelectable, setIsTextSelectable] = useAtom(isTextSelectableAtom)
   const [isShowAnswerOnHover, setIsShowAnswerOnHover] = useAtom(isShowAnswerOnHoverAtom)
   const [dailyLimitConfig, setDailyLimitConfig] = useAtom(dailyLimitConfigAtom)
+  const [hotkeyConfig, setHotkeyConfig] = useAtom(hotkeyConfigAtom)
   const [showConfirm, setShowConfirm] = useState(false)
 
   useEffect(() => {
@@ -79,6 +80,16 @@ export default function AdvancedSetting() {
       }))
     },
     [setDailyLimitConfig],
+  )
+
+  const handleHotkeyChange = useCallback(
+    (key: 'viewDetail' | 'goBack', value: string) => {
+      setHotkeyConfig((prev) => ({
+        ...prev,
+        [key]: value.toLowerCase(),
+      }))
+    },
+    [setHotkeyConfig],
   )
 
   return (
@@ -163,6 +174,32 @@ export default function AdvancedSetting() {
               <span className="text-right text-xs font-normal leading-tight text-gray-600">{`显示提示已${
                 isShowAnswerOnHover ? '开启' : '关闭'
               }`}</span>
+            </div>
+          </div>
+          <div className={styles.section}>
+            <span className={styles.sectionLabel}>快捷键设置</span>
+            <span className={styles.sectionDescription}>自定义查看详细释义和返回的快捷键</span>
+            <div className="mt-2 space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="w-32 text-sm text-gray-600 dark:text-gray-400">查看详细释义</span>
+                <input
+                  type="text"
+                  value={hotkeyConfig.viewDetail}
+                  onChange={(e) => handleHotkeyChange('viewDetail', e.target.value)}
+                  className="h-8 w-32 rounded border border-gray-300 px-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                  placeholder="ctrl+1"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="w-32 text-sm text-gray-600 dark:text-gray-400">返回</span>
+                <input
+                  type="text"
+                  value={hotkeyConfig.goBack}
+                  onChange={(e) => handleHotkeyChange('goBack', e.target.value)}
+                  className="h-8 w-32 rounded border border-gray-300 px-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                  placeholder="ctrl+2"
+                />
+              </div>
             </div>
           </div>
           <div className={styles.section}>

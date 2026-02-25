@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useHotkeys } from 'react-hotkeys-hook'
+import { useAtomValue } from 'jotai'
+import { hotkeyConfigAtom } from '@/store'
 import './index.css'
 
 const log = (msg: string) => {
@@ -29,6 +32,8 @@ export default function MdxQueryPage() {
   const [dicts, setDicts] = useState<DictItem[]>([])
   const [results, setResults] = useState<MdxResult[]>([])
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const hotkeyConfig = useAtomValue(hotkeyConfigAtom)
+  const pageRef = useRef<HTMLDivElement>(null)
 
   const isFromRoute = Boolean(routeWord)
 
@@ -56,11 +61,18 @@ export default function MdxQueryPage() {
     try {
       const res = await window.queryMdxWord?.(w) || await window.services?.queryWord?.(w) || []
       log(`handleSearch: got ${res.length} results`)
+      console.log('MdxQuery results:', res)
       setResults(res)
       const exp: Record<string, boolean> = {}
       for (const r of res) {
         if (r.ok && r.content) {
           exp[r.dictPath] = true
+        }
+      }
+      if (isFromRoute && res.length > 0) {
+        const firstResult = res[0]
+        if (firstResult.ok && firstResult.content) {
+          exp[firstResult.dictPath] = false
         }
       }
       setExpanded(exp)
@@ -69,7 +81,7 @@ export default function MdxQueryPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [isFromRoute])
 
   const toggleExpand = useCallback((dictPath: string) => {
     setExpanded(prev => ({ ...prev, [dictPath]: !prev[dictPath] }))
@@ -83,6 +95,23 @@ export default function MdxQueryPage() {
     log('useEffect: loadDicts')
     loadDicts()
   }, [loadDicts])
+
+  useEffect(() => {
+    if (!loading && pageRef.current) {
+      pageRef.current.focus()
+    }
+  }, [loading])
+
+  useHotkeys(
+    hotkeyConfig.goBack,
+    () => {
+      if (isFromRoute) {
+        handleBack()
+      }
+    },
+    { preventDefault: true },
+    [isFromRoute, handleBack],
+  )
 
   useEffect(() => {
     log('useEffect: setup mode change listener for search')
@@ -127,7 +156,7 @@ export default function MdxQueryPage() {
     <button
       onClick={handleBack}
       className="back-btn"
-      title="返回"
+      title={`返回（${hotkeyConfig.goBack.toUpperCase()}）`}
     >
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -146,7 +175,7 @@ export default function MdxQueryPage() {
 
   if (loading) {
     return (
-      <div className="mdict-page">
+      <div ref={pageRef} tabIndex={0} className="mdict-page outline-none">
         {renderHeader()}
         <div className="loading">查询中...</div>
       </div>
@@ -155,7 +184,7 @@ export default function MdxQueryPage() {
 
   if (results.length > 0) {
     return (
-      <div className="mdict-page">
+      <div ref={pageRef} tabIndex={0} className="mdict-page outline-none">
         {renderHeader()}
         <div className="result-list">
           {results.map((item) => (
@@ -184,7 +213,7 @@ export default function MdxQueryPage() {
 
   if (dicts.length === 0) {
     return (
-      <div className="mdict-page">
+      <div ref={pageRef} tabIndex={0} className="mdict-page outline-none">
         {renderHeader()}
         <div className="no-result">还没有添加词典，请先在 uTools 中输入&ldquo;管理词典&rdquo;添加 MDX 词典</div>
       </div>
@@ -192,7 +221,7 @@ export default function MdxQueryPage() {
   }
 
   return (
-    <div className="mdict-page">
+    <div ref={pageRef} tabIndex={0} className="mdict-page outline-none">
       {renderHeader()}
       <div className="no-result">未查到结果</div>
     </div>

@@ -6,11 +6,12 @@ import WordComponent from './components/Word'
 import Tooltip from '@/components/Tooltip'
 import { parseMdxEntry } from '@/utils/mdxParser'
 import { usePrefetchPronunciationSound } from '@/hooks/usePronunciation'
-import { isShowPrevAndNextWordAtom, phoneticConfigAtom } from '@/store'
+import { hotkeyConfigAtom, isShowPrevAndNextWordAtom, phoneticConfigAtom } from '@/store'
 import type { Word } from '@/typings'
 import { useAtomValue } from 'jotai'
 import { useCallback, useContext, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useHotkeys } from 'react-hotkeys-hook'
 
 export default function WordPanel({ onMastered }: { onMastered?: () => void }) {
   const handleMastered = onMastered ?? (() => undefined)
@@ -19,6 +20,7 @@ export default function WordPanel({ onMastered }: { onMastered?: () => void }) {
   const dispatch = typingContext?.dispatch
   const phoneticConfig = useAtomValue(phoneticConfigAtom)
   const isShowPrevAndNextWord = useAtomValue(isShowPrevAndNextWordAtom)
+  const hotkeyConfig = useAtomValue(hotkeyConfigAtom)
   const navigate = useNavigate()
   const currentWord = state.wordListData.words[state.wordListData.index]
   const prevWord = state.wordListData.words[state.wordListData.index - 1] as Word | undefined
@@ -90,6 +92,15 @@ export default function WordPanel({ onMastered }: { onMastered?: () => void }) {
     }
   }, [currentWord, navigate])
 
+  useHotkeys(
+    hotkeyConfig.viewDetail,
+    () => {
+      handleViewDetail()
+    },
+    { preventDefault: true },
+    [handleViewDetail],
+  )
+
   useEffect(() => {
     void requestWordMeaning(prevWord)
     void requestWordMeaning(currentWord)
@@ -138,16 +149,16 @@ export default function WordPanel({ onMastered }: { onMastered?: () => void }) {
                   onClick={handleViewDetail}
                   className="mt-3 cursor-pointer text-center text-xs text-gray-400 hover:text-indigo-400"
                 >
-                  点击查看详细释义
+                  点击查看详细释义（{hotkeyConfig.viewDetail.toUpperCase()}）
                 </div>
               )}
             </div>
             {!state.isImmersiveMode && (
-              <div className="absolute bottom-2 right-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                <Tooltip content="标记已掌握 Alt + M">
-                  <button className="btn-primary bg-green-500/80 shadow transition-all duration-300 hover:bg-green-500" onClick={handleMastered}>
-                    ✓ 掌握
-                  </button>
+              <div className="absolute bottom-4 right-4 opacity-60 transition-opacity duration-200 ease-in-out hover:opacity-100">
+                <Tooltip content="标记已掌握">
+                  <span className="cursor-pointer font-mono text-2xl font-normal text-gray-700 dark:text-gray-400" onClick={handleMastered}>
+                    掌握
+                  </span>
                 </Tooltip>
               </div>
             )}

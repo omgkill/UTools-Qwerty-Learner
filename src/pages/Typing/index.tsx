@@ -93,7 +93,7 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
     }
   }, [state.wordListData.words, state.wordListData.index, markAsMastered, dispatch, getNextNewWord])
 
-  useTypingHotkeys(handleMastered, state.isImmersiveMode)
+  useTypingHotkeys(state.isImmersiveMode)
 
   const { showPopup, handleConfirm, handleDismiss } = useExtraReviewPopup(
     hasReachedTarget,

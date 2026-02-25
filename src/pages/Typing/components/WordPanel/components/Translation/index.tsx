@@ -35,13 +35,20 @@ export default function Translation({ trans, tense }: TranslationProps) {
   return (
     <div className="flex flex-col items-center justify-center pb-4 pt-5">
       {displayTrans.length > 0 && (
-        <span
-          className={`inline-block max-w-4xl break-words whitespace-normal text-center font-sans text-xl text-gray-600 transition-colors duration-300 dark:text-gray-50 dark:text-opacity-80 ${
+        <div
+          className={`flex flex-col items-center justify-center max-w-4xl space-y-1 ${
             isShowTransRead && 'pl-8'
           } ${isTextSelectable && 'select-text'}`}
         >
-          {speechText}
-        </span>
+          {displayTrans.map((item, index) => (
+            <span
+              key={index}
+              className="block text-center font-sans text-xl text-gray-600 transition-colors duration-300 dark:text-gray-50 dark:text-opacity-80"
+            >
+              {item}
+            </span>
+          ))}
+        </div>
       )}
       {tense && (
         <div
