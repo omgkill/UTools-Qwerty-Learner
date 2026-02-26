@@ -335,8 +335,8 @@ export async function getRepeatLearningWords(params: RepeatLearningParams): Prom
   }
 
   const today = getTodayDate()
-  const todayStart = new Date(today).getTime()
-  const todayEnd = todayStart + 24 * 60 * 60 * 1000
+  const todayStart = Math.floor(new Date(today).getTime() / 1000) // 转换为秒级时间戳
+  const todayEnd = todayStart + 24 * 60 * 60 // 24小时的秒数
 
   const todayRecords = await listWordRecordsInRange(currentDictId, todayStart, todayEnd)
   const todayWordNames = [...new Set(todayRecords.map((record) => record.word))]

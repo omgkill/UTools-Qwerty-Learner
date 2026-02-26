@@ -120,6 +120,12 @@ export function useWordList(): UseWordListResult {
   const retryWordListRef = useRef<string | null>(null)
 
   const loadLearningWords = useCallback(async () => {
+    // 重复学习模式下不重新加载单词
+    if (isRepeatLearning) {
+      console.log('[useWordList] Skipping loadLearningWords: in repeat learning mode')
+      return
+    }
+
     console.log('[useWordList] loadLearningWords called:', JSON.stringify({
       wordListLength: wordList?.length,
       wordListType: typeof wordList,
@@ -192,13 +198,19 @@ export function useWordList(): UseWordListResult {
     getWordProgress,
     isExtraReview,
     isLoadingLearningWords,
+    isRepeatLearning,
   ])
 
   const reloadWords = useCallback(() => {
+    // 重复学习模式下不重新加载单词
+    if (isRepeatLearning) {
+      console.log('[useWordList] Skipping reloadWords: in repeat learning mode')
+      return
+    }
     // 递增版本号使过期请求失效，同时触发重新加载
     loadVersionRef.current += 1
     setLoadVersion((v) => v + 1)
-  }, [])
+  }, [isRepeatLearning])
 
   const startExtraReview = useCallback(() => {
     setIsExtraReview(true)

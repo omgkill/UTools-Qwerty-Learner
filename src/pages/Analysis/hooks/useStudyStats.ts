@@ -198,11 +198,11 @@ export function useWordDetails(dictId: string | null, date: string | null): Word
 
         const allWordRecords = await db.wordRecords.where('dict').equals(currentDictId).toArray()
 
-        const wordFirstTimeMap = new Map<string, number>()
+        const wordFirstDateMap = new Map<string, string>()
         const sortedAllRecords = [...allWordRecords].sort((a, b) => a.timeStamp - b.timeStamp)
         for (const r of sortedAllRecords) {
-          if (!wordFirstTimeMap.has(r.word)) {
-            wordFirstTimeMap.set(r.word, r.timeStamp)
+          if (!wordFirstDateMap.has(r.word)) {
+            wordFirstDateMap.set(r.word, dayjs(r.timeStamp * 1000).format('YYYY-MM-DD'))
           }
         }
 
@@ -210,10 +210,11 @@ export function useWordDetails(dictId: string | null, date: string | null): Word
 
         const wordDetails: WordDetail[] = wordRecords
           .map((record) => {
-            const firstTimeEver = wordFirstTimeMap.get(record.word)
+            const firstDateEver = wordFirstDateMap.get(record.word)
+            const currentDate = dayjs(record.timeStamp * 1000).format('YYYY-MM-DD')
             // 识别掌握单词：空的timing数组和0错误次数
             const isMastered = record.timing.length === 0 && record.wrongCount === 0
-            const type: 'new' | 'review' | 'mastered' = isMastered ? 'mastered' : (firstTimeEver === record.timeStamp ? 'new' : 'review')
+            const type: 'new' | 'review' | 'mastered' = isMastered ? 'mastered' : (firstDateEver === currentDate ? 'new' : 'review')
             return {
               word: record.word,
               timeStamp: record.timeStamp,
