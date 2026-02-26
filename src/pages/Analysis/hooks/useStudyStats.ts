@@ -16,6 +16,7 @@ export interface DayStats {
   date: string
   learnedCount: number
   reviewedCount: number
+  masteredCount: number
   totalWords: number
 }
 
@@ -23,7 +24,7 @@ export interface WordDetail {
   word: string
   timeStamp: number
   wrongCount: number
-  type: 'new' | 'review'
+  type: 'new' | 'review' | 'mastered'
 }
 
 export interface StudyStatsData {
@@ -137,12 +138,13 @@ export function useDayStats(dictId: string | null): DayStatsData {
         const dailyRecords = await db.dailyRecords.where('dict').equals(currentDictId).toArray()
 
         const days: DayStats[] = dailyRecords
-          .filter((r) => r.learnedCount > 0 || r.reviewedCount > 0)
+          .filter((r) => r.learnedCount > 0 || r.reviewedCount > 0 || r.masteredCount > 0)
           .map((r) => ({
             date: r.date,
             learnedCount: r.learnedCount,
             reviewedCount: r.reviewedCount,
-            totalWords: r.learnedCount + r.reviewedCount,
+            masteredCount: r.masteredCount,
+            totalWords: r.learnedCount + r.reviewedCount + r.masteredCount,
           }))
           .sort((a, b) => b.date.localeCompare(a.date))
 
@@ -209,7 +211,9 @@ export function useWordDetails(dictId: string | null, date: string | null): Word
         const wordDetails: WordDetail[] = wordRecords
           .map((record) => {
             const firstTimeEver = wordFirstTimeMap.get(record.word)
-            const type: 'new' | 'review' = firstTimeEver === record.timeStamp ? 'new' : 'review'
+            // 识别掌握单词：空的timing数组和0错误次数
+            const isMastered = record.timing.length === 0 && record.wrongCount === 0
+            const type: 'new' | 'review' | 'mastered' = isMastered ? 'mastered' : (firstTimeEver === record.timeStamp ? 'new' : 'review')
             return {
               word: record.word,
               timeStamp: record.timeStamp,

@@ -1,5 +1,38 @@
 # 变更记录
 
+## 2026-02-26 背单词逻辑服务化与渲染层解耦
+
+- 删除依赖 mock 的组件测试用例，保留真实服务流程测试
+- 调整掌握流程真实测试文件的 import 顺序以通过 lint
+- 修复掌握流程真实测试文件的 import 排序
+- 新增替换新词服务函数，避免掌握流程补位重复
+- 替换新词逻辑接入 useWordList 与真实流程测试
+- 新增真实流程用例：初始化进度后仍能正常产出新词与掌握40次不重复
+- 修复新词获取逻辑：已有 NEW 进度仍视为新词
+- 修复真实流程测试的 describe 闭合错误
+- 修复真实流程测试的函数闭合错误
+- 修复掌握40次流程测试文件括号闭合错误
+- 删除并重写掌握40次流程测试，改为真实词库流程并只调用服务层 API
+- 新增服务层会话与掌握流程函数，集中处理学习词表、重复学习与掌握补位逻辑
+- useWordList 调整为调用服务层输出学习结果，重复学习逻辑改为服务函数
+- Typing 页面掌握按钮改为调用服务层流程并返回动作结果
+- 学习模拟测试修正为使用本地日零点对齐下一次复习时间断言
+- 修正用例与工具文件的导入排序与冗余分号等 lint 错误
+- 清理测试重复词统计的未使用参数与 Typing 页面未使用解构值
+- 服务层改为类型化表访问，移除 any 与一致化 type import
+- 掌握流程参数类型与实际返回值一致化，修复 typecheck 报错
+- 掌握40次流程测试补充当前与下一个单词日志
+- 掌握40次流程测试改为调用真实服务层掌握流程
+- 修改文件：
+  - `src/services/index.ts`
+  - `src/pages/Typing/hooks/useWordList.ts`
+  - `src/pages/Typing/index.tsx`
+  - `src/pages/Typing/hooks/learningSimulation.test.ts`
+  - `src/pages/Typing/hooks/cycleBug.test.ts`
+  - `src/pages/Typing/store/reducer.test.ts`
+  - `src/pages/Typing/components/WordPanel/index.test.tsx`
+  - `src/pages/Typing/components/WordPanel/components/Word/hooks/useWordCompletion.ts`
+
 ## 2026-02-25 添加掌握按钮测试用例
 
 - 为 WordPanel 组件添加掌握按钮测试用例，测试以下场景：

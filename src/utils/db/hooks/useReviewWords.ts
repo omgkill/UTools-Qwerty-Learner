@@ -41,11 +41,14 @@ export function useReviewWords() {
       if (!dictID || allWords.length === 0) return []
 
       const existingProgress = await db.wordProgress.where('dict').equals(dictID).toArray()
-      const existingWords = new Set(existingProgress.map((p) => p.word))
+      const progressMap = new Map(existingProgress.map((progress) => [progress.word, progress]))
 
       return allWords
         .map((word, index) => ({ ...word, index }))
-        .filter((word) => !existingWords.has(word.name))
+        .filter((word) => {
+          const progress = progressMap.get(word.name)
+          return !progress || progress.masteryLevel === MASTERY_LEVELS.NEW
+        })
         .slice(0, limit)
     },
     [dictID],

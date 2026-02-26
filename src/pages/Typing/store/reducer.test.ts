@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { typingReducer } from './reducer'
 import { TypingStateActionType } from './actions'
 import type { TypingState } from './types'

@@ -19,7 +19,12 @@ import { useWordSync } from './hooks/useWordSync'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
 import type { WordBank } from '@/typings'
-import { useWordProgress } from '@/utils/db/useProgress'
+import { useWordProgress, useDailyRecord } from '@/utils/db/useProgress'
+import { handleMasteredFlow } from '@/services'
+import { WordRecord } from '@/utils/db/record'
+import { db } from '@/utils/db'
+import { currentDictIdAtom } from '@/store'
+import { useAtomValue } from 'jotai'
 import type React from 'react'
 import { useCallback, useContext, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
@@ -43,21 +48,33 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
     learningType,
     todayLearned,
     todayReviewed,
+    todayMastered,
     newWordQuota,
     remainingForTarget,
     hasReachedTarget,
     hasMoreDueWords,
     remainingDueCount,
     isExtraReview,
-    isRepeatLearning,
     startExtraReview,
     startRepeatLearning,
     getNextNewWord,
   } = useWordList()
 
   const { markAsMastered } = useWordProgress()
+  const { incrementMastered } = useDailyRecord()
+  const dictID = useAtomValue(currentDictIdAtom)
 
   useLearningRecordSaver(state)
+
+  const createWordRecord = useCallback(async (word: string) => {
+    try {
+      // 创建掌握单词的记录（简化版）
+      const wordRecord = new WordRecord(word, dictID, null, [], 0, {})
+      await db.wordRecords.add(wordRecord)
+    } catch (e) {
+      console.error('Failed to save mastered word record:', e)
+    }
+  }, [dictID])
   useTypingTimer(state.uiState.isTyping)
   useKeyboardStartListener(state.uiState.isTyping, false)
   useWordSync(words, state.uiState.isTyping)
@@ -83,17 +100,24 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
 
   const handleMastered = useCallback(async () => {
     const currentWord = state.wordListData.words?.[state.wordListData.index]
-    if (currentWord) {
-      await markAsMastered(currentWord.name)
+    const result = await handleMasteredFlow({
+      currentWord,
+      markAsMastered,
+      getNextNewWord,
+      createWordRecord,
+    })
 
-      const replacementWord = await getNextNewWord()
-      if (replacementWord) {
-        dispatch({ type: TypingStateActionType.ADD_REPLACEMENT_WORD, payload: replacementWord })
-      }
+    // 记录掌握数量
+    await incrementMastered()
 
+    if (result.replacementWord) {
+      dispatch({ type: TypingStateActionType.ADD_REPLACEMENT_WORD, payload: result.replacementWord })
+    }
+
+    if (result.shouldSkip) {
       dispatch({ type: TypingStateActionType.SKIP_WORD })
     }
-  }, [state.wordListData.words, state.wordListData.index, markAsMastered, dispatch, getNextNewWord])
+  }, [state.wordListData.words, state.wordListData.index, markAsMastered, dispatch, getNextNewWord, incrementMastered, createWordRecord])
 
   useTypingHotkeys(state.isImmersiveMode)
 
@@ -138,6 +162,9 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
               </span>
               {(todayLearned > 0 || todayReviewed > 0) && (
                 <span className="rounded bg-white/20 px-2 py-0.5">今日 {todayLearned + todayReviewed} 词</span>
+              )}
+              {todayMastered > 0 && (
+                <span className="rounded bg-purple-500/30 px-2 py-0.5 text-purple-200">✓ 已掌握 {todayMastered}</span>
               )}
               {learningType === 'new' && newWordQuota > 0 && (
                 <span className="rounded bg-green-500/30 px-2 py-0.5 text-green-200">新词配额 {newWordQuota}</span>

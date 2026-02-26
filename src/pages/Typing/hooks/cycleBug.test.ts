@@ -1,225 +1,113 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest'
-import { typingReducer } from '@/pages/Typing/store/reducer'
-import { TypingStateActionType } from '@/pages/Typing/store/actions'
-import type { TypingState } from '@/pages/Typing/store/types'
-import type { WordWithIndex } from '@/typings'
-import { MASTERY_LEVELS, WordProgress } from '@/utils/db/progress'
-import { determineLearningType } from './learningLogic'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { TypingStateActionType, initialState, typingReducer } from '@/pages/Typing/store'
+import type { Word } from '@/typings'
 import { db } from '@/utils/db'
-import { getNewWords, markAsMastered, getDueWords, getWordProgress } from '@/utils/db/progressApi'
+import { DailyRecordService, WordProgressService, getNextReplacementWord, handleMasteredFlow, loadTypingSession } from '@/services'
+import 'fake-indexeddb/auto'
 
-const createWord = (name: string, trans: string[] = [], index = 0): WordWithIndex => ({
-  name,
-  trans,
-  usphone: '',
-  ukphone: '',
-  tense: '',
-  index,
-})
+const createWordList = (count: number): Word[] => {
+  const words: Word[] = []
+  for (let i = 0; i < count; i++) {
+    words.push({
+      name: `word${i}`,
+      trans: ['n. 测试'],
+      usphone: '',
+      ukphone: '',
+      tense: '',
+    })
+  }
+  return words
+}
 
-const createInitialState = (words: WordWithIndex[] = [], index = 0): TypingState => ({
-  wordListData: {
-    words,
-    index,
-  },
-  statsData: {
-    wordCount: 0,
-    correctCount: 0,
-    wrongCount: 0,
-    wrongWordIndexes: [],
-    correctWordIndexes: [],
-    wordRecordIds: [],
-    timerData: { time: 0, accuracy: 0, wpm: 0 },
-  },
-  wordInfoMap: {},
-  uiState: {
-    isTyping: true,
-    isFinished: false,
-    isShowSkip: false,
-    isExtraReview: false,
-    isRepeatLearning: false,
-    isCurrentWordMastered: false,
-    isSavingRecord: false,
-  },
-  isTransVisible: true,
-  isImmersiveMode: false,
-})
-
-describe('Typing Page - 复现循环问题', () => {
+describe('Typing Page - 真实流程复现', () => {
   const dictId = 'test-dict-cycle-bug'
+  let wordProgressService: WordProgressService
+  let dailyRecordService: DailyRecordService
 
   beforeEach(async () => {
     await db.wordProgress.clear()
+    await db.dailyRecords.clear()
+    wordProgressService = new WordProgressService(db)
+    dailyRecordService = new DailyRecordService(db)
   })
 
   afterEach(async () => {
     await db.wordProgress.clear()
+    await db.dailyRecords.clear()
   })
 
-  it('复现：词库100词全部有进度记录，点击掌握40次', async () => {
-    const allWords: WordWithIndex[] = []
-    for (let i = 0; i < 100; i++) {
-      allWords.push(createWord(`word${i}`, ['n. 测试'], i))
-    }
+  it('词库100词 -> 设置词库 -> 获取今日单词列表 -> 点击掌握40次', async () => {
+    const wordList = createWordList(100)
+    await wordProgressService.initProgressBatch(dictId, wordList.map((word) => word.name))
+    const record = await dailyRecordService.getTodayRecord(dictId)
 
-    for (let i = 0; i < 100; i++) {
-      const progress = new WordProgress(`word${i}`, dictId)
-      progress.masteryLevel = MASTERY_LEVELS.NEW
-      await db.wordProgress.add(progress)
-    }
+    const session = await loadTypingSession({
+      wordList,
+      reviewedCount: record.reviewedCount,
+      learnedCount: record.learnedCount,
+      isExtraReview: false,
+      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+      getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
+      getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
+    })
 
-    const initialWords = allWords.slice(0, 20)
-    let state = createInitialState(initialWords, 0)
-
-    console.log('=== 开始复现循环问题 ===')
-    console.log(`词库：${allWords.length} 词`)
-    console.log(`初始学习列表：${initialWords.length} 词`)
-
-    const countBefore = await db.wordProgress.count()
-    console.log(`数据库中进度记录数：${countBefore}`)
+    let state = initialState
+    state = typingReducer(state, { type: TypingStateActionType.SET_WORDS, payload: { words: session.learningWords } })
+    state = typingReducer(state, { type: TypingStateActionType.SET_IS_TYPING, payload: true })
 
     const wordSequence: string[] = []
 
     for (let i = 0; i < 40; i++) {
       const currentWord = state.wordListData.words[state.wordListData.index]
-
       if (!currentWord) break
-
       wordSequence.push(currentWord.name)
-      await markAsMastered(dictId, currentWord.name)
 
-      const newWords = await getNewWords(dictId, allWords, 1)
+      const result = await handleMasteredFlow({
+        currentWord,
+        markAsMastered: (word) => wordProgressService.markAsMastered(dictId, word),
+        getNextNewWord: () =>
+          getNextReplacementWord({
+            wordList,
+            currentLearningWords: state.wordListData.words,
+            getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
+          }),
+      })
 
-      if (newWords.length > 0) {
+      if (result.replacementWord) {
         state = typingReducer(state, {
           type: TypingStateActionType.ADD_REPLACEMENT_WORD,
-          payload: newWords[0],
+          payload: result.replacementWord,
         })
       }
 
-      state = typingReducer(state, { type: TypingStateActionType.SKIP_WORD })
-    }
-
-    console.log(`\n单词序列（前25个）：${wordSequence.slice(0, 25).join(' -> ')}`)
-
-    const wordCounts: Record<string, number> = {}
-    for (const word of wordSequence) {
-      wordCounts[word] = (wordCounts[word] || 0) + 1
-    }
-
-    const repeatedWords = Object.entries(wordCounts).filter(([_, count]) => count > 1)
-    const uniqueWords = new Set(wordSequence)
-
-    console.log(`\n总共遇到 ${uniqueWords.size} 个不同的单词`)
-    console.log(`重复的单词数：${repeatedWords.length}`)
-
-    if (repeatedWords.length > 0) {
-      console.log(`重复详情：`)
-      for (const [word, count] of repeatedWords.slice(0, 5)) {
-        console.log(`  ${word}: ${count}次`)
+      if (result.shouldSkip) {
+        state = typingReducer(state, { type: TypingStateActionType.SKIP_WORD })
       }
+
+      const nextWord = state.wordListData.words[state.wordListData.index]
+      console.log(`当前单词：${currentWord.name}，掌握后下一个单词：${nextWord?.name ?? 'none'}`)
     }
 
-    expect(repeatedWords.length).toBeGreaterThan(0)
-    expect(uniqueWords.size).toBeLessThan(allWords.length)
+    expect(wordSequence.length).toBeGreaterThan(0)
+    expect(new Set(wordSequence).size).toBe(wordSequence.length)
   })
 
-  it('验证：getNewWords 在所有词都有进度时返回空', async () => {
-    const allWords: WordWithIndex[] = []
-    for (let i = 0; i < 100; i++) {
-      allWords.push(createWord(`word${i}`, ['n. 测试'], i))
-    }
+  it('所有单词已有NEW进度时，getNewWords 仍返回新词', async () => {
+    const wordList = createWordList(3)
+    await wordProgressService.initProgressBatch(dictId, wordList.map((word) => word.name))
 
-    for (let i = 0; i < 100; i++) {
-      const progress = new WordProgress(`word${i}`, dictId)
-      progress.masteryLevel = MASTERY_LEVELS.NEW
-      await db.wordProgress.add(progress)
-    }
-
-    const newWords = await getNewWords(dictId, allWords, 20)
-
-    console.log('=== getNewWords 返回空数组 ===')
-    console.log(`词库：${allWords.length} 词`)
-    console.log(`所有词都有进度记录`)
-    console.log(`getNewWords 返回：${newWords.length} 词`)
-
-    expect(newWords.length).toBe(0)
+    const newWords = await wordProgressService.getNewWords(dictId, wordList, 3)
+    expect(newWords.length).toBe(3)
   })
 
-  it('验证：部分词没有进度记录时，getNewWords 返回正确', async () => {
-    const allWords: WordWithIndex[] = []
-    for (let i = 0; i < 100; i++) {
-      allWords.push(createWord(`word${i}`, ['n. 测试'], i))
-    }
+  it('存在已掌握单词时，getNewWords 不返回已掌握单词', async () => {
+    const wordList = createWordList(3)
+    await wordProgressService.initProgressBatch(dictId, wordList.map((word) => word.name))
+    await wordProgressService.markAsMastered(dictId, wordList[0].name)
 
-    for (let i = 0; i < 20; i++) {
-      const progress = new WordProgress(`word${i}`, dictId)
-      progress.masteryLevel = MASTERY_LEVELS.NEW
-      await db.wordProgress.add(progress)
-    }
-
-    const newWords = await getNewWords(dictId, allWords, 20)
-
-    console.log('=== getNewWords 返回正确数量 ===')
-    console.log(`词库：${allWords.length} 词`)
-    console.log(`有进度记录：20 词`)
-    console.log(`getNewWords 返回：${newWords.length} 词`)
-    console.log(`前5个新词：${newWords.slice(0, 5).map(w => w.name).join(', ')}`)
-
-    expect(newWords.length).toBe(20)
-    expect(newWords[0].name).toBe('word20')
-  })
-
-  it('验证：markAsMastered 更新数据库', async () => {
-    const word = 'test-word'
-    const progress = new WordProgress(word, dictId)
-    progress.masteryLevel = MASTERY_LEVELS.NEW
-    await db.wordProgress.add(progress)
-
-    await markAsMastered(dictId, word)
-
-    const updated = await getWordProgress(dictId, word)
-
-    console.log('=== markAsMastered 验证 ===')
-    console.log(`更新前：masteryLevel = ${MASTERY_LEVELS.NEW}`)
-    console.log(`更新后：masteryLevel = ${updated?.masteryLevel}`)
-
-    expect(updated?.masteryLevel).toBe(MASTERY_LEVELS.MASTERED)
-  })
-
-  it('验证：determineLearningType 在所有词都有进度时的行为', async () => {
-    const allWords: WordWithIndex[] = []
-    for (let i = 0; i < 100; i++) {
-      allWords.push(createWord(`word${i}`, ['n. 测试'], i))
-    }
-
-    for (let i = 0; i < 100; i++) {
-      const progress = new WordProgress(`word${i}`, dictId)
-      progress.masteryLevel = MASTERY_LEVELS.NEW
-      await db.wordProgress.add(progress)
-    }
-
-    const allProgress = await db.wordProgress.toArray()
-
-    const dueWords: WordWithIndex[] = []
-    const newWords: WordWithIndex[] = []
-
-    console.log('=== determineLearningType 分析 ===')
-    console.log(`所有单词都有进度记录，masteryLevel=NEW`)
-
-    const result = determineLearningType({
-      dueWords,
-      newWords,
-      reviewedCount: 0,
-      learnedCount: 0,
-      allProgress,
-      wordList: allWords,
-      isExtraReview: false,
-    })
-
-    console.log(`学习类型：${result.learningType}`)
-    console.log(`学习单词数：${result.learningWords.length}`)
-
-    expect(result.learningType).toBe('consolidate')
+    const newWords = await wordProgressService.getNewWords(dictId, wordList, 3)
+    const names = newWords.map((word) => word.name)
+    expect(names).not.toContain(wordList[0].name)
+    expect(newWords.length).toBe(2)
   })
 })

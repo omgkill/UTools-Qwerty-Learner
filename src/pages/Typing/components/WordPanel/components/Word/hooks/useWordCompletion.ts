@@ -11,7 +11,7 @@ export function useWordCompletion(
   wordState: WordState,
   onFinish: () => void,
   isExtraReview: boolean,
-  isRepeatLearning: boolean = false,
+  isRepeatLearning = false,
 ) {
   const typingContext = useContext(TypingContext)
   const state = typingContext?.state ?? initialState

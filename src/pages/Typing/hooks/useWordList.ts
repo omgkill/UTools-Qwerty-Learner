@@ -1,14 +1,14 @@
-import { currentWordBankAtom, currentDictIdAtom } from '@/store'
+import { currentDictIdAtom, currentWordBankAtom } from '@/store'
 import { dailyRecordAtom } from '../store/atoms'
 import type { Word, WordWithIndex } from '@/typings/index'
-import { LEARNING_CONFIG, getTodayDate } from '@/utils/db/progress'
+import { LEARNING_CONFIG } from '@/utils/db/progress'
 import { useDailyRecord, useReviewWords, useWordProgress } from '@/utils/db/useProgress'
 import { db } from '@/utils/db'
+import { getNextReplacementWord, getRepeatLearningWords, loadTypingSession } from '@/services'
 import { useAtomValue } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import useSWR from 'swr'
 import type { LearningType } from './learningLogic'
-import { determineLearningType } from './learningLogic'
 
 export type { LearningType }
 
@@ -22,6 +22,7 @@ export type UseWordListResult = {
   masteredCount: number
   todayLearned: number
   todayReviewed: number
+  todayMastered: number
   newWordQuota: number
   remainingForTarget: number
   hasReachedTarget: boolean
@@ -53,7 +54,7 @@ export function useWordList(): UseWordListResult {
   const [remainingDueCount, setRemainingDueCount] = useState(0)
   const [isExtraReview, setIsExtraReview] = useState(false)
   const [isRepeatLearning, setIsRepeatLearning] = useState(false)
-  const isLoadingRef = useRef(false)
+  const [isLoadingLearningWords, setIsLoadingLearningWords] = useState(false)
   const lastLearningWordsRef = useRef<WordWithIndex[]>([])
   // 用于取消过期的异步加载请求
   const loadVersionRef = useRef(0)
@@ -62,15 +63,37 @@ export function useWordList(): UseWordListResult {
     ? currentWordBank.id.startsWith('x-dict-') || currentWordBank.languageCategory === 'custom'
     : false
 
+  console.log('[useWordList] Current word bank:', {
+    currentWordBank: currentWordBank ? currentWordBank.name : null,
+    currentWordBankId: currentDictId,
+    isLocalWordBank,
+    swrKey: currentWordBank ? (isLocalWordBank ? currentWordBank.id : currentWordBank.url) : null
+  })
+
+  const swrKey = currentWordBank ? (isLocalWordBank ? currentWordBank.id : currentWordBank.url) : null
+  const fetcher = isLocalWordBank ? localWordListFetcher : wordListFetcher
+
+  console.log('[useWordList] SWR configuration:', JSON.stringify({
+    swrKey,
+    isLocalWordBank,
+    fetcherName: isLocalWordBank ? 'localWordListFetcher' : 'wordListFetcher',
+    currentWordBank: currentWordBank ? currentWordBank.name : null
+  }, null, 2))
+
   const {
     data: wordList,
     error,
     isLoading: isWordListLoading,
     mutate,
-  } = useSWR(
-    currentWordBank ? (isLocalWordBank ? currentWordBank.id : currentWordBank.url) : null,
-    isLocalWordBank ? localWordListFetcher : wordListFetcher,
-  )
+  } = useSWR(swrKey, fetcher)
+
+  console.log('[useWordList] SWR state:', JSON.stringify({
+    wordListLength: wordList?.length,
+    isWordListLoading,
+    error: error?.message,
+    wordListType: typeof wordList,
+    wordListIsArray: Array.isArray(wordList)
+  }, null, 2))
 
   const { getDueWordsWithInfo, getNewWords } = useReviewWords()
   const { getWordProgress } = useWordProgress()
@@ -81,6 +104,7 @@ export function useWordList(): UseWordListResult {
 
   const todayLearned = dailyRecord?.learnedCount ?? 0
   const todayReviewed = dailyRecord?.reviewedCount ?? 0
+  const todayMastered = dailyRecord?.masteredCount ?? 0
 
   // newWordQuota 和 remainingForTarget 逻辑相同，合并为一个计算
   const newWordQuota = useMemo(() => {
@@ -96,68 +120,69 @@ export function useWordList(): UseWordListResult {
   const retryWordListRef = useRef<string | null>(null)
 
   const loadLearningWords = useCallback(async () => {
+    console.log('[useWordList] loadLearningWords called:', JSON.stringify({
+      wordListLength: wordList?.length,
+      wordListType: typeof wordList,
+      wordListIsArray: Array.isArray(wordList),
+      currentWordBank: currentWordBank?.name,
+      isLoadingLearningWords
+    }, null, 2))
     if (!wordList || wordList.length === 0 || !currentWordBank) {
+      console.log('[useWordList] Skipping loadLearningWords: no wordList or currentWordBank')
       setLearningWords([])
       return
     }
 
-    if (isLoadingRef.current) return
-    isLoadingRef.current = true
+    if (isLoadingLearningWords) {
+      console.log('[useWordList] Skipping loadLearningWords: already loading')
+      return
+    }
+    setIsLoadingLearningWords(true)
 
     // 记录本次请求的版本号，用于检测是否已过期
     const currentVersion = loadVersionRef.current
 
     try {
-      const [dueWords, newWords] = await Promise.all([
-        getDueWordsWithInfo(wordList, 100),
-        getNewWords(wordList, 100),
-      ])
-
-      // 异步操作完成后，检查版本号是否仍有效，防止竞态条件
-      if (currentVersion !== loadVersionRef.current) return
-
-      const allProgress = await Promise.all(
-        wordList.slice(0, 200).map(async (w) => getWordProgress(w.name))
-      )
-
-      if (currentVersion !== loadVersionRef.current) return
-
-      const mastered = allProgress.filter((p) => p && p.masteryLevel >= 7).length
-
-      setDueCount(dueWords.length)
-      setNewCount(newWords.length)
-      setMasteredCount(mastered)
-
       const record = dailyRecordRef.current
       const reviewedCount = record?.reviewedCount ?? 0
       const learnedCount = record?.learnedCount ?? 0
-
-      const result = determineLearningType({
-        dueWords,
-        newWords,
+      const result = await loadTypingSession({
+        wordList,
         reviewedCount,
         learnedCount,
-        allProgress,
-        wordList,
         isExtraReview,
+        getDueWordsWithInfo,
+        getNewWords,
+        getWordProgress,
       })
 
+      if (currentVersion !== loadVersionRef.current) return
+
+      setDueCount(result.dueCount)
+      setNewCount(result.newCount)
+      setMasteredCount(result.masteredCount)
       setLearningType(result.learningType)
-      
-      const prevWordNames = lastLearningWordsRef.current.map(w => w.name).join(',')
-      const newWordNames = result.learningWords.map(w => w.name).join(',')
+
+      const prevWordNames = lastLearningWordsRef.current.map((w) => w.name).join(',')
+      const newWordNames = result.learningWords.map((w) => w.name).join(',')
       if (prevWordNames !== newWordNames) {
         lastLearningWordsRef.current = result.learningWords
         setLearningWords(result.learningWords)
       }
-      
-      setHasMoreDueWords(result.hasMoreDueWords ?? false)
-      setRemainingDueCount(result.remainingDueCount ?? 0)
+
+      setHasMoreDueWords(result.hasMoreDueWords)
+      setRemainingDueCount(result.remainingDueCount)
+      console.log('[useWordList] loadLearningWords completed:', {
+        learningType: result.learningType,
+        learningWordsCount: result.learningWords.length,
+        dueCount: result.dueCount,
+        newCount: result.newCount
+      })
     } catch (e) {
-      console.error('Failed to load learning words:', e)
+      console.error('[useWordList] Failed to load learning words:', e)
       setLearningWords([])
     } finally {
-      isLoadingRef.current = false
+      setIsLoadingLearningWords(false)
     }
   }, [
     wordList,
@@ -166,6 +191,7 @@ export function useWordList(): UseWordListResult {
     getNewWords,
     getWordProgress,
     isExtraReview,
+    isLoadingLearningWords,
   ])
 
   const reloadWords = useCallback(() => {
@@ -186,44 +212,26 @@ export function useWordList(): UseWordListResult {
       return
     }
 
-    const today = getTodayDate()
-    const todayStart = new Date(today).getTime()
-    const todayEnd = todayStart + 24 * 60 * 60 * 1000
-
-    // 从数据库获取今日学习过的单词记录
-    const todayRecords = await db.wordRecords
-      .where('[dict+timeStamp]')
-      .between([currentDictId, todayStart], [currentDictId, todayEnd])
-      .toArray()
-
-    // 获取今天学习过的唯一单词名称
-    const todayWordNames = [...new Set(todayRecords.map(r => r.word))]
-
-    if (todayWordNames.length === 0) {
-      return
-    }
-
-    // 从词库中找到对应的单词
-    const repeatWords: WordWithIndex[] = []
-    todayWordNames.forEach(wordName => {
-      const index = wordList.findIndex(w => w.name === wordName)
-      if (index !== -1) {
-        repeatWords.push({ ...wordList[index], index })
-      }
+    const repeatWords = await getRepeatLearningWords({
+      currentDictId,
+      wordList,
+      listWordRecordsInRange: async (dictId, start, end) => {
+        return db.wordRecords
+          .where('[dict+timeStamp]')
+          .between([dictId, start], [dictId, end])
+          .toArray()
+      },
     })
 
     if (repeatWords.length === 0) {
       return
     }
 
-    // 随机打乱顺序
-    const shuffled = [...repeatWords].sort(() => Math.random() - 0.5)
-
     setIsRepeatLearning(true)
     setIsExtraReview(false)
     setLearningType('review')
-    setLearningWords(shuffled)
-    lastLearningWordsRef.current = shuffled
+    setLearningWords(repeatWords)
+    lastLearningWordsRef.current = repeatWords
   }, [wordList, currentDictId])
 
   const getNextNewWord = useCallback(async (): Promise<WordWithIndex | null> => {
@@ -231,13 +239,12 @@ export function useWordList(): UseWordListResult {
       return null
     }
 
-    const newWords = await getNewWords(wordList, 1)
-    if (newWords.length === 0) {
-      return null
-    }
-
-    return newWords[0]
-  }, [wordList, currentWordBank, getNewWords])
+    return getNextReplacementWord({
+      wordList,
+      currentLearningWords: learningWords,
+      getNewWords,
+    })
+  }, [wordList, currentWordBank, getNewWords, learningWords])
 
   useEffect(() => {
     loadLearningWords()
@@ -296,6 +303,7 @@ export function useWordList(): UseWordListResult {
     masteredCount,
     todayLearned,
     todayReviewed,
+    todayMastered,
     newWordQuota,
     remainingForTarget,
     hasReachedTarget,
@@ -310,23 +318,43 @@ export function useWordList(): UseWordListResult {
 }
 
 async function wordListFetcher(url: string): Promise<Word[]> {
+  console.log('[wordListFetcher] Fetching word list from URL:', url)
   let words: Word[] = []
   try {
     const response = await fetch('.' + url)
+    console.log('[wordListFetcher] Response status:', response.status)
     words = await response.json()
+    console.log('[wordListFetcher] Word list loaded:', {
+      url,
+      wordCount: words.length,
+      firstWord: words[0]?.name
+    })
   } catch (err) {
-    console.log(err)
+    console.error('[wordListFetcher] Failed to load word list:', err)
   }
 
   return words
 }
 
 async function localWordListFetcher(id: string): Promise<Word[]> {
+  console.log('[localWordListFetcher] Fetching word list for id:', id)
   let words: Word[] = []
   try {
     words = await window.readLocalWordBank(id)
+    console.log('[localWordListFetcher] Word list loaded:', JSON.stringify({
+      id,
+      wordCount: words.length,
+      firstWord: words[0]?.name,
+      isArray: Array.isArray(words),
+      type: typeof words
+    }, null, 2))
   } catch (err) {
-    console.error(err)
+    console.error('[localWordListFetcher] Failed to load word list:', err)
   }
+  console.log('[localWordListFetcher] Returning words:', JSON.stringify({
+    wordCount: words.length,
+    isArray: Array.isArray(words),
+    type: typeof words
+  }, null, 2))
   return words
 }

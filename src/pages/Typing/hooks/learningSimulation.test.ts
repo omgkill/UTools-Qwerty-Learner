@@ -398,6 +398,9 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
     it('should schedule next review at 4/7/15/21/30 days after correct review', () => {
       const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
       vi.setSystemTime(baseTime)
+      const baseDayStart = new Date(baseTime)
+      baseDayStart.setHours(0, 0, 0, 0)
+      const baseDayStartTime = baseDayStart.getTime()
 
       const words: SimulatedWord[] = [
         {
@@ -441,12 +444,12 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
       expect(word4?.masteryLevel).toBe(MASTERY_LEVELS.EXPERT)
       expect(word5?.masteryLevel).toBe(MASTERY_LEVELS.EXPERT)
 
-      expect(word1?.nextReviewTime).toBe(baseTime + 4 * DAY_MS)
-      expect(word2?.nextReviewTime).toBe(baseTime + 7 * DAY_MS)
-      expect(word3?.nextReviewTime).toBe(baseTime + 15 * DAY_MS)
-      expect(word4?.nextReviewTime).toBe(baseTime + 21 * DAY_MS)
-      expect(word5?.nextReviewTime).toBe(baseTime + 21 * DAY_MS)
-      expect(getNextReviewTime(MASTERY_LEVELS.MASTERED)).toBe(baseTime + 30 * DAY_MS)
+      expect(word1?.nextReviewTime).toBe(baseDayStartTime + 4 * DAY_MS)
+      expect(word2?.nextReviewTime).toBe(baseDayStartTime + 7 * DAY_MS)
+      expect(word3?.nextReviewTime).toBe(baseDayStartTime + 15 * DAY_MS)
+      expect(word4?.nextReviewTime).toBe(baseDayStartTime + 21 * DAY_MS)
+      expect(word5?.nextReviewTime).toBe(baseDayStartTime + 21 * DAY_MS)
+      expect(getNextReviewTime(MASTERY_LEVELS.MASTERED)).toBe(baseDayStartTime + 30 * DAY_MS)
     })
   })
 

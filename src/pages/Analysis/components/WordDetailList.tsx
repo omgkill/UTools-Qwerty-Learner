@@ -24,6 +24,7 @@ const WordDetailList: FC<WordDetailListProps> = ({ words, date, onBack, isLoadin
 
   const newWords = words.filter((w) => w.type === 'new')
   const reviewWords = words.filter((w) => w.type === 'review')
+  const masteredWords = words.filter((w) => w.type === 'mastered')
 
   return (
     <div className="space-y-6">
@@ -35,6 +36,7 @@ const WordDetailList: FC<WordDetailListProps> = ({ words, date, onBack, isLoadin
       <div className="mb-4 flex gap-4 text-sm">
         <span className="text-green-300">新词: {newWords.length}</span>
         <span className="text-blue-300">复习: {reviewWords.length}</span>
+        <span className="text-purple-300">掌握: {masteredWords.length}</span>
         <span className="text-gray-400">总计: {words.length}</span>
       </div>
 
@@ -72,6 +74,24 @@ const WordDetailList: FC<WordDetailListProps> = ({ words, date, onBack, isLoadin
                 {word.wrongCount > 0 && (
                   <span className="ml-1 text-xs text-red-300">({word.wrongCount}错)</span>
                 )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {masteredWords.length > 0 && (
+        <div>
+          <h4 className="mb-2 font-medium text-purple-300">已掌握单词</h4>
+          <div className="flex flex-wrap gap-2">
+            {masteredWords.map((word, index) => (
+              <div
+                key={`${word.word}-${index}`}
+                className="rounded-lg bg-purple-900/30 px-3 py-2 text-purple-200"
+                title="已掌握"
+              >
+                <span className="font-medium">{word.word}</span>
+                <span className="ml-1 text-xs">✓</span>
               </div>
             ))}
           </div>

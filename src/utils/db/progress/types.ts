@@ -31,6 +31,7 @@ export interface IDailyRecord {
   reviewedCount: number
   learnedCount: number
   extraReviewedCount: number
+  masteredCount: number
   lastUpdateTime: number
   totalToday: number
   totalReviewed: number

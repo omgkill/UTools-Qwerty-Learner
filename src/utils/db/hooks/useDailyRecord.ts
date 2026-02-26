@@ -63,6 +63,18 @@ export function useDailyRecord() {
     setDailyRecord({ ...record })
   }, [dictID, getTodayRecord, setDailyRecord])
 
+  const incrementMastered = useCallback(async (): Promise<void> => {
+    if (!dictID) return
+
+    const record = await getTodayRecord()
+    record.masteredCount++
+    record.lastUpdateTime = Date.now()
+    const recordId = record.id ?? (await db.dailyRecords.add(record))
+    record.id = recordId
+    await db.dailyRecords.update(recordId, record)
+    setDailyRecord({ ...record })
+  }, [dictID, getTodayRecord, setDailyRecord])
+
   const getExtraReviewInfo = useCallback((): { hasExtra: boolean; remaining: number } => {
     if (!dailyRecord) return { hasExtra: false, remaining: 0 }
     return { hasExtra: dailyRecord.hasExtraReviewQuota, remaining: dailyRecord.extraReviewedCount }
@@ -92,6 +104,7 @@ export function useDailyRecord() {
     refreshDailyRecord,
     incrementReviewed,
     incrementLearned,
+    incrementMastered,
     getNewWordQuota,
     getRemainingForTarget,
     hasReachedTarget,

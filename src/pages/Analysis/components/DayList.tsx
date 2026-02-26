@@ -60,6 +60,9 @@ const DayList: FC<DayListProps> = ({ days, selectedDate, onSelectDate, onBack, i
                   {day.reviewedCount > 0 && (
                     <span className="ml-2 text-blue-300">复习 {day.reviewedCount}</span>
                   )}
+                  {day.masteredCount > 0 && (
+                    <span className="ml-2 text-purple-300">掌握 {day.masteredCount}</span>
+                  )}
                 </div>
               </div>
               <div className="text-gray-400">→</div>

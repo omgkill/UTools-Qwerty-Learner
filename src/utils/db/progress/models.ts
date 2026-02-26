@@ -76,6 +76,7 @@ export class DailyRecord implements IDailyRecord {
   reviewedCount: number
   learnedCount: number
   extraReviewedCount: number
+  masteredCount: number
   lastUpdateTime: number
 
   constructor(dict: string, date: string) {
@@ -84,6 +85,7 @@ export class DailyRecord implements IDailyRecord {
     this.reviewedCount = 0
     this.learnedCount = 0
     this.extraReviewedCount = 0
+    this.masteredCount = 0
     this.lastUpdateTime = Date.now()
   }
 
