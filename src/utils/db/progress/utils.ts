@@ -7,7 +7,10 @@ export function getTodayDate(): string {
 
 export function getNextReviewTime(masteryLevel: MasteryLevel): number {
   const baseDays = REVIEW_INTERVALS[masteryLevel] ?? 1
-  return Date.now() + baseDays * 24 * 60 * 60 * 1000
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayStart = today.getTime()
+  return todayStart + baseDays * 24 * 60 * 60 * 1000
 }
 
 export function updateMasteryLevel(

@@ -28,7 +28,8 @@ describe('Translation Component', () => {
       const { default: Translation } = await import('./index')
       render(<Translation trans={['n. 苹果', 'n. 公司']} />)
 
-      expect(screen.getByText('n. 苹果；n. 公司')).toBeInTheDocument()
+      expect(screen.getByText('n. 苹果')).toBeInTheDocument()
+      expect(screen.getByText('n. 公司')).toBeInTheDocument()
     })
 
     it('should render tense when provided', async () => {
@@ -65,7 +66,8 @@ describe('Translation Component', () => {
       const { default: Translation } = await import('./index')
       render(<Translation trans={['n. 苹果', '', 'n. 公司', '  ']} />)
 
-      expect(screen.getByText('n. 苹果；n. 公司')).toBeInTheDocument()
+      expect(screen.getByText('n. 苹果')).toBeInTheDocument()
+      expect(screen.getByText('n. 公司')).toBeInTheDocument()
     })
 
     it('should limit display to 6 translations', async () => {
@@ -73,7 +75,12 @@ describe('Translation Component', () => {
       const manyTrans = ['1', '2', '3', '4', '5', '6', '7', '8']
       render(<Translation trans={manyTrans} />)
 
-      expect(screen.getByText('1；2；3；4；5；6')).toBeInTheDocument()
+      expect(screen.getByText('1')).toBeInTheDocument()
+      expect(screen.getByText('2')).toBeInTheDocument()
+      expect(screen.getByText('3')).toBeInTheDocument()
+      expect(screen.getByText('4')).toBeInTheDocument()
+      expect(screen.getByText('5')).toBeInTheDocument()
+      expect(screen.getByText('6')).toBeInTheDocument()
     })
   })
 
@@ -104,16 +111,27 @@ describe('Translation Component', () => {
       const { default: Translation } = await import('./index')
       render(<Translation trans={['n. 🍎 苹果', 'n. 🏢 公司']} />)
 
-      expect(screen.getByText('n. 🍎 苹果；n. 🏢 公司')).toBeInTheDocument()
+      expect(screen.getByText('n. 🍎 苹果')).toBeInTheDocument()
+      expect(screen.getByText('n. 🏢 公司')).toBeInTheDocument()
     })
   })
 
   describe('Display Logic (显示逻辑)', () => {
-    it('should join translations with Chinese semicolon', async () => {
+    it('should render each translation separately', async () => {
+      const { default: Translation } = await import('./index')
+      render(<Translation trans={['n. 苹果', 'n. 公司']} />)
+
+      expect(screen.getByText('n. 苹果')).toBeInTheDocument()
+      expect(screen.getByText('n. 公司')).toBeInTheDocument()
+    })
+
+    it('should render multiple translations', async () => {
       const { default: Translation } = await import('./index')
       render(<Translation trans={['n. 苹果', 'n. 公司', 'n. 品牌']} />)
 
-      expect(screen.getByText('n. 苹果；n. 公司；n. 品牌')).toBeInTheDocument()
+      expect(screen.getByText('n. 苹果')).toBeInTheDocument()
+      expect(screen.getByText('n. 公司')).toBeInTheDocument()
+      expect(screen.getByText('n. 品牌')).toBeInTheDocument()
     })
   })
 
@@ -136,7 +154,8 @@ describe('Translation Component', () => {
       const { default: Translation } = await import('./index')
       render(<Translation trans={['  n. 苹果  ', '  n. 公司  ']} />)
 
-      expect(screen.getByText('n. 苹果；n. 公司')).toBeInTheDocument()
+      expect(screen.getByText('n. 苹果')).toBeInTheDocument()
+      expect(screen.getByText('n. 公司')).toBeInTheDocument()
     })
   })
 })

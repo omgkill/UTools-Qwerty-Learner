@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type * as Jotai from 'jotai'
 import type * as React from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -35,6 +35,7 @@ let mockState: TypingState = {
     isFinished: false,
     isShowSkip: false,
     isExtraReview: false,
+    isRepeatLearning: false,
     isCurrentWordMastered: false,
     isSavingRecord: false,
   },
@@ -46,7 +47,6 @@ vi.mock('react', async (importOriginal) => {
   const actual = (await importOriginal()) as typeof React
   return {
     ...actual,
-    // 只 mock useContext，不 mock useRef（mock React 内部 hook 会破坏 React 运行时）
     useContext: vi.fn(() => ({ state: mockState, dispatch: mockDispatch })),
   }
 })
@@ -63,7 +63,7 @@ vi.mock('jotai', async (importOriginal) => {
   const actual = (await importOriginal()) as typeof Jotai
   return {
     ...actual,
-    useAtomValue: vi.fn(() => false),
+    useAtomValue: vi.fn(() => ({ viewDetail: 'ctrl+1', goBack: 'ctrl+2' })),
   }
 })
 
@@ -117,6 +117,7 @@ describe('WordPanel Component', () => {
         isFinished: false,
         isShowSkip: false,
         isExtraReview: false,
+        isRepeatLearning: false,
         isCurrentWordMastered: false,
         isSavingRecord: false,
       },
@@ -174,7 +175,7 @@ describe('WordPanel Component', () => {
     })
 
     it('当mdx查询失败时，界面应该显示单词但没有释义', async () => {
-      (window as unknown as { queryFirstMdxWord: ReturnType<typeof vi.fn> }).queryFirstMdxWord = vi.fn().mockResolvedValue(null)
+      ;(window as unknown as { queryFirstMdxWord: ReturnType<typeof vi.fn> }).queryFirstMdxWord = vi.fn().mockResolvedValue(null)
       mockState.wordListData.words = [createWord('unknownword', [], 0)]
 
       const { default: WordPanel } = await import('./index')
@@ -188,7 +189,7 @@ describe('WordPanel Component', () => {
     })
 
     it('当没有配置mdx词典时，界面应该显示单词但没有释义', async () => {
-      (window as unknown as { getMdxDictConfig: ReturnType<typeof vi.fn> }).getMdxDictConfig = vi.fn().mockReturnValue([])
+      ;(window as unknown as { getMdxDictConfig: ReturnType<typeof vi.fn> }).getMdxDictConfig = vi.fn().mockReturnValue([])
       mockState.wordListData.words = [createWord('nodictword', [], 0)]
 
       const { default: WordPanel } = await import('./index')
@@ -283,6 +284,105 @@ describe('WordPanel Component', () => {
 
       expect(mockState.statsData.wordCount).toBe(10)
       expect(mockState.statsData.correctCount).toBe(8)
+    })
+
+    describe('掌握按钮测试', () => {
+      const mockOnMastered = vi.fn()
+
+      beforeEach(() => {
+        mockOnMastered.mockClear()
+      })
+
+      it('点击掌握按钮后，应该调用onMastered callback', async () => {
+        mockState.wordListData.words = [createWord('apple', ['n. 苹果'], 0), createWord('banana', ['n. 香蕉'], 1)]
+        mockState.wordListData.index = 0
+        const { default: WordPanel } = await import('./index')
+        render(<WordPanel onMastered={mockOnMastered} />)
+
+        const masteredButton = screen.getByText('掌握')
+        fireEvent.click(masteredButton)
+
+        await waitFor(() => {
+          expect(mockOnMastered).toHaveBeenCalledTimes(1)
+        }, { timeout: 1000 })
+      })
+
+      it('重复点击掌握按钮，应该多次调用onMastered callback', async () => {
+        mockState.wordListData.words = [createWord('apple', ['n. 苹果'], 0)]
+        mockState.wordListData.index = 0
+        const { default: WordPanel } = await import('./index')
+        render(<WordPanel onMastered={mockOnMastered} />)
+
+        const masteredButton = screen.getByText('掌握')
+        fireEvent.click(masteredButton)
+
+        await waitFor(() => {
+          expect(mockOnMastered).toHaveBeenCalledTimes(1)
+        }, { timeout: 1000 })
+
+        fireEvent.click(masteredButton)
+
+        await waitFor(() => {
+          expect(mockOnMastered).toHaveBeenCalledTimes(2)
+        }, { timeout: 1000 })
+      })
+
+      it('当单词列表中有重复单词时，掌握按钮应该正确工作', async () => {
+        mockState.wordListData.words = [
+          createWord('apple', ['n. 苹果'], 0),
+          createWord('apple', ['n. 苹果'], 1),
+          createWord('banana', ['n. 香蕉'], 2),
+        ]
+        mockState.wordListData.index = 0
+        const { default: WordPanel } = await import('./index')
+        render(<WordPanel onMastered={mockOnMastered} />)
+
+        const masteredButton = screen.getByText('掌握')
+        fireEvent.click(masteredButton)
+
+        await waitFor(() => {
+          expect(mockOnMastered).toHaveBeenCalledTimes(1)
+        }, { timeout: 1000 })
+      })
+
+      it('当单词列表中已掌握的单词重复出现时，掌握按钮应该正确工作', async () => {
+        mockState.wordListData.words = [
+          createWord('apple', ['n. 苹果'], 0),
+          createWord('banana', ['n. 香蕉'], 1),
+          createWord('apple', ['n. 苹果'], 2),
+        ]
+        mockState.wordListData.index = 1
+        const { default: WordPanel } = await import('./index')
+        render(<WordPanel onMastered={mockOnMastered} />)
+
+        const masteredButton = screen.getByText('掌握')
+        fireEvent.click(masteredButton)
+
+        await waitFor(() => {
+          expect(mockOnMastered).toHaveBeenCalledTimes(1)
+        }, { timeout: 1000 })
+      })
+
+      it('连续点击掌握按钮15次，应该调用onMastered callback 15次', async () => {
+        const words: WordWithIndex[] = []
+        for (let i = 0; i < 100; i++) {
+          words.push(createWord(`word${i}`, ['n. 测试'], i))
+        }
+        mockState.wordListData.words = words
+        mockState.wordListData.index = 0
+        const { default: WordPanel } = await import('./index')
+        render(<WordPanel onMastered={mockOnMastered} />)
+
+        const masteredButton = screen.getByText('掌握')
+
+        for (let i = 0; i < 15; i++) {
+          fireEvent.click(masteredButton)
+        }
+
+        await waitFor(() => {
+          expect(mockOnMastered).toHaveBeenCalledTimes(15)
+        }, { timeout: 2000 })
+      })
     })
   })
 })

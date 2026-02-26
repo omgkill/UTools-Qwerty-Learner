@@ -186,57 +186,65 @@ describe('updateMasteryLevel', () => {
 
 describe('getNextReviewTime', () => {
   it('should return 0 days later for NEW level (immediate upgrade, no review needed)', () => {
-    const now = Date.now()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.NEW)
-    expect(reviewTime).toBeGreaterThanOrEqual(now - 1000)
+    expect(reviewTime).toBeGreaterThanOrEqual(today.getTime() - 1000)
   })
 
   it('should return 1 day later for LEARNED level', () => {
-    const now = Date.now()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.LEARNED)
-    const expectedMin = now + 1 * 24 * 60 * 60 * 1000
+    const expectedMin = today.getTime() + 1 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
   it('should return 2 days later for FAMILIAR level', () => {
-    const now = Date.now()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.FAMILIAR)
-    const expectedMin = now + 2 * 24 * 60 * 60 * 1000
+    const expectedMin = today.getTime() + 2 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
   it('should return 4 days later for KNOWN level', () => {
-    const now = Date.now()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.KNOWN)
-    const expectedMin = now + 4 * 24 * 60 * 60 * 1000
+    const expectedMin = today.getTime() + 4 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
   it('should return 7 days later for PROFICIENT level', () => {
-    const now = Date.now()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.PROFICIENT)
-    const expectedMin = now + 7 * 24 * 60 * 60 * 1000
+    const expectedMin = today.getTime() + 7 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
   it('should return 15 days later for ADVANCED level', () => {
-    const now = Date.now()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.ADVANCED)
-    const expectedMin = now + 15 * 24 * 60 * 60 * 1000
+    const expectedMin = today.getTime() + 15 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
   it('should return 21 days later for EXPERT level', () => {
-    const now = Date.now()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.EXPERT)
-    const expectedMin = now + 21 * 24 * 60 * 60 * 1000
+    const expectedMin = today.getTime() + 21 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
   it('should return 30 days later for MASTERED level', () => {
-    const now = Date.now()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.MASTERED)
-    const expectedMin = now + 30 * 24 * 60 * 60 * 1000
+    const expectedMin = today.getTime() + 30 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 })

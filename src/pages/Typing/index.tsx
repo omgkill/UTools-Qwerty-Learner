@@ -49,7 +49,9 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
     hasMoreDueWords,
     remainingDueCount,
     isExtraReview,
+    isRepeatLearning,
     startExtraReview,
+    startRepeatLearning,
     getNextNewWord,
   } = useWordList()
 
@@ -163,6 +165,18 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
                     今日学习 <span className="font-bold text-indigo-600 dark:text-indigo-400">{todayLearned + todayReviewed}</span> 个单词
                     （新词 <span className="font-bold">{todayLearned}</span> 个，复习 <span className="font-bold">{todayReviewed}</span> 个）
                   </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={async () => {
+                        await startRepeatLearning()
+                        dispatch({ type: TypingStateActionType.RESET_PROGRESS })
+                        dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: true })
+                      }}
+                      className="rounded-lg bg-indigo-500 px-4 py-2 text-white transition-colors hover:bg-indigo-600"
+                    >
+                      🔄 重复学习
+                    </button>
+                  </div>
                   <p className="text-sm text-gray-500 dark:text-gray-500">明天继续加油！</p>
                 </div>
               ) : (

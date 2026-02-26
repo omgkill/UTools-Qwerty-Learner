@@ -11,6 +11,7 @@ export function useWordCompletion(
   wordState: WordState,
   onFinish: () => void,
   isExtraReview: boolean,
+  isRepeatLearning: boolean = false,
 ) {
   const typingContext = useContext(TypingContext)
   const state = typingContext?.state ?? initialState
@@ -65,6 +66,10 @@ export function useWordCompletion(
       const isCorrect = !wordState.hasMadeInputWrong
       updateWordProgress(word.name, isCorrect, wordState.wrongCount)
         .then((progress) => {
+          // 重复学习模式不计入统计
+          if (isRepeatLearning) {
+            return
+          }
           const isNewWord = progress.reps === 1
           if (isNewWord) {
             incrementLearned()
@@ -97,5 +102,6 @@ export function useWordCompletion(
     incrementReviewed,
     onFinish,
     isExtraReview,
+    isRepeatLearning,
   ])
 }

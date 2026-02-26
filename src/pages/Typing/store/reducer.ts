@@ -94,15 +94,40 @@ export function typingReducer(state: TypingState, action: TypingStateAction): Ty
       }
     }
 
-    case TypingStateActionType.NEXT_WORD:
+    case TypingStateActionType.NEXT_WORD: {
+      const newIndex = state.wordListData.index + 1
+      const isEnd = newIndex >= state.wordListData.words.length
       return {
         ...state,
-        wordListData: { ...state.wordListData, index: state.wordListData.index + 1 },
+        wordListData: {
+          ...state.wordListData,
+          index: isEnd ? state.wordListData.index : newIndex,
+        },
         statsData: { ...state.statsData, wordCount: state.statsData.wordCount + 1 },
-        uiState: { ...state.uiState, isShowSkip: false, isCurrentWordMastered: false },
+        uiState: {
+          ...state.uiState,
+          isShowSkip: false,
+          isCurrentWordMastered: false,
+          isTyping: isEnd ? false : state.uiState.isTyping,
+          isFinished: isEnd ? true : state.uiState.isFinished,
+        },
       }
+    }
 
-    case TypingStateActionType.FINISH_WORDS:
+    case TypingStateActionType.FINISH_WORDS: {
+      // 重复学习模式下循环学习，不结束
+      if (state.uiState.isRepeatLearning) {
+        return {
+          ...state,
+          wordListData: { ...state.wordListData, index: 0 },
+          statsData: { ...state.statsData, wordCount: state.statsData.wordCount + 1 },
+          uiState: {
+            ...state.uiState,
+            isShowSkip: false,
+            isCurrentWordMastered: false,
+          },
+        }
+      }
       return {
         ...state,
         statsData: { ...state.statsData, wordCount: state.statsData.wordCount + 1 },
@@ -114,6 +139,7 @@ export function typingReducer(state: TypingState, action: TypingStateAction): Ty
           isCurrentWordMastered: false,
         },
       }
+    }
 
     case TypingStateActionType.INCREASE_CORRECT_COUNT:
       return {
@@ -245,6 +271,12 @@ export function typingReducer(state: TypingState, action: TypingStateAction): Ty
       return {
         ...state,
         statsData: structuredClone(initialStatsData),
+      }
+
+    case TypingStateActionType.SET_IS_REPEAT_LEARNING:
+      return {
+        ...state,
+        uiState: { ...state.uiState, isRepeatLearning: action.payload },
       }
 
     default:

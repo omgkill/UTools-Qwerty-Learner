@@ -1,8 +1,9 @@
-import { currentWordBankAtom } from '@/store'
+import { currentWordBankAtom, currentDictIdAtom } from '@/store'
 import { dailyRecordAtom } from '../store/atoms'
 import type { Word, WordWithIndex } from '@/typings/index'
-import { LEARNING_CONFIG } from '@/utils/db/progress'
+import { LEARNING_CONFIG, getTodayDate } from '@/utils/db/progress'
 import { useDailyRecord, useReviewWords, useWordProgress } from '@/utils/db/useProgress'
+import { db } from '@/utils/db'
 import { useAtomValue } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import useSWR from 'swr'
@@ -27,12 +28,15 @@ export type UseWordListResult = {
   hasMoreDueWords: boolean
   remainingDueCount: number
   isExtraReview: boolean
+  isRepeatLearning: boolean
   startExtraReview: () => void
+  startRepeatLearning: () => Promise<void>
   getNextNewWord: () => Promise<WordWithIndex | null>
 }
 
 export function useWordList(): UseWordListResult {
   const currentWordBank = useAtomValue(currentWordBankAtom)
+  const currentDictId = useAtomValue(currentDictIdAtom)
   const dailyRecord = useAtomValue(dailyRecordAtom)
   const dailyRecordRef = useRef(dailyRecord)
   dailyRecordRef.current = dailyRecord
@@ -48,6 +52,7 @@ export function useWordList(): UseWordListResult {
   const [hasMoreDueWords, setHasMoreDueWords] = useState(false)
   const [remainingDueCount, setRemainingDueCount] = useState(0)
   const [isExtraReview, setIsExtraReview] = useState(false)
+  const [isRepeatLearning, setIsRepeatLearning] = useState(false)
   const isLoadingRef = useRef(false)
   const lastLearningWordsRef = useRef<WordWithIndex[]>([])
   // 用于取消过期的异步加载请求
@@ -171,8 +176,55 @@ export function useWordList(): UseWordListResult {
 
   const startExtraReview = useCallback(() => {
     setIsExtraReview(true)
+    setIsRepeatLearning(false)
     reloadWords()
   }, [reloadWords])
+
+  // 获取今日学习过的单词并设置为重复学习
+  const startRepeatLearning = useCallback(async (): Promise<void> => {
+    if (!wordList || wordList.length === 0 || !currentDictId) {
+      return
+    }
+
+    const today = getTodayDate()
+    const todayStart = new Date(today).getTime()
+    const todayEnd = todayStart + 24 * 60 * 60 * 1000
+
+    // 从数据库获取今日学习过的单词记录
+    const todayRecords = await db.wordRecords
+      .where('[dict+timeStamp]')
+      .between([currentDictId, todayStart], [currentDictId, todayEnd])
+      .toArray()
+
+    // 获取今天学习过的唯一单词名称
+    const todayWordNames = [...new Set(todayRecords.map(r => r.word))]
+
+    if (todayWordNames.length === 0) {
+      return
+    }
+
+    // 从词库中找到对应的单词
+    const repeatWords: WordWithIndex[] = []
+    todayWordNames.forEach(wordName => {
+      const index = wordList.findIndex(w => w.name === wordName)
+      if (index !== -1) {
+        repeatWords.push({ ...wordList[index], index })
+      }
+    })
+
+    if (repeatWords.length === 0) {
+      return
+    }
+
+    // 随机打乱顺序
+    const shuffled = [...repeatWords].sort(() => Math.random() - 0.5)
+
+    setIsRepeatLearning(true)
+    setIsExtraReview(false)
+    setLearningType('review')
+    setLearningWords(shuffled)
+    lastLearningWordsRef.current = shuffled
+  }, [wordList, currentDictId])
 
   const getNextNewWord = useCallback(async (): Promise<WordWithIndex | null> => {
     if (!wordList || wordList.length === 0 || !currentWordBank) {
@@ -250,7 +302,9 @@ export function useWordList(): UseWordListResult {
     hasMoreDueWords,
     remainingDueCount,
     isExtraReview,
+    isRepeatLearning,
     startExtraReview,
+    startRepeatLearning,
     getNextNewWord,
   }
 }

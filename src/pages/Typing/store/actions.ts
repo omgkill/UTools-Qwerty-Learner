@@ -26,6 +26,7 @@ export enum TypingStateActionType {
   ADD_REPLACEMENT_WORD = 'ADD_REPLACEMENT_WORD',
   CLEAR_WORD_INFO_MAP = 'CLEAR_WORD_INFO_MAP',
   RESET_STATS = 'RESET_STATS',
+  SET_IS_REPEAT_LEARNING = 'SET_IS_REPEAT_LEARNING',
 }
 
 export type TypingStateAction =
@@ -53,3 +54,4 @@ export type TypingStateAction =
   | { type: TypingStateActionType.ADD_REPLACEMENT_WORD; payload: WordWithIndex }
   | { type: TypingStateActionType.CLEAR_WORD_INFO_MAP }
   | { type: TypingStateActionType.RESET_STATS }
+  | { type: TypingStateActionType.SET_IS_REPEAT_LEARNING; payload: boolean }

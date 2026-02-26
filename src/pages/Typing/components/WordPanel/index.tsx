@@ -141,7 +141,7 @@ export default function WordPanel({ onMastered }: { onMastered?: () => void }) {
               </div>
             )}
             <div className="relative">
-              <WordComponent word={currentWord} onFinish={onFinish} isExtraReview={state.uiState.isExtraReview} />
+              <WordComponent word={currentWord} onFinish={onFinish} isExtraReview={state.uiState.isExtraReview} isRepeatLearning={state.uiState.isRepeatLearning} />
               {phoneticConfig.isOpen && <Phonetic word={wordWithInfo || currentWord} />}
               {state.isTransVisible && <Translation trans={displayTrans} tense={displayTense} />}
               {!state.isImmersiveMode && state.uiState.isTyping && (

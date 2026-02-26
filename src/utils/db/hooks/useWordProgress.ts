@@ -53,7 +53,11 @@ export function useWordProgress() {
       progress.lastReviewTime = Date.now()
       progress.reps = (progress.reps || 0) + 1
       if (wasFirstAttempt && !isCorrect) {
-        progress.nextReviewTime = Date.now() + 24 * 60 * 60 * 1000
+        // 第一次尝试且错误，设置为明天开始时间（00:00:00）
+        const tomorrow = new Date()
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        tomorrow.setHours(0, 0, 0, 0)
+        progress.nextReviewTime = tomorrow.getTime()
       }
       if (isCorrect) {
         progress.correctCount++
