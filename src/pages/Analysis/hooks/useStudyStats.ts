@@ -138,13 +138,13 @@ export function useDayStats(dictId: string | null): DayStatsData {
         const dailyRecords = await db.dailyRecords.where('dict').equals(currentDictId).toArray()
 
         const days: DayStats[] = dailyRecords
-          .filter((r) => r.learnedCount > 0 || r.reviewedCount > 0 || r.masteredCount > 0)
+          .filter((r) => (r.learnedCount || 0) > 0 || (r.reviewedCount || 0) > 0 || (r.masteredCount || 0) > 0)
           .map((r) => ({
             date: r.date,
-            learnedCount: r.learnedCount,
-            reviewedCount: r.reviewedCount,
-            masteredCount: r.masteredCount,
-            totalWords: r.learnedCount + r.reviewedCount + r.masteredCount,
+            learnedCount: r.learnedCount || 0,
+            reviewedCount: r.reviewedCount || 0,
+            masteredCount: r.masteredCount || 0,
+            totalWords: (r.learnedCount || 0) + (r.reviewedCount || 0) + (r.masteredCount || 0),
           }))
           .sort((a, b) => b.date.localeCompare(a.date))
 
