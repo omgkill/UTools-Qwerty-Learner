@@ -55,6 +55,7 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
     hasMoreDueWords,
     remainingDueCount,
     isExtraReview,
+    isRepeatLearning,
     startExtraReview,
     startRepeatLearning,
     getNextNewWord,
@@ -184,7 +185,7 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
         <div className="container mx-auto flex h-full flex-1 flex-col items-center justify-center pb-4">
           <div className="container relative mx-auto flex h-full flex-col items-center">
             <div className="container flex flex-grow items-center justify-center">
-              {(learningType === 'complete' || state.uiState.isFinished) ? (
+              {(learningType === 'complete' || state.uiState.isFinished) && !isRepeatLearning ? (
                 <div className="flex flex-col items-center justify-center space-y-6">
                   <div className="text-6xl">🎉</div>
                   <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">✓ 今日目标达成</h2>

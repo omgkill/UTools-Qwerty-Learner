@@ -59,26 +59,37 @@ export function useWordList(): UseWordListResult {
   // 用于取消过期的异步加载请求
   const loadVersionRef = useRef(0)
 
-  const isLocalWordBank = currentWordBank
-    ? currentWordBank.id.startsWith('x-dict-') || currentWordBank.languageCategory === 'custom'
-    : false
+  // 从localStorage加载重复学习状态和学习单词
+  useEffect(() => {
+    try {
+      const savedState = localStorage.getItem('typingState')
+      if (savedState) {
+        const parsedState = JSON.parse(savedState)
+        // 检查是否是今天的状态
+        if (parsedState.date === new Date().toISOString().split('T')[0]) {
+          setIsRepeatLearning(parsedState.isRepeatLearning)
+          if (parsedState.isRepeatLearning && parsedState.learningWords && parsedState.learningWords.length > 0) {
+            setLearningWords(parsedState.learningWords)
+            lastLearningWordsRef.current = parsedState.learningWords
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load saved state:', e)
+    }
+  }, [])
 
-  console.log('[useWordList] Current word bank:', {
-    currentWordBank: currentWordBank ? currentWordBank.name : null,
-    currentWordBankId: currentDictId,
-    isLocalWordBank,
-    swrKey: currentWordBank ? (isLocalWordBank ? currentWordBank.id : currentWordBank.url) : null
-  })
+  const isLocalWordBank = useMemo(() => {
+    return currentWordBank
+      ? currentWordBank.id.startsWith('x-dict-') || currentWordBank.languageCategory === 'custom'
+      : false
+  }, [currentWordBank])
 
-  const swrKey = currentWordBank ? (isLocalWordBank ? currentWordBank.id : currentWordBank.url) : null
+  const swrKey = useMemo(() => {
+    return currentWordBank ? (isLocalWordBank ? currentWordBank.id : currentWordBank.url) : null
+  }, [currentWordBank, isLocalWordBank])
+
   const fetcher = isLocalWordBank ? localWordListFetcher : wordListFetcher
-
-  console.log('[useWordList] SWR configuration:', JSON.stringify({
-    swrKey,
-    isLocalWordBank,
-    fetcherName: isLocalWordBank ? 'localWordListFetcher' : 'wordListFetcher',
-    currentWordBank: currentWordBank ? currentWordBank.name : null
-  }, null, 2))
 
   const {
     data: wordList,
@@ -87,13 +98,18 @@ export function useWordList(): UseWordListResult {
     mutate,
   } = useSWR(swrKey, fetcher)
 
-  console.log('[useWordList] SWR state:', JSON.stringify({
-    wordListLength: wordList?.length,
-    isWordListLoading,
-    error: error?.message,
-    wordListType: typeof wordList,
-    wordListIsArray: Array.isArray(wordList)
-  }, null, 2))
+  // 监听重复学习状态和学习单词变化，保存到localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('typingState', JSON.stringify({
+        isRepeatLearning,
+        learningWords: isRepeatLearning ? learningWords : [],
+        date: new Date().toISOString().split('T')[0]
+      }))
+    } catch (e) {
+      console.error('Failed to save state:', e)
+    }
+  }, [isRepeatLearning, learningWords])
 
   const { getDueWordsWithInfo, getNewWords } = useReviewWords()
   const { getWordProgress } = useWordProgress()
@@ -122,25 +138,15 @@ export function useWordList(): UseWordListResult {
   const loadLearningWords = useCallback(async () => {
     // 重复学习模式下不重新加载单词
     if (isRepeatLearning) {
-      console.log('[useWordList] Skipping loadLearningWords: in repeat learning mode')
       return
     }
 
-    console.log('[useWordList] loadLearningWords called:', JSON.stringify({
-      wordListLength: wordList?.length,
-      wordListType: typeof wordList,
-      wordListIsArray: Array.isArray(wordList),
-      currentWordBank: currentWordBank?.name,
-      isLoadingLearningWords
-    }, null, 2))
     if (!wordList || wordList.length === 0 || !currentWordBank) {
-      console.log('[useWordList] Skipping loadLearningWords: no wordList or currentWordBank')
       setLearningWords([])
       return
     }
 
     if (isLoadingLearningWords) {
-      console.log('[useWordList] Skipping loadLearningWords: already loading')
       return
     }
     setIsLoadingLearningWords(true)
@@ -178,14 +184,8 @@ export function useWordList(): UseWordListResult {
 
       setHasMoreDueWords(result.hasMoreDueWords)
       setRemainingDueCount(result.remainingDueCount)
-      console.log('[useWordList] loadLearningWords completed:', {
-        learningType: result.learningType,
-        learningWordsCount: result.learningWords.length,
-        dueCount: result.dueCount,
-        newCount: result.newCount
-      })
     } catch (e) {
-      console.error('[useWordList] Failed to load learning words:', e)
+      console.error('Failed to load learning words:', e)
       setLearningWords([])
     } finally {
       setIsLoadingLearningWords(false)
@@ -204,7 +204,6 @@ export function useWordList(): UseWordListResult {
   const reloadWords = useCallback(() => {
     // 重复学习模式下不重新加载单词
     if (isRepeatLearning) {
-      console.log('[useWordList] Skipping reloadWords: in repeat learning mode')
       return
     }
     // 递增版本号使过期请求失效，同时触发重新加载
@@ -245,6 +244,13 @@ export function useWordList(): UseWordListResult {
     setLearningWords(repeatWords)
     lastLearningWordsRef.current = repeatWords
   }, [wordList, currentDictId])
+
+  // 当重复学习状态为true且学习单词为空时，自动加载重复学习单词
+  useEffect(() => {
+    if (isRepeatLearning && learningWords.length === 0 && wordList && wordList.length > 0 && currentDictId) {
+      startRepeatLearning()
+    }
+  }, [isRepeatLearning, learningWords.length, wordList, currentDictId, startRepeatLearning])
 
   const getNextNewWord = useCallback(async (): Promise<WordWithIndex | null> => {
     if (!wordList || wordList.length === 0 || !currentWordBank) {
@@ -330,43 +336,23 @@ export function useWordList(): UseWordListResult {
 }
 
 async function wordListFetcher(url: string): Promise<Word[]> {
-  console.log('[wordListFetcher] Fetching word list from URL:', url)
   let words: Word[] = []
   try {
     const response = await fetch('.' + url)
-    console.log('[wordListFetcher] Response status:', response.status)
     words = await response.json()
-    console.log('[wordListFetcher] Word list loaded:', {
-      url,
-      wordCount: words.length,
-      firstWord: words[0]?.name
-    })
   } catch (err) {
-    console.error('[wordListFetcher] Failed to load word list:', err)
+    console.error('Failed to load word list:', err)
   }
 
   return words
 }
 
 async function localWordListFetcher(id: string): Promise<Word[]> {
-  console.log('[localWordListFetcher] Fetching word list for id:', id)
   let words: Word[] = []
   try {
     words = await window.readLocalWordBank(id)
-    console.log('[localWordListFetcher] Word list loaded:', JSON.stringify({
-      id,
-      wordCount: words.length,
-      firstWord: words[0]?.name,
-      isArray: Array.isArray(words),
-      type: typeof words
-    }, null, 2))
   } catch (err) {
-    console.error('[localWordListFetcher] Failed to load word list:', err)
+    console.error('Failed to load word list:', err)
   }
-  console.log('[localWordListFetcher] Returning words:', JSON.stringify({
-    wordCount: words.length,
-    isArray: Array.isArray(words),
-    type: typeof words
-  }, null, 2))
   return words
 }

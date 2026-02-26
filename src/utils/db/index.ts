@@ -19,6 +19,17 @@ class RecordDB extends Dexie {
 
   constructor() {
     super('RecordDB')
+    this.version(4)
+      .stores({
+        wordRecords: '++id,word,timeStamp,dict,learning,errorCount,[dict+learning],[dict+timeStamp]',
+        learningRecords: '++id,timeStamp,dict,learning,time,[dict+learning]',
+        wordProgress: '++id,word,dict,masteryLevel,nextReviewTime,lastReviewTime,[dict+word],[dict+masteryLevel]',
+        dictProgress: '++id,dict',
+        dailyRecords: '++id,dict,date,[dict+date]',
+      })
+      .upgrade((tx) => {
+        // 版本4：添加dict+timeStamp索引
+      })
     this.version(3)
       .stores({
         wordRecords: '++id,word,timeStamp,dict,learning,errorCount,[dict+learning]',
