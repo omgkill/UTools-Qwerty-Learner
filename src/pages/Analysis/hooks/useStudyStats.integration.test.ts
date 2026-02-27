@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { db } from '@/utils/db'
 import { DailyRecord, WordProgress } from '@/utils/db/progress'
 import { handleMasteredFlow } from '@/services'
+import { getTodayString } from '@/utils/timeService'
 import type { Word } from '@/typings'
 import 'fake-indexeddb/auto'
 
@@ -63,7 +64,7 @@ describe('统计信息集成测试 - 完整用户流程', () => {
     })
 
     // 3. 增加掌握计数（模拟 useDailyRecord.incrementMastered）
-    const today = new Date().toISOString().split('T')[0]
+    const today = getTodayString()
     const existingRecord = await db.dailyRecords.where('[dict+date]').equals([dictId, today]).first()
     const record = existingRecord ?? new DailyRecord(dictId, today)
     if (!existingRecord) {
@@ -107,7 +108,7 @@ describe('统计信息集成测试 - 完整用户流程', () => {
       await db.wordProgress.add(progress)
     }
 
-    const today = new Date().toISOString().split('T')[0]
+    const today = getTodayString()
 
     // 点击掌握5次
     for (let i = 0; i < 5; i++) {
@@ -157,7 +158,7 @@ describe('统计信息集成测试 - 完整用户流程', () => {
   })
 
   it('同时有学习、复习、掌握时，统计应该正确显示所有类型', async () => {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getTodayString()
     
     // 创建一条包含所有类型的记录
     const record = new DailyRecord(dictId, today)

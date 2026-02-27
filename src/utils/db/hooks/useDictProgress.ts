@@ -1,6 +1,7 @@
 import type { IDictProgress } from '../progress'
 import { DictProgress, MASTERY_LEVELS } from '../progress'
 import { currentDictIdAtom } from '@/store'
+import { now, getTodayString } from '@/utils/timeService'
 import { useAtomValue } from 'jotai'
 import { useCallback } from 'react'
 import { db, recordDataWrite, resolveDictId } from '../index'
@@ -21,18 +22,16 @@ export function useDictProgress() {
       const progress = await getDictProgress()
 
       if (!progress) {
-        // 新建记录：先合并 updates 再一次性写入，避免先 add 再 update 的双重写入
         const newProgress = new DictProgress(resolvedDictId)
         Object.assign(newProgress, updates)
-        newProgress.lastStudyTime = Date.now()
+        newProgress.lastStudyTime = now()
         await db.dictProgress.add(newProgress)
         recordDataWrite()
         return
       }
 
-      // 更新已有记录
       Object.assign(progress, updates)
-      progress.lastStudyTime = Date.now()
+      progress.lastStudyTime = now()
       if (!progress.id) {
         progress.id = await db.dictProgress.add(progress)
         recordDataWrite()
@@ -50,9 +49,8 @@ export function useDictProgress() {
     const progress = await getDictProgress()
     if (!progress) return
 
-    // 统一使用 ISO 日期字符串（UTC）比较，与 getTodayDate() 保持一致
     const lastDate = new Date(progress.lastStudyTime).toISOString().split('T')[0]
-    const today = new Date().toISOString().split('T')[0]
+    const today = getTodayString()
 
     if (lastDate !== today) {
       await updateDictProgress({ studyDays: progress.studyDays + 1 })

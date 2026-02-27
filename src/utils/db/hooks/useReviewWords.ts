@@ -2,6 +2,7 @@ import type { IWordProgress } from '../progress'
 import { MASTERY_LEVELS } from '../progress'
 import type { Word, WordWithIndex } from '@/typings'
 import { currentDictIdAtom } from '@/store'
+import { now } from '@/utils/timeService'
 import { useAtomValue } from 'jotai'
 import { useCallback } from 'react'
 import { db, resolveDictId } from '../index'
@@ -14,10 +15,10 @@ export function useReviewWords() {
     async (limit = 20): Promise<IWordProgress[]> => {
       if (!resolvedDictId) return []
 
-      const now = Date.now()
+      const currentTime = now()
       const allDictProgress = await db.wordProgress.where('dict').equals(resolvedDictId).toArray()
       const dueWords = allDictProgress.filter(
-        (p) => p.nextReviewTime <= now && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED,
+        (p) => p.nextReviewTime <= currentTime && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED,
       )
       return dueWords.slice(0, limit)
     },

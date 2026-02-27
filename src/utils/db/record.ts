@@ -1,4 +1,4 @@
-import { getUTCUnixTimestamp } from '../index'
+import { getUnixTimestamp } from '../index'
 
 export interface IWordRecord {
   word: string
@@ -25,7 +25,7 @@ export class WordRecord implements IWordRecord {
 
   constructor(word: string, dict: string, learning: number | null, timing: number[], wrongCount: number, mistakes: LetterMistakes) {
     this.word = word
-    this.timeStamp = getUTCUnixTimestamp()
+    this.timeStamp = getUnixTimestamp()
     this.dict = dict
     this.learning = learning
     this.timing = timing
@@ -76,7 +76,7 @@ export class LearningRecord implements ILearningRecord {
   ) {
     this.dict = dict
     this.learning = learning
-    this.timeStamp = getUTCUnixTimestamp()
+    this.timeStamp = getUnixTimestamp()
     this.time = time
     this.correctCount = correctCount
     this.wrongCount = wrongCount

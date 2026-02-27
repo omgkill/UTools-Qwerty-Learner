@@ -6,7 +6,7 @@ import { db } from '@/utils/db'
 import { DailyRecordService, WordProgressService, loadTypingSession } from '@/services'
 import dayjs from 'dayjs'
 import 'fake-indexeddb/auto'
-import { advanceDays, resetTimeDiff } from '@/test/timeService'
+import { advanceDays, resetTimeDiff, getTomorrowDateString } from '@/utils/timeService'
 
 const createWordList = (count: number): Word[] => {
   const words: Word[] = []
@@ -84,17 +84,14 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       const timing = Array.from({ length: wrongCount + 1 }, () => Math.floor(Math.random() * 500) + 100)
       const mistakes: Record<number, string[]> = {}
       
-      for (let j = 0; j < wrongCount; j++) {
-        await wordProgressService.updateProgress(dictId, word.name, false, 0)
-      }
-      await wordProgressService.updateProgress(dictId, word.name, true, 0)
+      await wordProgressService.updateProgress(dictId, word.name, true, wrongCount)
 
       await saveWordRecord(word.name, dictId, timing, wrongCount, mistakes)
 
       const progressAfter = await wordProgressService.getProgress(dictId, word.name)
       expect(progressAfter?.masteryLevel).toBe(MASTERY_LEVELS.LEARNED)
-      expect(progressAfter?.reps).toBe(wrongCount + 1)
-      expect(progressAfter?.wrongCount).toBe(wrongCount)
+      expect(progressAfter?.reps).toBe(1)
+      expect(progressAfter?.wrongCount).toBe(0)
 
       await dailyRecordService.incrementLearned(dictId)
     }
@@ -110,8 +107,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
     
     for (const progress of learnedProgress) {
       expect(progress.masteryLevel).toBe(MASTERY_LEVELS.LEARNED)
-      expect(progress.reps).toBeGreaterThan(0)
-      expect(progress.wrongCount).toBeGreaterThan(0)
+      expect(progress.reps).toBe(1)
     }
 
     const newProgress = allProgress.filter((p) => !learnedWordNames.includes(p.word))
@@ -307,10 +303,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       const timing = Array.from({ length: wrongCount + 1 }, () => Math.floor(Math.random() * 500) + 100)
       const mistakes: Record<number, string[]> = {}
       
-      for (let j = 0; j < wrongCount; j++) {
-        await wordProgressService.updateProgress(dictId, word.name, false, 0)
-      }
-      await wordProgressService.updateProgress(dictId, word.name, true, 0)
+      await wordProgressService.updateProgress(dictId, word.name, true, wrongCount)
 
       await saveWordRecord(word.name, dictId, timing, wrongCount, mistakes)
 
@@ -328,7 +321,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
     
     for (const progress of learnedProgress) {
       expect(progress.masteryLevel).toBe(MASTERY_LEVELS.LEARNED)
-      expect(progress.reps).toBeGreaterThan(0)
+      expect(progress.reps).toBe(1)
     }
 
     const today = getTodayDate()
@@ -506,12 +499,8 @@ describe('背单词集成测试 - 第一天学习新词', () => {
     }
 
     try {
-      // 手动创建第二天的daily record（模拟日期变化）
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      const tomorrowDate = tomorrow.toISOString().split('T')[0]
+      const tomorrowDate = getTomorrowDateString()
       
-      // 确保第二天有新的记录
       await db.dailyRecords.where('[dict+date]').equals([dictId, tomorrowDate]).delete()
       const secondDayRecord = new DailyRecord(dictId, tomorrowDate)
       secondDayRecord.id = await db.dailyRecords.add(secondDayRecord)
@@ -540,5 +529,78 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       // 重置时间差异
       resetTimeDiff()
     }
+  })
+
+  it('Bug验证：新词输入错误后完成，masteryLevel应变为LEARNED而非保持NEW', async () => {
+    const wordList = createWordList(100)
+    
+    await wordProgressService.initProgressBatch(dictId, wordList.map((word) => word.name))
+    
+    const record = await dailyRecordService.getTodayRecord(dictId)
+    
+    const session = await loadTypingSession({
+      wordList,
+      reviewedCount: record.reviewedCount,
+      learnedCount: record.learnedCount,
+      isExtraReview: false,
+      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+      getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
+      getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
+    })
+
+    expect(session.learningType).toBe('new')
+    expect(session.learningWords.length).toBe(20)
+
+    const learnedWordNames: string[] = []
+
+    for (let i = 0; i < 10; i++) {
+      const word = session.learningWords[i]
+      learnedWordNames.push(word.name)
+      
+      await wordProgressService.updateProgress(dictId, word.name, true, 0)
+      await saveWordRecord(word.name, dictId, [100], 0, {})
+      await dailyRecordService.incrementLearned(dictId)
+    }
+
+    const wordWithWrong = session.learningWords[10]
+    const wordWithWrongName = wordWithWrong.name
+    learnedWordNames.push(wordWithWrongName)
+
+    const wrongCount = 3
+    await wordProgressService.updateProgress(dictId, wordWithWrongName, true, wrongCount)
+    await saveWordRecord(wordWithWrongName, dictId, Array.from({ length: wrongCount + 1 }, () => 100), wrongCount, {})
+    await dailyRecordService.incrementLearned(dictId)
+
+    const lastCorrectWord = session.learningWords[11]
+    const lastCorrectWordName = lastCorrectWord.name
+    learnedWordNames.push(lastCorrectWordName)
+    
+    await wordProgressService.updateProgress(dictId, lastCorrectWordName, true, 0)
+    await saveWordRecord(lastCorrectWordName, dictId, [100], 0, {})
+    await dailyRecordService.incrementLearned(dictId)
+
+    const progressAfterWrong = await wordProgressService.getProgress(dictId, wordWithWrongName)
+    expect(progressAfterWrong?.masteryLevel).toBe(MASTERY_LEVELS.LEARNED)
+
+    const updatedRecord = await dailyRecordService.getTodayRecord(dictId)
+    expect(updatedRecord.learnedCount).toBe(12)
+
+    const newSession = await loadTypingSession({
+      wordList,
+      reviewedCount: updatedRecord.reviewedCount,
+      learnedCount: updatedRecord.learnedCount,
+      isExtraReview: false,
+      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+      getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
+      getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
+    })
+
+    const learningWordNames = newSession.learningWords.map((w) => w.name)
+    
+    for (const learnedWord of learnedWordNames) {
+      expect(learningWordNames).not.toContain(learnedWord)
+    }
+
+    expect(newSession.learningWords.length).toBe(8)
   })
 })

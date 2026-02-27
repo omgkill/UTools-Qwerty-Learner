@@ -1,35 +1,48 @@
-// 时间服务，统一管理时间获取，便于测试时模拟时间
+let timeDiff = 0
 
-// 尝试导入测试时间服务，如果不存在则使用默认的Date.now
-let getCurrentTime: () => number
-
-try {
-  const { getCurrentTime: importedGetCurrentTime } = require('@/test/timeService')
-  getCurrentTime = importedGetCurrentTime
-} catch {
-  getCurrentTime = Date.now
-}
-
-/**
- * 获取当前时间戳
- * @returns 当前时间戳（毫秒）
- */
 export function now(): number {
-  return getCurrentTime()
+  return Date.now() + timeDiff
 }
 
-/**
- * 获取当前时间的Date对象
- * @returns 当前时间的Date对象
- */
 export function getCurrentDate(): Date {
-  return new Date(getCurrentTime())
+  return new Date(now())
 }
 
-/**
- * 获取今天的日期字符串（YYYY-MM-DD）
- * @returns 今天的日期字符串
- */
 export function getTodayString(): string {
-  return new Date(getCurrentTime()).toISOString().split('T')[0]
+  const date = new Date(now())
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export function getTodayStartTime(): number {
+  const date = new Date(now())
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+}
+
+export function getTomorrowDateString(): string {
+  const date = new Date(now())
+  date.setDate(date.getDate() + 1)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export function setTimeTo(date: Date | string | number): void {
+  const targetTime = typeof date === 'string' ? new Date(date).getTime() : typeof date === 'number' ? date : date.getTime()
+  timeDiff = targetTime - Date.now()
+}
+
+export function advanceTime(ms: number): void {
+  timeDiff += ms
+}
+
+export function advanceDays(days: number): void {
+  timeDiff += days * 24 * 60 * 60 * 1000
+}
+
+export function resetTimeDiff(): void {
+  timeDiff = 0
 }

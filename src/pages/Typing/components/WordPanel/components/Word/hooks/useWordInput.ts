@@ -3,7 +3,8 @@ import type { WordState } from './useWordState'
 import { EXPLICIT_SPACE } from '@/constants'
 import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
 import { isIgnoreCaseAtom } from '@/store'
-import { getUtcStringForMixpanel } from '@/utils/mixpanel'
+import { getLocalTimeString } from '@/utils/mixpanel'
+import { now } from '@/utils/timeService'
 import { useAtomValue } from 'jotai'
 import { useCallback, useContext, useEffect } from 'react'
 
@@ -74,7 +75,7 @@ export function useWordInput(
     if (isEqual) {
       if (!dispatch) return
       setWordState((state) => {
-        state.letterTimeArray.push(Date.now())
+        state.letterTimeArray.push(now())
         state.correctCount += 1
       })
 
@@ -82,7 +83,7 @@ export function useWordInput(
         setWordState((state) => {
           state.letterStates[inputLength - 1] = 'correct'
           state.isFinished = true
-          state.endTime = getUtcStringForMixpanel()
+          state.endTime = getLocalTimeString()
         })
       } else {
         setWordState((state) => {

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_DAILY_LIMIT, DailyRecord, LEARNING_CONFIG, MASTERY_LEVELS, WordProgress, getDailyLimit, getNextReviewTime, setDailyLimit, updateMasteryLevel } from '@/utils/db/progress'
+import { getTodayStartTime } from '@/utils/timeService'
 
 describe('WordProgress', () => {
   it('should create a new word progress with default values', () => {
@@ -158,12 +159,12 @@ describe('updateMasteryLevel', () => {
     expect(result.newLevel).toBe(MASTERY_LEVELS.LEARNED)
   })
 
-  it('should decrease level when wrong', () => {
+  it('should stay at current level when wrong', () => {
     const result = updateMasteryLevel(MASTERY_LEVELS.FAMILIAR, false, 0)
-    expect(result.newLevel).toBe(MASTERY_LEVELS.LEARNED)
+    expect(result.newLevel).toBe(MASTERY_LEVELS.FAMILIAR)
   })
 
-  it('should not decrease below NEW level', () => {
+  it('should stay at NEW level when wrong', () => {
     const result = updateMasteryLevel(MASTERY_LEVELS.NEW, false, 0)
     expect(result.newLevel).toBe(MASTERY_LEVELS.NEW)
   })
@@ -173,78 +174,70 @@ describe('updateMasteryLevel', () => {
     expect(result.newLevel).toBe(6)
   })
 
-  it('should stay at current level when correct with wrongs', () => {
+  it('should increase level when correct regardless of wrongs', () => {
     const result = updateMasteryLevel(MASTERY_LEVELS.FAMILIAR, true, 2)
-    expect(result.newLevel).toBe(MASTERY_LEVELS.FAMILIAR)
+    expect(result.newLevel).toBe(MASTERY_LEVELS.KNOWN)
   })
 
-  it('should not go below LEARNED when correct with wrongs', () => {
+  it('should increase from LEARNED when correct with wrongs', () => {
     const result = updateMasteryLevel(MASTERY_LEVELS.LEARNED, true, 2)
-    expect(result.newLevel).toBe(MASTERY_LEVELS.LEARNED)
+    expect(result.newLevel).toBe(MASTERY_LEVELS.FAMILIAR)
   })
 })
 
 describe('getNextReviewTime', () => {
   it('should return 0 days later for NEW level (immediate upgrade, no review needed)', () => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const todayStart = getTodayStartTime()
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.NEW)
-    expect(reviewTime).toBeGreaterThanOrEqual(today.getTime() - 1000)
+    expect(reviewTime).toBeGreaterThanOrEqual(todayStart - 1000)
   })
 
   it('should return 1 day later for LEARNED level', () => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const todayStart = getTodayStartTime()
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.LEARNED)
-    const expectedMin = today.getTime() + 1 * 24 * 60 * 60 * 1000
+    const expectedMin = todayStart + 1 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
   it('should return 2 days later for FAMILIAR level', () => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const todayStart = getTodayStartTime()
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.FAMILIAR)
-    const expectedMin = today.getTime() + 2 * 24 * 60 * 60 * 1000
+    const expectedMin = todayStart + 2 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
   it('should return 4 days later for KNOWN level', () => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const todayStart = getTodayStartTime()
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.KNOWN)
-    const expectedMin = today.getTime() + 4 * 24 * 60 * 60 * 1000
+    const expectedMin = todayStart + 4 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
   it('should return 7 days later for PROFICIENT level', () => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const todayStart = getTodayStartTime()
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.PROFICIENT)
-    const expectedMin = today.getTime() + 7 * 24 * 60 * 60 * 1000
+    const expectedMin = todayStart + 7 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
   it('should return 15 days later for ADVANCED level', () => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const todayStart = getTodayStartTime()
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.ADVANCED)
-    const expectedMin = today.getTime() + 15 * 24 * 60 * 60 * 1000
+    const expectedMin = todayStart + 15 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
   it('should return 21 days later for EXPERT level', () => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const todayStart = getTodayStartTime()
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.EXPERT)
-    const expectedMin = today.getTime() + 21 * 24 * 60 * 60 * 1000
+    const expectedMin = todayStart + 21 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 
   it('should return 30 days later for MASTERED level', () => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const todayStart = getTodayStartTime()
     const reviewTime = getNextReviewTime(MASTERY_LEVELS.MASTERED)
-    const expectedMin = today.getTime() + 30 * 24 * 60 * 60 * 1000
+    const expectedMin = todayStart + 30 * 24 * 60 * 60 * 1000
     expect(reviewTime).toBeGreaterThanOrEqual(expectedMin - 1000)
   })
 })

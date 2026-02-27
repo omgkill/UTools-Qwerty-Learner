@@ -1,5 +1,6 @@
 import { CHAPTER_LENGTH } from '@/constants'
 import type { Howl } from 'howler'
+import { now } from './timeService'
 
 export * from './mixpanel'
 
@@ -85,7 +86,6 @@ export function toFixedNumber(number: number, fractionDigits: number) {
   return Number((number ?? 0).toFixed(fractionDigits))
 }
 
-export function getUTCUnixTimestamp() {
-  // Date.UTC(...各UTC字段) 等价于 Date.now()，简化实现
-  return Math.floor(Date.now() / 1000)
+export function getUnixTimestamp() {
+  return Math.floor(now() / 1000)
 }

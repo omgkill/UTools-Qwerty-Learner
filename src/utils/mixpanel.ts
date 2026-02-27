@@ -7,6 +7,7 @@ import {
 } from '@/store'
 import type { InfoPanelType } from '@/typings'
 import type { PronunciationType } from '@/typings'
+import { getCurrentDate } from '@/utils/timeService'
 import { useAtomValue } from 'jotai'
 import mixpanel from 'mixpanel-browser'
 import { useCallback } from 'react'
@@ -118,7 +119,7 @@ export function useMixPanelLearningLogUploader(typingState: TypingState) {
   const learningLogUploader = useCallback(() => {
     if (!currentDictInfo) return
     const props: LearningLogUpload = {
-      timeEnd: getUtcStringForMixpanel(),
+      timeEnd: getLocalTimeString(),
       duration: typingState.statsData.timerData.time,
       countInput: typingState.statsData.correctCount + typingState.statsData.wrongCount,
       countTypo: typingState.statsData.wrongCount,
@@ -164,10 +165,13 @@ export function recordDataAction({
   mixpanel.track('dataAction', props)
 }
 
-export function getUtcStringForMixpanel() {
-  const now = new Date()
-  const isoString = now.toISOString()
-  const utcString = isoString.substring(0, 19).replace('T', ' ')
-
-  return utcString
+export function getLocalTimeString() {
+  const date = getCurrentDate()
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }

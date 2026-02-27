@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Word, WordWithIndex } from '@/typings'
 import { db } from '@/utils/db'
 import { DailyRecordService, WordProgressService, getRepeatLearningWords } from '@/services'
-import { getTodayDate } from '@/utils/db/progress'
+import { getTodayStartTime, getTodayString, getTomorrowDateString } from '@/utils/timeService'
 import 'fake-indexeddb/auto'
 
 const REPEAT_STATE_KEY = 'typing-state'
@@ -93,8 +93,7 @@ describe('重复学习功能测试', () => {
       await dailyRecordService.incrementReviewed(dictId)
     }
     
-    const today = getTodayDate()
-    const todayStart = Math.floor(new Date(today).getTime() / 1000)
+    const todayStart = Math.floor(getTodayStartTime() / 1000)
     
     for (let i = 0; i < 20; i++) {
       await db.wordRecords.add({
@@ -125,7 +124,7 @@ describe('重复学习功能测试', () => {
     const savedState = {
       isRepeatLearning: true,
       learningWords: repeatWords,
-      date: new Date().toISOString().split('T')[0],
+      date: getTodayString(),
     }
     utoolsDbMock.put({ _id: REPEAT_STATE_KEY, data: savedState })
     
@@ -137,7 +136,7 @@ describe('重复学习功能测试', () => {
     
     expect(loadedState.isRepeatLearning).toBe(true)
     expect(loadedState.learningWords.length).toBe(20)
-    expect(loadedState.date).toBe(new Date().toISOString().split('T')[0])
+    expect(loadedState.date).toBe(getTodayString())
     
     const loadedWordNames = loadedState.learningWords.map((w: WordWithIndex) => w.name)
     const originalWordNames = repeatWords.map(w => w.name)
@@ -145,9 +144,11 @@ describe('重复学习功能测试', () => {
   })
 
   it('第二天应该清除昨天的重复学习状态', async () => {
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayDate = yesterday.toISOString().split('T')[0]
+    const yesterdayDate = getTomorrowDateString().replace(/(\d{4})-(\d{2})-(\d{2})/, (_, y, m, d) => {
+      const date = new Date(`${y}-${m}-${d}`)
+      date.setDate(date.getDate() - 2)
+      return date.toISOString().split('T')[0]
+    })
     
     const wordList = createWordList(10)
     const repeatWords = wordList.map((word, index) => createWordWithIndex(word, index))
@@ -162,7 +163,7 @@ describe('重复学习功能测试', () => {
     const loadedStateDoc = utoolsDbMock.get(REPEAT_STATE_KEY)
     const loadedState = loadedStateDoc?.data as typeof savedState
     
-    const today = new Date().toISOString().split('T')[0]
+    const today = getTodayString()
     expect(loadedState.date).not.toBe(today)
     
     if (loadedState.date !== today) {
@@ -174,8 +175,7 @@ describe('重复学习功能测试', () => {
     const wordList = createWordList(15)
     await wordProgressService.initProgressBatch(dictId, wordList.map((word) => word.name))
     
-    const today = getTodayDate()
-    const todayStart = Math.floor(new Date(today).getTime() / 1000)
+    const todayStart = Math.floor(getTodayStartTime() / 1000)
     
     for (let i = 0; i < 15; i++) {
       await db.wordRecords.add({
@@ -233,8 +233,7 @@ describe('重复学习功能测试', () => {
     const wordList = createWordList(20)
     await wordProgressService.initProgressBatch(dictId, wordList.map((word) => word.name))
     
-    const today = getTodayDate()
-    const todayStart = Math.floor(new Date(today).getTime() / 1000)
+    const todayStart = Math.floor(getTodayStartTime() / 1000)
     
     for (let i = 0; i < 20; i++) {
       await db.wordRecords.add({
@@ -261,10 +260,11 @@ describe('重复学习功能测试', () => {
     
     expect(repeatWords.length).toBe(20)
     
+    const todayString = getTodayString()
     const savedState = {
       isRepeatLearning: true,
       learningWords: repeatWords,
-      date: new Date().toISOString().split('T')[0],
+      date: todayString,
     }
     utoolsDbMock.put({ _id: REPEAT_STATE_KEY, data: savedState })
     
@@ -274,7 +274,7 @@ describe('重复学习功能测试', () => {
     const updatedState = {
       isRepeatLearning: true,
       learningWords: remainingWords,
-      date: new Date().toISOString().split('T')[0],
+      date: todayString,
     }
     utoolsDbMock.put({ _id: REPEAT_STATE_KEY, data: updatedState })
     
@@ -290,7 +290,7 @@ describe('重复学习功能测试', () => {
     
     expect(loadedState.isRepeatLearning).toBe(true)
     expect(loadedState.learningWords.length).toBe(15)
-    expect(loadedState.date).toBe(new Date().toISOString().split('T')[0])
+    expect(loadedState.date).toBe(todayString)
     
     const loadedWordNames = loadedState.learningWords.map((w: WordWithIndex) => w.name)
     const remainingWordNames = remainingWords.map(w => w.name)

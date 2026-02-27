@@ -1,6 +1,7 @@
 import type { IWordProgress } from '../progress'
 import { MASTERY_LEVELS, WordProgress, getNextReviewTime, updateMasteryLevel } from '../progress'
 import { currentDictIdAtom } from '@/store'
+import { now, getTodayStartTime } from '@/utils/timeService'
 import { useAtomValue } from 'jotai'
 import { useCallback } from 'react'
 import { db, recordDataWrite, resolveDictId } from '../index'
@@ -50,13 +51,10 @@ export function useWordProgress() {
 
       progress.masteryLevel = newLevel
       progress.nextReviewTime = getNextReviewTime(newLevel)
-      progress.lastReviewTime = Date.now()
+      progress.lastReviewTime = now()
       progress.reps = (progress.reps || 0) + 1
       if (wasFirstAttempt && !isCorrect) {
-        const tomorrow = new Date()
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        tomorrow.setHours(0, 0, 0, 0)
-        progress.nextReviewTime = tomorrow.getTime()
+        progress.nextReviewTime = getTodayStartTime() + 24 * 60 * 60 * 1000
       }
       if (isCorrect) {
         progress.correctCount++
@@ -115,8 +113,8 @@ export function useWordProgress() {
       }
 
       progress.masteryLevel = MASTERY_LEVELS.MASTERED
-      progress.nextReviewTime = Date.now() + 30 * 24 * 60 * 60 * 1000
-      progress.lastReviewTime = Date.now()
+      progress.nextReviewTime = now() + 30 * 24 * 60 * 60 * 1000
+      progress.lastReviewTime = now()
       progress.correctCount++
       progress.streak++
 

@@ -5,7 +5,7 @@ import { determineLearningType } from '@/pages/Typing/hooks/learningLogic'
 import type { LearningType } from '@/pages/Typing/hooks/learningLogic'
 import type Dexie from 'dexie'
 import type { Table } from 'dexie'
-import { now } from '@/utils/timeService'
+import { now, getTodayStartTime, getTomorrowDateString } from '@/utils/timeService'
 
 type WordProgressTables = {
   wordProgress: Table<IWordProgress, number>
@@ -106,10 +106,7 @@ export class WordProgressService {
     progress.reps = (progress.reps || 0) + 1
 
     if (wasFirstAttempt && !isCorrect) {
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      tomorrow.setHours(0, 0, 0, 0)
-      progress.nextReviewTime = tomorrow.getTime()
+      progress.nextReviewTime = getTodayStartTime() + 24 * 60 * 60 * 1000
     }
 
     if (isCorrect) {
@@ -333,9 +330,8 @@ export async function getRepeatLearningWords(params: RepeatLearningParams): Prom
     return []
   }
 
-  const today = getTodayDate()
-  const todayStart = Math.floor(new Date(today).getTime() / 1000) // 转换为秒级时间戳
-  const todayEnd = todayStart + 24 * 60 * 60 // 24小时的秒数
+  const todayStart = Math.floor(getTodayStartTime() / 1000)
+  const todayEnd = todayStart + 24 * 60 * 60
 
   const todayRecords = await listWordRecordsInRange(currentDictId, todayStart, todayEnd)
   const todayWordNames = [...new Set(todayRecords.map((record) => record.word))]

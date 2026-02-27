@@ -1,5 +1,6 @@
 import { MASTERY_LEVELS } from '../progress'
 import { currentDictIdAtom } from '@/store'
+import { now, getTodayStartTime } from '@/utils/timeService'
 import { useAtomValue } from 'jotai'
 import { useCallback, useEffect, useState } from 'react'
 import { db, resolveDictId } from '../index'
@@ -34,12 +35,12 @@ export function useLearningStats() {
     }
 
     const allProgress = await db.wordProgress.where('dict').equals(resolvedDictId).toArray()
-    const now = Date.now()
-    const todayStart = new Date().setHours(0, 0, 0, 0)
+    const currentTime = now()
+    const todayStart = getTodayStartTime()
 
     const learnedWords = allProgress.filter((p) => p.masteryLevel > MASTERY_LEVELS.NEW).length
     const masteredWords = allProgress.filter((p) => p.masteryLevel >= MASTERY_LEVELS.MASTERED).length
-    const dueWords = allProgress.filter((p) => p.nextReviewTime <= now && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED).length
+    const dueWords = allProgress.filter((p) => p.nextReviewTime <= currentTime && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED).length
     const todayLearned = allProgress.filter((p) => p.lastReviewTime >= todayStart && p.reps === 1).length
     const todayReviewed = allProgress.filter((p) => p.lastReviewTime >= todayStart && p.reps > 1).length
 
@@ -62,11 +63,11 @@ export function useLearningStats() {
       }
       const allProgress = await db.wordProgress.where('dict').equals(resolvedDictId).toArray()
       if (cancelled) return
-      const now = Date.now()
-      const todayStart = new Date().setHours(0, 0, 0, 0)
+      const currentTime = now()
+      const todayStart = getTodayStartTime()
       const learnedWords = allProgress.filter((p) => p.masteryLevel > MASTERY_LEVELS.NEW).length
       const masteredWords = allProgress.filter((p) => p.masteryLevel >= MASTERY_LEVELS.MASTERED).length
-      const dueWords = allProgress.filter((p) => p.nextReviewTime <= now && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED).length
+      const dueWords = allProgress.filter((p) => p.nextReviewTime <= currentTime && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED).length
       const todayLearned = allProgress.filter((p) => p.lastReviewTime >= todayStart && p.reps === 1).length
       const todayReviewed = allProgress.filter((p) => p.lastReviewTime >= todayStart && p.reps > 1).length
       setStats({ totalWords: allProgress.length, learnedWords, masteredWords, dueWords, todayLearned, todayReviewed })

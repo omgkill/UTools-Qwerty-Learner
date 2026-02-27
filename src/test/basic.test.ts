@@ -3,7 +3,7 @@ import clamp from '@/utils/clamp'
 import groupBy from '@/utils/groupBy'
 import shuffle from '@/utils/shuffle'
 import range from '@/utils/range'
-import { getUTCUnixTimestamp } from '@/utils'
+import { getUnixTimestamp } from '@/utils'
 
 describe('clamp', () => {
   it('should return value when within range', () => {
@@ -66,10 +66,10 @@ describe('range', () => {
   })
 })
 
-describe('getUTCUnixTimestamp', () => {
+describe('getUnixTimestamp', () => {
   it('should return current unix timestamp in seconds', () => {
     const before = Math.floor(Date.now() / 1000)
-    const ts = getUTCUnixTimestamp()
+    const ts = getUnixTimestamp()
     const after = Math.floor(Date.now() / 1000)
     expect(ts).toBeGreaterThanOrEqual(before)
     expect(ts).toBeLessThanOrEqual(after)

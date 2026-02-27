@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { db } from '@/utils/db'
 import { DailyRecord, WordProgress } from '@/utils/db/progress'
+import { getTodayStartTime, getTodayString } from '@/utils/timeService'
 import 'fake-indexeddb/auto'
 
 describe('useWordDetails - 学习详情中的掌握单词', () => {
@@ -19,8 +20,8 @@ describe('useWordDetails - 学习详情中的掌握单词', () => {
   })
 
   it('当前逻辑无法显示掌握单词（bug复现）', async () => {
-    const today = new Date().toISOString().split('T')[0]
-    const startOfDay = new Date(today).getTime() / 1000
+    const today = getTodayString()
+    const startOfDay = getTodayStartTime() / 1000
     const endOfDay = startOfDay + 24 * 60 * 60
 
     // 创建单词进度并标记为已掌握
@@ -57,8 +58,8 @@ describe('useWordDetails - 学习详情中的掌握单词', () => {
   })
 
   it('学习详情应该同时显示新词、复习词和掌握词', async () => {
-    const today = new Date().toISOString().split('T')[0]
-    const startOfDay = new Date(today).getTime() / 1000
+    const today = getTodayString()
+    const startOfDay = getTodayStartTime() / 1000
     const endOfDay = startOfDay + 24 * 60 * 60
 
     // 创建新词进度

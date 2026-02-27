@@ -1,5 +1,5 @@
 import { EXPLICIT_SPACE } from '@/constants'
-import { getUtcStringForMixpanel } from '@/utils'
+import { getLocalTimeString } from '@/utils'
 import type { LetterMistakes } from '@/utils/db/record'
 import { useImmer } from 'use-immer'
 import { useEffect, useRef } from 'react'
@@ -56,7 +56,7 @@ export function useWordState(wordName: string) {
     newWordState.wordName = wordName
     newWordState.displayWord = headword
     newWordState.letterStates = new Array(headword.length).fill('normal')
-    newWordState.startTime = getUtcStringForMixpanel()
+    newWordState.startTime = getLocalTimeString()
     setWordState(newWordState)
   }, [wordName, setWordState])
 

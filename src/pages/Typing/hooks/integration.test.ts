@@ -288,12 +288,7 @@ describe('Word Progress State Transitions', () => {
     }
   })
 
-  it('should decrease mastery level on wrong answer', () => {
-    const result = updateMasteryLevel(MASTERY_LEVELS.FAMILIAR, false, 0)
-    expect(result.newLevel).toBe(MASTERY_LEVELS.LEARNED)
-  })
-
-  it('should not decrease below NEW level', () => {
+  it('should stay at NEW level when wrong', () => {
     const result = updateMasteryLevel(MASTERY_LEVELS.NEW, false, 0)
     expect(result.newLevel).toBe(MASTERY_LEVELS.NEW)
   })

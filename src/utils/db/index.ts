@@ -6,6 +6,7 @@ import type { TypingState } from '@/pages/Typing/store'
 import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
 import { currentDictIdAtom } from '@/store'
 import { getUtoolsValue, setUtoolsValue } from '@/utils/utools'
+import { now } from '@/utils/timeService'
 import type { Table } from 'dexie'
 import Dexie from 'dexie'
 import { useAtomValue } from 'jotai'
@@ -86,7 +87,7 @@ const setBackupMeta = (patch: Partial<BackupMeta>) => {
 }
 
 export const markLocalWrite = () => {
-  setUtoolsValue(LOCAL_WRITE_KEY, Date.now())
+  setUtoolsValue(LOCAL_WRITE_KEY, now())
 }
 
 export const recordDataWrite = () => {
@@ -111,7 +112,7 @@ export const scheduleUtoolsBackup = () => {
       await window.exportDatabase2UTools?.()
       const duration = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startAt
       setBackupMeta({
-        lastBackupAt: Date.now(),
+        lastBackupAt: now(),
         lastBackupOk: true,
         lastBackupError: null,
         lastBackupDurationMs: duration,

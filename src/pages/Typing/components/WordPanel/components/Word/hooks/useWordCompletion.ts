@@ -46,7 +46,7 @@ export function useWordCompletion(
         dispatch({ type: TypingStateActionType.REPORT_CORRECT_WORD })
       }
 
-      const isCorrect = !wordState.hasMadeInputWrong
+      const isCorrect = true
       const startTime = performance.now()
 
       Promise.all([

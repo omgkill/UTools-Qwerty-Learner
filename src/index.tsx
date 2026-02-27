@@ -4,6 +4,7 @@ import '@/utils/db/data-export'
 import type { BackupMeta } from '@/utils/db'
 import { BACKUP_META_KEY, LOCAL_WRITE_KEY } from '@/utils/db'
 import { VIP_STATE_KEY, getUtoolsValue, setConcealFeature, setUtoolsValue } from '@/utils/utools'
+import { now } from '@/utils/timeService'
 import mixpanel from 'mixpanel-browser'
 import React, { Suspense, lazy, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -111,7 +112,7 @@ function Root() {
         if (hasData) {
           log('Found uTools backup data, restoring...')
           await window.importDatabase2UTools?.()
-          const restoredAt = backupAt > 0 ? backupAt : Date.now()
+          const restoredAt = backupAt > 0 ? backupAt : now()
           setUtoolsValue(LOCAL_WRITE_KEY, Math.max(localWriteAt, restoredAt))
           log('Data restored successfully')
         } else {

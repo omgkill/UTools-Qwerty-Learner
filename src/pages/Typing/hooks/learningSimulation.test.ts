@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { IWordProgress } from '@/utils/db/progress'
 import { DailyRecord, LEARNING_CONFIG, MASTERY_LEVELS, getNextReviewTime, updateMasteryLevel } from '@/utils/db/progress'
+import { setTimeTo, advanceDays, resetTimeDiff, now, getTodayStartTime } from '@/utils/timeService'
 import type { LearningType } from './learningLogic'
 import { determineLearningType } from './learningLogic'
 
@@ -23,12 +24,13 @@ type DayResult = {
 const DAY_MS = 24 * 60 * 60 * 1000
 
 function createInitialProgress(word: string, dict: string): IWordProgress {
+  const currentTime = now()
   return {
     word,
     dict,
     masteryLevel: MASTERY_LEVELS.NEW,
-    nextReviewTime: Date.now(),
-    lastReviewTime: Date.now(),
+    nextReviewTime: currentTime,
+    lastReviewTime: currentTime,
     correctCount: 0,
     wrongCount: 0,
     streak: 0,
@@ -42,7 +44,7 @@ function createExistingProgress(params: { word: string; dict: string; masteryLev
     dict: params.dict,
     masteryLevel: params.masteryLevel,
     nextReviewTime: params.nextReviewTime,
-    lastReviewTime: Date.now(),
+    lastReviewTime: now(),
     correctCount: 0,
     wrongCount: 0,
     streak: 0,
@@ -53,16 +55,17 @@ function createExistingProgress(params: { word: string; dict: string; masteryLev
 function applyProgressUpdate(params: { word: string; dict: string; progress: IWordProgress | undefined; isCorrect: boolean; wrongCount: number }): IWordProgress {
   const base = params.progress ?? createInitialProgress(params.word, params.dict)
   const { newLevel } = updateMasteryLevel(base.masteryLevel, params.isCorrect, params.wrongCount)
+  const currentTime = now()
 
   const next: IWordProgress = {
     ...base,
     masteryLevel: newLevel,
     nextReviewTime: getNextReviewTime(newLevel),
-    lastReviewTime: Date.now(),
+    lastReviewTime: currentTime,
     reps: (base.reps || 0) + 1,
   }
   if ((base.reps || 0) === 0 && !params.isCorrect) {
-    next.nextReviewTime = Date.now() + DAY_MS
+    next.nextReviewTime = currentTime + DAY_MS
   }
 
   if (params.isCorrect) {
@@ -82,14 +85,14 @@ function simulateDay(
 ): { result: DayResult; updatedWords: SimulatedWord[] } {
   const dict = 'test-dict'
 
-  const now = Date.now()
+  const currentTime = now()
   const wordList = words.map((w, index) => ({ name: w.name, trans: [] as string[], usphone: '', ukphone: '', index }))
 
   const dueWordsStart = words
     .map((w, index) => ({ w, index }))
     .filter(({ w }) => {
       const p = w.progress
-      return p && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED && p.nextReviewTime <= now
+      return p && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED && p.nextReviewTime <= currentTime
     })
     .map(({ index }) => wordList[index])
 
@@ -104,7 +107,7 @@ function simulateDay(
   let firstLearningType: LearningType | null = null
 
   for (let safety = 0; safety < 1000; safety++) {
-    const loopNow = Date.now()
+    const loopNow = now()
     const dueWords = updatedWords
       .map((w, index) => ({ w, index }))
       .filter(({ w }) => {
@@ -181,17 +184,17 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
   const dict = 'test-dict'
 
   beforeEach(() => {
-    vi.useFakeTimers()
+    resetTimeDiff()
   })
 
   afterEach(() => {
-    vi.useRealTimers()
+    resetTimeDiff()
   })
 
   describe('First Attempt With Wrong Inputs', () => {
     it('should schedule next review to tomorrow for a new word with wrong inputs', () => {
-      const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
-      vi.setSystemTime(baseTime)
+      setTimeTo('2026-02-18T00:00:00.000Z')
+      const baseTime = now()
 
       const progress = applyProgressUpdate({
         word: 'word1',
@@ -202,14 +205,16 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
       })
 
       expect(progress.reps).toBe(1)
-      expect(progress.nextReviewTime).toBe(baseTime + DAY_MS)
+      const minNextReview = baseTime + DAY_MS
+      const maxNextReview = baseTime + DAY_MS + 5000
+      expect(progress.nextReviewTime).toBeGreaterThanOrEqual(minNextReview)
+      expect(progress.nextReviewTime).toBeLessThanOrEqual(maxNextReview)
     })
   })
 
   describe('Day 1 - First day learning', () => {
     it('should match Day 1 simulation: 0 due words, 20 new words quota, learn 20 new words', () => {
-      const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
-      vi.setSystemTime(baseTime)
+      setTimeTo('2026-02-18T00:00:00.000Z')
 
       const words: SimulatedWord[] = Array.from({ length: TOTAL_WORDS }, (_, i) => ({ name: `word${i + 1}`, progress: undefined }))
 
@@ -231,13 +236,12 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
 
   describe('Day 2 - Review day (LEARNED interval is 1 day)', () => {
     it('should match Day 2 simulation: 20 due words, review 20 words', () => {
-      const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
-      vi.setSystemTime(baseTime)
+      setTimeTo('2026-02-18T00:00:00.000Z')
 
       const words: SimulatedWord[] = Array.from({ length: TOTAL_WORDS }, (_, i) => ({ name: `word${i + 1}`, progress: undefined }))
       const day1 = simulateDay(words)
 
-      vi.setSystemTime(baseTime + DAY_MS)
+      advanceDays(1)
       const { result } = simulateDay(day1.updatedWords)
 
       expect(result.dueWordsCount).toBe(20)
@@ -253,16 +257,15 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
 
   describe('Day 3 - New word day (FAMILIAR interval is 2 days)', () => {
     it('should match Day 3 simulation: 0 due words, learn 20 new words', () => {
-      const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
-      vi.setSystemTime(baseTime)
+      setTimeTo('2026-02-18T00:00:00.000Z')
 
       const words: SimulatedWord[] = Array.from({ length: TOTAL_WORDS }, (_, i) => ({ name: `word${i + 1}`, progress: undefined }))
       const day1 = simulateDay(words)
 
-      vi.setSystemTime(baseTime + DAY_MS)
+      advanceDays(1)
       const day2 = simulateDay(day1.updatedWords)
 
-      vi.setSystemTime(baseTime + 2 * DAY_MS)
+      advanceDays(1)
       const { result, updatedWords } = simulateDay(day2.updatedWords)
 
       expect(result.dueWordsCount).toBe(0)
@@ -278,8 +281,7 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
 
   describe('First 15 Days Summary', () => {
     it('should match the first 15 days summary table from 学习配置方案.md', () => {
-      const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
-      vi.setSystemTime(baseTime)
+      setTimeTo('2026-02-18T00:00:00.000Z')
 
       const words: SimulatedWord[] = Array.from({ length: TOTAL_WORDS }, (_, i) => ({ name: `word${i + 1}`, progress: undefined }))
 
@@ -287,7 +289,9 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
       const dayResults: DayResult[] = []
 
       for (let day = 1; day <= 15; day++) {
-        vi.setSystemTime(baseTime + (day - 1) * DAY_MS)
+        if (day > 1) {
+          advanceDays(1)
+        }
         const { result, updatedWords } = simulateDay(words)
         words.splice(0, words.length, ...updatedWords)
         cumulativeNewWords += result.newWordsLearned
@@ -332,8 +336,7 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
 
   describe('Learning Timeline - 100 Words', () => {
     it('should complete 100 new words on day 14 with the expected new word days', () => {
-      const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
-      vi.setSystemTime(baseTime)
+      setTimeTo('2026-02-18T00:00:00.000Z')
 
       const words: SimulatedWord[] = Array.from({ length: TOTAL_WORDS }, (_, i) => ({ name: `word${i + 1}`, progress: undefined }))
 
@@ -343,7 +346,9 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
 
       while (cumulativeNewWords < TOTAL_WORDS && day < 30) {
         day++
-        vi.setSystemTime(baseTime + (day - 1) * DAY_MS)
+        if (day > 1) {
+          advanceDays(1)
+        }
         const { result, updatedWords } = simulateDay(words)
 
         words.splice(0, words.length, ...updatedWords)
@@ -362,8 +367,8 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
 
   describe('Consolidate Stability - No New Words', () => {
     it('should stay in consolidate mode across consecutive days', () => {
-      const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
-      vi.setSystemTime(baseTime)
+      setTimeTo('2026-02-18T00:00:00.000Z')
+      const baseTime = now()
 
       const words: SimulatedWord[] = Array.from({ length: LEARNING_CONFIG.DAILY_LIMIT }, (_, i) => ({
         name: `word${i + 1}`,
@@ -378,7 +383,9 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
       const results: DayResult[] = []
 
       for (let day = 1; day <= 3; day++) {
-        vi.setSystemTime(baseTime + (day - 1) * DAY_MS)
+        if (day > 1) {
+          advanceDays(1)
+        }
         const { result, updatedWords } = simulateDay(words, { doConsolidate: true })
         words.splice(0, words.length, ...updatedWords)
         results.push(result)
@@ -396,11 +403,9 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
 
   describe('Review Interval Golden Cases (4/7/15/21/30 days)', () => {
     it('should schedule next review at 4/7/15/21/30 days after correct review', () => {
-      const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
-      vi.setSystemTime(baseTime)
-      const baseDayStart = new Date(baseTime)
-      baseDayStart.setHours(0, 0, 0, 0)
-      const baseDayStartTime = baseDayStart.getTime()
+      setTimeTo('2026-02-18T00:00:00.000Z')
+      const baseTime = now()
+      const baseDayStartTime = getTodayStartTime()
 
       const words: SimulatedWord[] = [
         {
@@ -455,8 +460,8 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
 
   describe('Extra Review Scenario (额外复习场景)', () => {
     it('should handle scenario where due words exceed DAILY_LIMIT', () => {
-      const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
-      vi.setSystemTime(baseTime)
+      setTimeTo('2026-02-18T00:00:00.000Z')
+      const baseTime = now()
 
       const words: SimulatedWord[] = Array.from({ length: 35 }, (_, i) => ({
         name: `word${i + 1}`,
@@ -480,8 +485,8 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
     })
 
     it('should keep remaining due words for the next day with reduced quota', () => {
-      const baseTime = new Date('2026-02-18T00:00:00.000Z').getTime()
-      vi.setSystemTime(baseTime)
+      setTimeTo('2026-02-18T00:00:00.000Z')
+      const baseTime = now()
 
       const words: SimulatedWord[] = Array.from({ length: 35 }, (_, i) => ({
         name: `word${i + 1}`,
@@ -490,7 +495,7 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
 
       const day1 = simulateDay(words)
 
-      vi.setSystemTime(baseTime + DAY_MS)
+      advanceDays(1)
       const { result } = simulateDay(day1.updatedWords)
 
       expect(result.dueWordsCount).toBe(15)

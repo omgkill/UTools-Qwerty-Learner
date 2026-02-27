@@ -2,6 +2,7 @@ import type { IDailyRecord } from '../progress'
 import { DailyRecord, LEARNING_CONFIG, getTodayDate } from '../progress'
 import { currentDictIdAtom } from '@/store'
 import { dailyRecordAtom } from '@/pages/Typing/store/atoms'
+import { now } from '@/utils/timeService'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useCallback, useEffect } from 'react'
 import { db, recordDataWrite, resolveDictId } from '../index'
@@ -52,7 +53,7 @@ export function useDailyRecord() {
         } else {
           record.reviewedCount++
         }
-        record.lastUpdateTime = Date.now()
+        record.lastUpdateTime = now()
         record.id = await db.dailyRecords.put(record)
         return { ...record }
       })
@@ -74,7 +75,7 @@ export function useDailyRecord() {
           record = new DailyRecord(resolvedDictId, today)
         }
         record.learnedCount++
-        record.lastUpdateTime = Date.now()
+        record.lastUpdateTime = now()
         record.id = await db.dailyRecords.put(record)
         return { ...record }
       })
@@ -96,7 +97,7 @@ export function useDailyRecord() {
           record = new DailyRecord(resolvedDictId, today)
         }
         record.masteredCount++
-        record.lastUpdateTime = Date.now()
+        record.lastUpdateTime = now()
         record.id = await db.dailyRecords.put(record)
         return { ...record }
       })
