@@ -171,10 +171,6 @@ window.initLocalDictionries = window.initLocalWordBanks;
 window.exportDatabase2UTools = () => {
 };
 
-// Migration
-window.migrateLocalStorageToUtools = () => {
-};
-
 // Clear All Data
 window.clearAllData = () => {
   try {

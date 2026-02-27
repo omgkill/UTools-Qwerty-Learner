@@ -1,4 +1,4 @@
-import { setConcealFeature } from '@/utils/utools'
+import { VIP_STATE_KEY, getUtoolsValue, setConcealFeature, setUtoolsValue } from '@/utils/utools'
 import mixpanel from 'mixpanel-browser'
 import IconCheck from '~icons/gg/check-o'
 
@@ -10,9 +10,9 @@ export default function SubscriptionOverlay({ setGalleryState }) {
     const permanentGoodsId = import.meta.env.VITE_PERMANENT_GOODS_ID
     utools.openPayment({ goodsId: param === 'b' ? monthGoodsId : permanentGoodsId, attach: param }, (res) => {
       // 存储状态
-      localStorage.setItem('x-vipState', param)
+      setUtoolsValue(VIP_STATE_KEY, param)
       setGalleryState((state) => {
-        state.vipState = localStorage.getItem('x-vipState') || ''
+        state.vipState = getUtoolsValue(VIP_STATE_KEY, '')
       })
       setConcealFeature()
       mixpanel.track('Payment', { state: param })

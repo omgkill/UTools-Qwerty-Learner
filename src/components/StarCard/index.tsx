@@ -2,6 +2,7 @@ import starBar from '@/assets/starBar.svg'
 import { DISMISS_START_CARD_DATE_KEY } from '@/constants'
 import { dismissStartCardDateAtom } from '@/store'
 import { recordStarAction } from '@/utils'
+import { getUtoolsValue } from '@/utils/utools'
 import { Transition } from '@headlessui/react'
 import { useSetAtom } from 'jotai'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
@@ -14,8 +15,7 @@ export default function StarCard() {
   const [isShow, setIsShow] = useState(false)
 
   useLayoutEffect(() => {
-    // 直接使用 jotai 的 dismissStartCardDate 其值先是默认值，然后才是 localStorage 中的值
-    const value = window.localStorage.getItem(DISMISS_START_CARD_DATE_KEY) as Date | null
+    const value = getUtoolsValue<Date | null>(DISMISS_START_CARD_DATE_KEY, null)
     if (value === null) {
       setIsShow(true)
     }

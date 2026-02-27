@@ -19,11 +19,12 @@ import { useWordSync } from './hooks/useWordSync'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
 import type { WordBank } from '@/typings'
-import { useWordProgress, useDailyRecord } from '@/utils/db/useProgress'
+import { useDailyRecord, useWordProgress } from '@/utils/db/useProgress'
 import { handleMasteredFlow } from '@/services'
 import { WordRecord } from '@/utils/db/record'
 import { db } from '@/utils/db'
 import { currentDictIdAtom } from '@/store'
+import { getUtoolsValue } from '@/utils/utools'
 import { useAtomValue } from 'jotai'
 import type React from 'react'
 import { useCallback, useContext, useEffect } from 'react'
@@ -68,9 +69,11 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
   useLearningRecordSaver(state)
 
   const createWordRecord = useCallback(async (word: string) => {
+    const resolvedDictId = dictID || getUtoolsValue('currentWordBank', '')
+    if (!resolvedDictId) return
     try {
       // 创建掌握单词的记录（简化版）
-      const wordRecord = new WordRecord(word, dictID, null, [], 0, {})
+      const wordRecord = new WordRecord(word, resolvedDictId, null, [], 0, {})
       await db.wordRecords.add(wordRecord)
     } catch (e) {
       console.error('Failed to save mastered word record:', e)

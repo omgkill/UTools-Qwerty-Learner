@@ -3,28 +3,30 @@ import { DictProgress, MASTERY_LEVELS } from '../progress'
 import { currentDictIdAtom } from '@/store'
 import { useAtomValue } from 'jotai'
 import { useCallback } from 'react'
-import { db } from '../index'
+import { db, recordDataWrite, resolveDictId } from '../index'
 
 export function useDictProgress() {
   const dictID = useAtomValue(currentDictIdAtom)
+  const resolvedDictId = resolveDictId(dictID)
 
   const getDictProgress = useCallback(async (): Promise<IDictProgress | undefined> => {
-    if (!dictID) return undefined
-    return db.dictProgress.where('dict').equals(dictID).first()
-  }, [dictID])
+    if (!resolvedDictId) return undefined
+    return db.dictProgress.where('dict').equals(resolvedDictId).first()
+  }, [resolvedDictId])
 
   const updateDictProgress = useCallback(
     async (updates: Partial<IDictProgress>): Promise<void> => {
-      if (!dictID) return
+      if (!resolvedDictId) return
 
       const progress = await getDictProgress()
 
       if (!progress) {
         // 新建记录：先合并 updates 再一次性写入，避免先 add 再 update 的双重写入
-        const newProgress = new DictProgress(dictID)
+        const newProgress = new DictProgress(resolvedDictId)
         Object.assign(newProgress, updates)
         newProgress.lastStudyTime = Date.now()
         await db.dictProgress.add(newProgress)
+        recordDataWrite()
         return
       }
 
@@ -33,15 +35,17 @@ export function useDictProgress() {
       progress.lastStudyTime = Date.now()
       if (!progress.id) {
         progress.id = await db.dictProgress.add(progress)
+        recordDataWrite()
         return
       }
       await db.dictProgress.update(progress.id, progress)
+      recordDataWrite()
     },
-    [dictID, getDictProgress],
+    [resolvedDictId, getDictProgress],
   )
 
   const incrementStudyDay = useCallback(async (): Promise<void> => {
-    if (!dictID) return
+    if (!resolvedDictId) return
 
     const progress = await getDictProgress()
     if (!progress) return
@@ -53,18 +57,18 @@ export function useDictProgress() {
     if (lastDate !== today) {
       await updateDictProgress({ studyDays: progress.studyDays + 1 })
     }
-  }, [dictID, getDictProgress, updateDictProgress])
+  }, [resolvedDictId, getDictProgress, updateDictProgress])
 
   const recalculateStats = useCallback(async (): Promise<void> => {
-    if (!dictID) return
+    if (!resolvedDictId) return
 
-    const allProgress = await db.wordProgress.where('dict').equals(dictID).toArray()
+    const allProgress = await db.wordProgress.where('dict').equals(resolvedDictId).toArray()
 
     const learnedWords = allProgress.filter((p) => p.masteryLevel > MASTERY_LEVELS.NEW).length
     const masteredWords = allProgress.filter((p) => p.masteryLevel >= MASTERY_LEVELS.MASTERED).length
 
     await updateDictProgress({ learnedWords, masteredWords })
-  }, [dictID, updateDictProgress])
+  }, [resolvedDictId, updateDictProgress])
 
   return {
     getDictProgress,

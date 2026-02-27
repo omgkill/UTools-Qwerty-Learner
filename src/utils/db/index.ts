@@ -5,6 +5,7 @@ import { LearningRecord, WordRecord } from './record'
 import type { TypingState } from '@/pages/Typing/store'
 import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
 import { currentDictIdAtom } from '@/store'
+import { getUtoolsValue, setUtoolsValue } from '@/utils/utools'
 import type { Table } from 'dexie'
 import Dexie from 'dexie'
 import { useAtomValue } from 'jotai'
@@ -26,9 +27,6 @@ class RecordDB extends Dexie {
         wordProgress: '++id,word,dict,masteryLevel,nextReviewTime,lastReviewTime,[dict+word],[dict+masteryLevel]',
         dictProgress: '++id,dict',
         dailyRecords: '++id,dict,date,[dict+date]',
-      })
-      .upgrade((tx) => {
-        // 版本4：添加dict+timeStamp索引
       })
     this.version(3)
       .stores({
@@ -56,18 +54,93 @@ db.wordProgress.mapToClass(WordProgress)
 db.dictProgress.mapToClass(DictProgress)
 db.dailyRecords.mapToClass(DailyRecord)
 
+export const resolveDictId = (dictId: string) => {
+  if (dictId) return dictId
+  if (typeof window === 'undefined') return dictId
+  const utoolsDb = window.utools?.db
+  if (!utoolsDb) return dictId
+  const doc = utoolsDb.get('currentWordBank')
+  return typeof doc?.data === 'string' && doc.data ? doc.data : dictId
+}
+
+export const BACKUP_META_KEY = 'utools-backup-meta'
+export const LOCAL_WRITE_KEY = 'utools-local-write-at'
+
+export type BackupMeta = {
+  lastBackupAt: number
+  lastBackupOk: boolean
+  lastBackupError?: string | null
+  lastBackupDurationMs?: number
+}
+
+const getBackupMeta = (): BackupMeta => {
+  return getUtoolsValue<BackupMeta>(BACKUP_META_KEY, {
+    lastBackupAt: 0,
+    lastBackupOk: false,
+  })
+}
+
+const setBackupMeta = (patch: Partial<BackupMeta>) => {
+  const next = { ...getBackupMeta(), ...patch }
+  setUtoolsValue(BACKUP_META_KEY, next)
+}
+
+export const markLocalWrite = () => {
+  setUtoolsValue(LOCAL_WRITE_KEY, Date.now())
+}
+
+export const recordDataWrite = () => {
+  markLocalWrite()
+  scheduleUtoolsBackup()
+}
+
+let backupTimer: number | null = null
+let backupRunning = false
+
+export const scheduleUtoolsBackup = () => {
+  if (typeof window === 'undefined') return
+  if (!window.utools || !window.exportDatabase2UTools) return
+  if (backupTimer) {
+    window.clearTimeout(backupTimer)
+  }
+  backupTimer = window.setTimeout(async () => {
+    if (backupRunning) return
+    backupRunning = true
+    const startAt = typeof performance !== 'undefined' ? performance.now() : Date.now()
+    try {
+      await window.exportDatabase2UTools?.()
+      const duration = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startAt
+      setBackupMeta({
+        lastBackupAt: Date.now(),
+        lastBackupOk: true,
+        lastBackupError: null,
+        lastBackupDurationMs: duration,
+      })
+    } catch (e) {
+      setBackupMeta({
+        lastBackupOk: false,
+        lastBackupError: e instanceof Error ? e.message : String(e),
+      })
+    } finally {
+      backupRunning = false
+    }
+  }, 1500)
+}
+
 export function useSaveLearningRecord() {
   const dictID = useAtomValue(currentDictIdAtom)
 
   const saveLearningRecord = useCallback(
     async (typingState: TypingState) => {
+      const resolvedDictId = resolveDictId(dictID)
+      if (!resolvedDictId) return
       const {
         statsData: { correctCount, wrongCount, wordCount, correctWordIndexes, wordRecordIds, timerData },
         wordListData: { words },
       } = typingState
 
       const learningRecord = new LearningRecord(
-        dictID,
+        resolvedDictId,
         null,
         timerData.time,
         correctCount,
@@ -79,6 +152,7 @@ export function useSaveLearningRecord() {
       )
       try {
         await db.learningRecords.add(learningRecord)
+        recordDataWrite()
       } catch (e) {
         console.error('Failed to save learning record:', e)
       }
@@ -110,25 +184,30 @@ export function useSaveWordRecord() {
       wrongCount: number
       letterTimeArray: number[]
       letterMistake: LetterMistakes
-    }) => {
+    }): Promise<number> => {
+      const resolvedDictId = resolveDictId(dictID)
+      if (!resolvedDictId) {
+        return -1
+      }
       const timing = []
       for (let i = 1; i < letterTimeArray.length; i++) {
         const diff = letterTimeArray[i] - letterTimeArray[i - 1]
         timing.push(diff)
       }
 
-      const wordRecord = new WordRecord(word, dictID, null, timing, wrongCount, letterMistake)
+      const wordRecord = new WordRecord(word, resolvedDictId, null, timing, wrongCount, letterMistake)
 
       let dbID = -1
       try {
         dbID = await db.wordRecords.add(wordRecord)
+        recordDataWrite()
       } catch (e) {
-        console.error(e)
+        console.error('Failed to save word record:', e)
       }
-      if (dispatch) {
-        dbID > 0 && dispatch({ type: TypingStateActionType.ADD_WORD_RECORD_ID, payload: dbID })
-        dispatch({ type: TypingStateActionType.SET_IS_SAVING_RECORD, payload: false })
+      if (dispatch && dbID > 0) {
+        dispatch({ type: TypingStateActionType.ADD_WORD_RECORD_ID, payload: dbID })
       }
+      return dbID
     },
     [dictID, dispatch],
   )

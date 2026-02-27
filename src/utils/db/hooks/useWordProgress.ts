@@ -3,28 +3,28 @@ import { MASTERY_LEVELS, WordProgress, getNextReviewTime, updateMasteryLevel } f
 import { currentDictIdAtom } from '@/store'
 import { useAtomValue } from 'jotai'
 import { useCallback } from 'react'
-import { db } from '../index'
+import { db, recordDataWrite, resolveDictId } from '../index'
 
 export function useWordProgress() {
   const dictID = useAtomValue(currentDictIdAtom)
+  const resolvedDictId = resolveDictId(dictID)
 
   const getWordProgress = useCallback(
     async (word: string): Promise<IWordProgress | undefined> => {
-      if (!dictID) return undefined
-      return db.wordProgress.where('[dict+word]').equals([dictID, word]).first()
+      if (!resolvedDictId) return undefined
+      return db.wordProgress.where('[dict+word]').equals([resolvedDictId, word]).first()
     },
-    [dictID],
+    [resolvedDictId],
   )
 
   const getWordsProgress = useCallback(
     async (words: string[]): Promise<Map<string, IWordProgress>> => {
       const progressMap = new Map<string, IWordProgress>()
-      if (!dictID || words.length === 0) return progressMap
+      if (!resolvedDictId || words.length === 0) return progressMap
 
-      // 使用复合索引 [dict+word] 批量精确查询，避免全表扫描 + 内存过滤
       const progressList = await db.wordProgress
         .where('[dict+word]')
-        .anyOf(words.map((w) => [dictID, w]))
+        .anyOf(words.map((w) => [resolvedDictId, w]))
         .toArray()
 
       for (const progress of progressList) {
@@ -32,20 +32,20 @@ export function useWordProgress() {
       }
       return progressMap
     },
-    [dictID],
+    [resolvedDictId],
   )
 
   const updateWordProgress = useCallback(
     async (word: string, isCorrect: boolean, wrongCount: number): Promise<IWordProgress> => {
-      if (!dictID) throw new Error('No dict selected')
+      if (!resolvedDictId) throw new Error('No dict selected')
 
       let progress = await getWordProgress(word)
+      const wasFirstAttempt = !progress || (progress.reps || 0) === 0
 
       if (!progress) {
-        progress = new WordProgress(word, dictID)
+        progress = new WordProgress(word, resolvedDictId)
       }
 
-      const wasFirstAttempt = (progress.reps || 0) === 0
       const { newLevel } = updateMasteryLevel(progress.masteryLevel, isCorrect, wrongCount)
 
       progress.masteryLevel = newLevel
@@ -53,7 +53,6 @@ export function useWordProgress() {
       progress.lastReviewTime = Date.now()
       progress.reps = (progress.reps || 0) + 1
       if (wasFirstAttempt && !isCorrect) {
-        // 第一次尝试且错误，设置为明天开始时间（00:00:00）
         const tomorrow = new Date()
         tomorrow.setDate(tomorrow.getDate() + 1)
         tomorrow.setHours(0, 0, 0, 0)
@@ -67,72 +66,65 @@ export function useWordProgress() {
         progress.streak = 0
       }
 
-      if (progress.id) {
-        await db.wordProgress.update(progress.id, progress)
-      } else {
-        progress.id = await db.wordProgress.add(progress)
-      }
-
+      progress.id = await db.wordProgress.put(progress)
+      recordDataWrite()
       return progress
     },
-    [dictID, getWordProgress],
+    [resolvedDictId, getWordProgress],
   )
 
   const initWordProgress = useCallback(
     async (word: string): Promise<IWordProgress> => {
-      if (!dictID) throw new Error('No dict selected')
+      if (!resolvedDictId) throw new Error('No dict selected')
 
       const existing = await getWordProgress(word)
       if (existing) return existing
 
-      const progress = new WordProgress(word, dictID)
+      const progress = new WordProgress(word, resolvedDictId)
       progress.id = await db.wordProgress.add(progress)
+      recordDataWrite()
       return progress
     },
-    [dictID, getWordProgress],
+    [resolvedDictId, getWordProgress],
   )
 
   const batchInitWordProgress = useCallback(
     async (words: string[]): Promise<void> => {
-      if (!dictID || words.length === 0) return
+      if (!resolvedDictId || words.length === 0) return
 
       const existingProgress = await getWordsProgress(words)
       const newWords = words.filter((w) => !existingProgress.has(w))
 
       if (newWords.length > 0) {
-        const newProgressList = newWords.map((word) => new WordProgress(word, dictID))
+        const newProgressList = newWords.map((word) => new WordProgress(word, resolvedDictId))
         await db.wordProgress.bulkAdd(newProgressList)
+        recordDataWrite()
       }
     },
-    [dictID, getWordsProgress],
+    [resolvedDictId, getWordsProgress],
   )
 
   const markAsMastered = useCallback(
     async (word: string): Promise<IWordProgress> => {
-      if (!dictID) throw new Error('No dict selected')
+      if (!resolvedDictId) throw new Error('No dict selected')
 
       let progress = await getWordProgress(word)
 
       if (!progress) {
-        progress = new WordProgress(word, dictID)
+        progress = new WordProgress(word, resolvedDictId)
       }
 
       progress.masteryLevel = MASTERY_LEVELS.MASTERED
-      // MASTERED 级别间隔与 REVIEW_INTERVALS[7] 保持一致（30天）
       progress.nextReviewTime = Date.now() + 30 * 24 * 60 * 60 * 1000
       progress.lastReviewTime = Date.now()
       progress.correctCount++
       progress.streak++
 
-      if (progress.id) {
-        await db.wordProgress.update(progress.id, progress)
-      } else {
-        progress.id = await db.wordProgress.add(progress)
-      }
-
+      progress.id = await db.wordProgress.put(progress)
+      recordDataWrite()
       return progress
     },
-    [dictID, getWordProgress],
+    [resolvedDictId, getWordProgress],
   )
 
   return {

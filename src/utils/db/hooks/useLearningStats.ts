@@ -2,7 +2,7 @@ import { MASTERY_LEVELS } from '../progress'
 import { currentDictIdAtom } from '@/store'
 import { useAtomValue } from 'jotai'
 import { useCallback, useEffect, useState } from 'react'
-import { db } from '../index'
+import { db, resolveDictId } from '../index'
 
 export type LearningStats = {
   totalWords: number
@@ -24,15 +24,16 @@ const initialStats: LearningStats = {
 
 export function useLearningStats() {
   const dictID = useAtomValue(currentDictIdAtom)
+  const resolvedDictId = resolveDictId(dictID)
   const [stats, setStats] = useState<LearningStats>(initialStats)
 
   const refreshStats = useCallback(async () => {
-    if (!dictID) {
+    if (!resolvedDictId) {
       setStats(initialStats)
       return
     }
 
-    const allProgress = await db.wordProgress.where('dict').equals(dictID).toArray()
+    const allProgress = await db.wordProgress.where('dict').equals(resolvedDictId).toArray()
     const now = Date.now()
     const todayStart = new Date().setHours(0, 0, 0, 0)
 
@@ -50,16 +51,16 @@ export function useLearningStats() {
       todayLearned,
       todayReviewed,
     })
-  }, [dictID])
+  }, [resolvedDictId])
 
   useEffect(() => {
     let cancelled = false
     const run = async () => {
-      if (!dictID) {
+      if (!resolvedDictId) {
         setStats(initialStats)
         return
       }
-      const allProgress = await db.wordProgress.where('dict').equals(dictID).toArray()
+      const allProgress = await db.wordProgress.where('dict').equals(resolvedDictId).toArray()
       if (cancelled) return
       const now = Date.now()
       const todayStart = new Date().setHours(0, 0, 0, 0)
@@ -72,7 +73,7 @@ export function useLearningStats() {
     }
     run()
     return () => { cancelled = true }
-  }, [dictID])
+  }, [resolvedDictId])
 
   return { stats, refreshStats }
 }

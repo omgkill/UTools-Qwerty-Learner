@@ -43,7 +43,6 @@ declare global {
     getUToolsUserData: () => Promise<Uint8Array> | Uint8Array
     exportDatabase2UTools: () => Promise<boolean> | boolean
     importDatabase2UTools: () => Promise<boolean> | boolean
-    migrateLocalStorageToUtools: () => void
     utools?: {
       setFeature: (feature: { code: string; explain: string; cmds: string[] }) => void
       isDev?: () => boolean

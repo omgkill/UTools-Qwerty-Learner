@@ -4,23 +4,24 @@ import type { Word, WordWithIndex } from '@/typings'
 import { currentDictIdAtom } from '@/store'
 import { useAtomValue } from 'jotai'
 import { useCallback } from 'react'
-import { db } from '../index'
+import { db, resolveDictId } from '../index'
 
 export function useReviewWords() {
   const dictID = useAtomValue(currentDictIdAtom)
+  const resolvedDictId = resolveDictId(dictID)
 
   const getDueWords = useCallback(
     async (limit = 20): Promise<IWordProgress[]> => {
-      if (!dictID) return []
+      if (!resolvedDictId) return []
 
       const now = Date.now()
-      const allDictProgress = await db.wordProgress.where('dict').equals(dictID).toArray()
+      const allDictProgress = await db.wordProgress.where('dict').equals(resolvedDictId).toArray()
       const dueWords = allDictProgress.filter(
         (p) => p.nextReviewTime <= now && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED,
       )
       return dueWords.slice(0, limit)
     },
-    [dictID],
+    [resolvedDictId],
   )
 
   const getDueWordsWithInfo = useCallback(
@@ -38,9 +39,9 @@ export function useReviewWords() {
 
   const getNewWords = useCallback(
     async (allWords: Word[], limit = 20): Promise<WordWithIndex[]> => {
-      if (!dictID || allWords.length === 0) return []
+      if (!resolvedDictId || allWords.length === 0) return []
 
-      const existingProgress = await db.wordProgress.where('dict').equals(dictID).toArray()
+      const existingProgress = await db.wordProgress.where('dict').equals(resolvedDictId).toArray()
       const progressMap = new Map(existingProgress.map((progress) => [progress.word, progress]))
 
       return allWords
@@ -51,7 +52,7 @@ export function useReviewWords() {
         })
         .slice(0, limit)
     },
-    [dictID],
+    [resolvedDictId],
   )
 
   return {

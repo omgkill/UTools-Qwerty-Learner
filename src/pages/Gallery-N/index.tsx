@@ -4,6 +4,7 @@ import Layout from '@/components/Layout'
 import { wordBanksAtom } from '@/store'
 import type { WordBank } from '@/typings'
 import groupBy, { groupByDictTags } from '@/utils/groupBy'
+import { VIP_STATE_KEY, getUtoolsValue } from '@/utils/utools'
 import * as ScrollArea from '@radix-ui/react-scroll-area'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
@@ -25,7 +26,7 @@ export default function GalleryPage() {
   const setWordBanks = useSetAtom(wordBanksAtom)
 
   const [refreshCount, setPageRefresh] = useState(0)
-  const [galleryState] = useState<GalleryState>({ vipState: localStorage.getItem('x-vipState') || '' })
+  const [galleryState] = useState<GalleryState>({ vipState: getUtoolsValue(VIP_STATE_KEY, '') })
 
   const loadWordBanks = useCallback(() => {
     const config = window.readLocalWordBankConfig()

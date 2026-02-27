@@ -54,7 +54,7 @@ describe('统计信息集成测试 - 完整用户流程', () => {
         const progress = await db.wordProgress.where({ dict: dictId, word }).first()
         if (progress) {
           progress.masteryLevel = 7 // MASTERED
-          progress.lastStudyTime = Math.floor(Date.now() / 1000)
+          progress.lastReviewTime = Date.now()
           await db.wordProgress.update(progress.id!, progress)
         }
         return progress!
@@ -64,10 +64,9 @@ describe('统计信息集成测试 - 完整用户流程', () => {
 
     // 3. 增加掌握计数（模拟 useDailyRecord.incrementMastered）
     const today = new Date().toISOString().split('T')[0]
-    let record = await db.dailyRecords.where('[dict+date]').equals([dictId, today]).first()
-    
-    if (!record) {
-      record = new DailyRecord(dictId, today)
+    const existingRecord = await db.dailyRecords.where('[dict+date]').equals([dictId, today]).first()
+    const record = existingRecord ?? new DailyRecord(dictId, today)
+    if (!existingRecord) {
       record.id = await db.dailyRecords.add(record)
     }
     
@@ -120,7 +119,7 @@ describe('统计信息集成测试 - 完整用户流程', () => {
           const progress = await db.wordProgress.where({ dict: dictId, word }).first()
           if (progress) {
             progress.masteryLevel = 7
-            progress.lastStudyTime = Math.floor(Date.now() / 1000)
+            progress.lastReviewTime = Date.now()
             await db.wordProgress.update(progress.id!, progress)
           }
           return progress!
@@ -129,9 +128,9 @@ describe('统计信息集成测试 - 完整用户流程', () => {
       })
 
       // 增加掌握计数
-      let record = await db.dailyRecords.where('[dict+date]').equals([dictId, today]).first()
-      if (!record) {
-        record = new DailyRecord(dictId, today)
+      const existingRecord = await db.dailyRecords.where('[dict+date]').equals([dictId, today]).first()
+      const record = existingRecord ?? new DailyRecord(dictId, today)
+      if (!existingRecord) {
         record.id = await db.dailyRecords.add(record)
       }
       record.masteredCount++
@@ -161,7 +160,7 @@ describe('统计信息集成测试 - 完整用户流程', () => {
     const today = new Date().toISOString().split('T')[0]
     
     // 创建一条包含所有类型的记录
-    let record = new DailyRecord(dictId, today)
+    const record = new DailyRecord(dictId, today)
     record.learnedCount = 10
     record.reviewedCount = 5
     record.masteredCount = 3

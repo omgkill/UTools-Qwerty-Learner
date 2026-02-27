@@ -40,7 +40,7 @@ describe('每日掌握单词统计集成测试', () => {
     await wordProgressService.initProgressBatch(dictId, wordList.map((word) => word.name))
     
     // 获取今日记录
-    let record = await dailyRecordService.getTodayRecord(dictId)
+    const record = await dailyRecordService.getTodayRecord(dictId)
     expect(record.masteredCount).toBe(0)
 
     // 模拟点击掌握按钮
@@ -67,7 +67,7 @@ describe('每日掌握单词统计集成测试', () => {
     const wordList = createWordList(10)
     await wordProgressService.initProgressBatch(dictId, wordList.map((word) => word.name))
     
-    let record = await dailyRecordService.getTodayRecord(dictId)
+    const record = await dailyRecordService.getTodayRecord(dictId)
     expect(record.masteredCount).toBe(0)
 
     // 模拟点击掌握按钮5次
@@ -124,7 +124,7 @@ describe('每日掌握单词统计集成测试', () => {
     await wordProgressService.initProgressBatch(dictId2, wordList2.map((word) => word.name))
     
     // 在词库1中掌握2个单词
-    let record1 = await dailyRecordService.getTodayRecord(dictId1)
+    const record1 = await dailyRecordService.getTodayRecord(dictId1)
     for (let i = 0; i < 2; i++) {
       await handleMasteredFlow({
         currentWord: { ...wordList1[i], index: i },
@@ -138,7 +138,7 @@ describe('每日掌握单词统计集成测试', () => {
     }
 
     // 在词库2中掌握3个单词
-    let record2 = await dailyRecordService.getTodayRecord(dictId2)
+    const record2 = await dailyRecordService.getTodayRecord(dictId2)
     for (let i = 0; i < 3; i++) {
       await handleMasteredFlow({
         currentWord: { ...wordList2[i], index: i },

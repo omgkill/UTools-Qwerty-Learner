@@ -1,15 +1,48 @@
 import type { WritableAtom } from 'jotai'
 import { atom } from 'jotai'
-import { atomWithStorage } from 'jotai/utils'
+import { atomWithStorage, createJSONStorage } from 'jotai/utils'
 import type { RESET } from 'jotai/vanilla/utils/constants'
 
 type SetStateActionWithReset<Value> = Value | typeof RESET | ((prev: Value) => Value | typeof RESET)
+
+export const createUtoolsJSONStorage = <T>() =>
+  createJSONStorage<T>(() => ({
+    getItem: (key) => {
+      if (typeof window === 'undefined' || !window.utools?.db) return null
+      const doc = window.utools.db.get(key)
+      if (!doc || doc.data === undefined) return null
+      try {
+        return JSON.stringify(doc.data)
+      } catch {
+        return null
+      }
+    },
+    setItem: (key, newValue) => {
+      if (typeof window === 'undefined' || !window.utools?.db) return
+      let parsed: unknown = newValue
+      try {
+        parsed = JSON.parse(newValue)
+      } catch {
+        parsed = newValue
+      }
+      const doc = window.utools.db.get(key)
+      window.utools.db.put({
+        _id: key,
+        data: parsed,
+        _rev: doc ? doc._rev : undefined,
+      })
+    },
+    removeItem: (key) => {
+      if (typeof window === 'undefined' || !window.utools?.db) return
+      window.utools.db.remove(key)
+    },
+  }))
 
 export default function atomForConfig<T extends Record<string, unknown>>(
   key: string,
   defaultValue: T,
 ): WritableAtom<T, [SetStateActionWithReset<T>], void> {
-  const storageAtom = atomWithStorage(key, defaultValue)
+  const storageAtom = atomWithStorage(key, defaultValue, createUtoolsJSONStorage<T>())
 
   const derivedAtom = atom(
     (get) => {
@@ -29,7 +62,7 @@ export default function atomForConfig<T extends Record<string, unknown>>(
         }
       }
 
-      // 纯计算，不在 getter 中写 localStorage（getter 必须是纯函数）
+      // 纯计算，不在 getter 中写存储（getter 必须是纯函数）
       return hasMissingProperty ? { ...defaultValue, ...config } : config
     },
     (get, set, update: SetStateActionWithReset<T>) => {

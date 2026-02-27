@@ -4,76 +4,108 @@ import { currentDictIdAtom } from '@/store'
 import { dailyRecordAtom } from '@/pages/Typing/store/atoms'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useCallback, useEffect } from 'react'
-import { db } from '../index'
+import { db, recordDataWrite, resolveDictId } from '../index'
 
 export function useDailyRecord() {
   const dictID = useAtomValue(currentDictIdAtom)
+  const resolvedDictId = resolveDictId(dictID)
   const setDailyRecord = useSetAtom(dailyRecordAtom)
   const dailyRecord = useAtomValue(dailyRecordAtom)
 
   const getTodayRecord = useCallback(async (): Promise<IDailyRecord> => {
-    if (!dictID) throw new Error('No dict selected')
+    if (!resolvedDictId) throw new Error('No dict selected')
 
     const today = getTodayDate()
-    let record = await db.dailyRecords.where('[dict+date]').equals([dictID, today]).first()
+    let record = await db.dailyRecords.where('[dict+date]').equals([resolvedDictId, today]).first()
 
     if (!record) {
-      record = new DailyRecord(dictID, today)
+      record = new DailyRecord(resolvedDictId, today)
       record.id = await db.dailyRecords.add(record)
+      recordDataWrite()
     }
 
     return record
-  }, [dictID])
+  }, [resolvedDictId])
 
   const refreshDailyRecord = useCallback(async () => {
-    if (!dictID) {
+    if (!resolvedDictId) {
       setDailyRecord(null)
       return
     }
 
     const record = await getTodayRecord()
     setDailyRecord(record)
-  }, [dictID, getTodayRecord, setDailyRecord])
+  }, [resolvedDictId, getTodayRecord, setDailyRecord])
 
   const incrementReviewed = useCallback(async (isExtra = false): Promise<void> => {
-    if (!dictID) return
+    if (!resolvedDictId) return
 
-    const record = await getTodayRecord()
-    if (isExtra) {
-      record.extraReviewedCount++
-    } else {
-      record.reviewedCount++
+    try {
+      const today = getTodayDate()
+      const updatedRecord = await db.transaction('rw', db.dailyRecords, async () => {
+        let record = await db.dailyRecords.where('[dict+date]').equals([resolvedDictId, today]).first()
+        if (!record) {
+          record = new DailyRecord(resolvedDictId, today)
+        }
+        if (isExtra) {
+          record.extraReviewedCount++
+        } else {
+          record.reviewedCount++
+        }
+        record.lastUpdateTime = Date.now()
+        record.id = await db.dailyRecords.put(record)
+        return { ...record }
+      })
+      setDailyRecord(updatedRecord)
+      recordDataWrite()
+    } catch (e) {
+      console.error('Failed to increment reviewed:', e)
     }
-    record.lastUpdateTime = Date.now()
-    const recordId = record.id ?? (await db.dailyRecords.add(record))
-    record.id = recordId
-    await db.dailyRecords.update(recordId, record)
-    setDailyRecord({ ...record })
-  }, [dictID, getTodayRecord, setDailyRecord])
+  }, [resolvedDictId, setDailyRecord])
 
   const incrementLearned = useCallback(async (): Promise<void> => {
-    if (!dictID) return
+    if (!resolvedDictId) return
 
-    const record = await getTodayRecord()
-    record.learnedCount++
-    record.lastUpdateTime = Date.now()
-    const recordId = record.id ?? (await db.dailyRecords.add(record))
-    record.id = recordId
-    await db.dailyRecords.update(recordId, record)
-    setDailyRecord({ ...record })
-  }, [dictID, getTodayRecord, setDailyRecord])
+    try {
+      const today = getTodayDate()
+      const updatedRecord = await db.transaction('rw', db.dailyRecords, async () => {
+        let record = await db.dailyRecords.where('[dict+date]').equals([resolvedDictId, today]).first()
+        if (!record) {
+          record = new DailyRecord(resolvedDictId, today)
+        }
+        record.learnedCount++
+        record.lastUpdateTime = Date.now()
+        record.id = await db.dailyRecords.put(record)
+        return { ...record }
+      })
+      setDailyRecord(updatedRecord)
+      recordDataWrite()
+    } catch (e) {
+      console.error('Failed to increment learned:', e)
+    }
+  }, [resolvedDictId, setDailyRecord])
 
   const incrementMastered = useCallback(async (): Promise<void> => {
-    if (!dictID) return
+    if (!resolvedDictId) return
 
-    const record = await getTodayRecord()
-    record.masteredCount++
-    record.lastUpdateTime = Date.now()
-    const recordId = record.id ?? (await db.dailyRecords.add(record))
-    record.id = recordId
-    await db.dailyRecords.update(recordId, record)
-    setDailyRecord({ ...record })
-  }, [dictID, getTodayRecord, setDailyRecord])
+    try {
+      const today = getTodayDate()
+      const updatedRecord = await db.transaction('rw', db.dailyRecords, async () => {
+        let record = await db.dailyRecords.where('[dict+date]').equals([resolvedDictId, today]).first()
+        if (!record) {
+          record = new DailyRecord(resolvedDictId, today)
+        }
+        record.masteredCount++
+        record.lastUpdateTime = Date.now()
+        record.id = await db.dailyRecords.put(record)
+        return { ...record }
+      })
+      setDailyRecord(updatedRecord)
+      recordDataWrite()
+    } catch (e) {
+      console.error('Failed to increment mastered:', e)
+    }
+  }, [resolvedDictId, setDailyRecord])
 
   const getExtraReviewInfo = useCallback((): { hasExtra: boolean; remaining: number } => {
     if (!dailyRecord) return { hasExtra: false, remaining: 0 }

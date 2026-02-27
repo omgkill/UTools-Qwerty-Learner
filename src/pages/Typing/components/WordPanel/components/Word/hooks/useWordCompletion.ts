@@ -46,7 +46,38 @@ export function useWordCompletion(
         dispatch({ type: TypingStateActionType.REPORT_CORRECT_WORD })
       }
 
-      dispatch({ type: TypingStateActionType.SET_IS_SAVING_RECORD, payload: true })
+      const isCorrect = !wordState.hasMadeInputWrong
+      const startTime = performance.now()
+
+      Promise.all([
+        saveWordRecord({
+          word: word.name,
+          wrongCount: wordState.wrongCount,
+          letterTimeArray: wordState.letterTimeArray,
+          letterMistake: wordState.letterMistake,
+        }).then((id) => {
+          console.log(`[DB] saveWordRecord done in ${performance.now() - startTime}ms, id=${id}`)
+          return id
+        }),
+        updateWordProgress(word.name, isCorrect, wordState.wrongCount).then((progress) => {
+          console.log(`[DB] updateWordProgress done in ${performance.now() - startTime}ms`)
+          return progress
+        }),
+      ])
+        .then(([, progress]) => {
+          if (!isRepeatLearning && progress) {
+            const isNewWord = progress.reps === 1
+            if (isNewWord) {
+              return incrementLearned()
+            } else {
+              return incrementReviewed(isExtraReview)
+            }
+          }
+        })
+        .then(() => {
+          console.log(`[DB] All IndexedDB operations done in ${performance.now() - startTime}ms`)
+        })
+        .catch((e) => console.error('Failed to save word records:', e))
 
       wordLogUploader({
         headword: word.name,
@@ -56,30 +87,6 @@ export function useWordCompletion(
         countCorrect: wordState.correctCount,
         countTypo: wordState.wrongCount,
       })
-      saveWordRecord({
-        word: word.name,
-        wrongCount: wordState.wrongCount,
-        letterTimeArray: wordState.letterTimeArray,
-        letterMistake: wordState.letterMistake,
-      })
-
-      const isCorrect = !wordState.hasMadeInputWrong
-      updateWordProgress(word.name, isCorrect, wordState.wrongCount)
-        .then((progress) => {
-          // 重复学习模式不计入统计
-          if (isRepeatLearning) {
-            return
-          }
-          const isNewWord = progress.reps === 1
-          if (isNewWord) {
-            incrementLearned()
-          } else {
-            incrementReviewed(isExtraReview)
-          }
-        })
-        .catch((e) => {
-          console.error('Failed to update word progress:', e)
-        })
 
       onFinish()
     }

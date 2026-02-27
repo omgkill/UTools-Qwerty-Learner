@@ -1,5 +1,88 @@
 # 变更记录
 
+## 2026-02-27 备份状态与恢复版本校验
+
+- 增加本地写入时间与备份时间的对比，避免旧备份覆盖新数据
+- 记录备份状态与耗时，统一写入入口触发备份
+- 修改文件：
+  - `src/index.tsx`
+  - `src/utils/db/index.ts`
+  - `src/utils/db/hooks/useWordProgress.ts`
+  - `src/utils/db/hooks/useDailyRecord.ts`
+  - `src/utils/db/hooks/useDictProgress.ts`
+
+## 2026-02-27 进程级恢复标记避免重复覆盖
+
+- 基于主进程 id 标记恢复，仅同一主进程内首次恢复
+- 修改文件：
+  - `src/index.tsx`
+  - `src/utils/db/index.ts`
+
+## 2026-02-27 修复重启后统计丢失与重复学习
+
+- 学习记录、进度与每日记录更新后触发 utools 备份
+- 增加统一的去抖备份调度，避免高频写入
+- 修改文件：
+  - `src/utils/db/index.ts`
+  - `src/utils/db/hooks/useWordProgress.ts`
+  - `src/utils/db/hooks/useDailyRecord.ts`
+  - `src/utils/db/hooks/useDictProgress.ts`
+
+## 2026-02-27 修复统计详情无学习单词与学习重复
+
+- 词库 id 解析下沉到进度与统计相关 hooks
+- 学习进度、统计与每日记录统一使用兜底 dict id
+- 修改文件：
+  - `src/utils/db/hooks/useWordProgress.ts`
+  - `src/utils/db/hooks/useReviewWords.ts`
+  - `src/utils/db/hooks/useDailyRecord.ts`
+  - `src/utils/db/hooks/useDictProgress.ts`
+  - `src/utils/db/hooks/useLearningStats.ts`
+
+## 2026-02-27 修复学习后单词记录缺失
+
+- 补充词库 id 的兜底解析，避免记录写入时丢失 dict
+- 掌握单词记录写入时使用兜底 dict id
+- 修改文件：
+  - `src/utils/db/index.ts`
+  - `src/pages/Typing/index.tsx`
+
+## 2026-02-27 统一配置与状态存储到 utools db
+
+- 将配置与界面状态的存储适配为 utools db
+- 增加 localStorage → utools db 的启动迁移与定时迁移
+- 重复学习状态与会员状态改为 utools db
+- 清理业务代码对 localStorage 的直接读写
+- 修改文件：
+  - `src/store/atomForConfig.ts`
+  - `src/store/index.ts`
+  - `src/utils/utools.ts`
+  - `src/index.tsx`
+  - `src/pages/Typing/hooks/useLearningRecordSaver.ts`
+  - `src/pages/Typing/hooks/useWordList.ts`
+  - `src/pages/Typing/hooks/useTypingInitializer.ts`
+  - `src/pages/Gallery-N/index.tsx`
+  - `src/pages/Gallery-N/SubscriptionOverlay.jsx`
+  - `src/components/StarCard/index.tsx`
+  - `src/pages/Typing/hooks/repeatLearning.test.ts`
+
+## 2026-02-27 修复重启后学习数据丢失
+
+- 启动恢复逻辑改为等待 utools 数据读取并判空再导入
+- 增加可见性切换、退出与定时备份，确保持久化写入 utools
+- 启动时强制注册导入导出实现，避免预加载空函数导致备份失效
+- 重复学习状态改为 utools db 持久化并按词库隔离
+- 重复学习切换时恢复正常学习词表与类型
+- 启动时跨天检测，自动回到正常学习状态
+- 词库选择写入 utools db，重启恢复用户选择
+- 修复测试与 Typing 页面 lint 报错
+- 修改文件：
+  - `src/index.tsx`
+  - `src/pages/Typing/hooks/useWordList.ts`
+  - `src/pages/Analysis/hooks/useStudyStats.integration.test.ts`
+  - `src/pages/Typing/hooks/masteredCount.test.ts`
+  - `src/pages/Typing/index.tsx`
+
 ## 2026-02-26 背单词逻辑服务化与渲染层解耦
 
 - 删除依赖 mock 的组件测试用例，保留真实服务流程测试
