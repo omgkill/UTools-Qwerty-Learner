@@ -99,11 +99,16 @@ async function blobToUint8Array(blob: Blob): Promise<Uint8Array> {
 }
 
 export async function importDatabase2UTools() {
+  console.log('[importDatabase2UTools] Starting data restore from uTools DB...')
   const [pako] = await Promise.all([import('pako'), import('dexie-export-import')])
 
   const uint8Array = await window.getUToolsUserData()
+  const dataSizeKB = (uint8Array.length / 1024).toFixed(2)
+  console.log(`[importDatabase2UTools] Retrieved backup data: ${dataSizeKB} KB`)
+
   const json = pako.ungzip(uint8Array, { to: 'string' })
   const blob = new Blob([json])
+  console.log(`[importDatabase2UTools] Decompressed data size: ${(json.length / 1024).toFixed(2)} KB`)
 
   await db.import(blob, {
     acceptVersionDiff: true,
@@ -113,6 +118,20 @@ export async function importDatabase2UTools() {
     overwriteValues: true,
     clearTablesBeforeImport: true,
   })
+
+  const [wordCount, learningCount, wordProgressCount, dictProgressCount, dailyRecordCount] = await Promise.all([
+    db.wordRecords.count(),
+    db.learningRecords.count(),
+    db.wordProgress.count(),
+    db.dictProgress.count(),
+    db.dailyRecords.count(),
+  ])
+  console.log(`[importDatabase2UTools] Data restored successfully:
+    - wordRecords: ${wordCount}
+    - learningRecords: ${learningCount}
+    - wordProgress: ${wordProgressCount}
+    - dictProgress: ${dictProgressCount}
+    - dailyRecords: ${dailyRecordCount}`)
   return true
 }
 

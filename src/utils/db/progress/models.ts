@@ -1,5 +1,6 @@
 import { LEARNING_CONFIG, MASTERY_LEVELS } from './constants'
 import type { IDailyRecord, IDictProgress, IWordProgress, MasteryLevel } from './types'
+import { now } from '@/utils/timeService'
 
 export class WordProgress implements IWordProgress {
   id?: number
@@ -17,8 +18,8 @@ export class WordProgress implements IWordProgress {
     this.word = word
     this.dict = dict
     this.masteryLevel = MASTERY_LEVELS.NEW
-    this.nextReviewTime = Date.now()
-    this.lastReviewTime = Date.now()
+    this.nextReviewTime = now()
+    this.lastReviewTime = now()
     this.correctCount = 0
     this.wrongCount = 0
     this.streak = 0
@@ -26,7 +27,7 @@ export class WordProgress implements IWordProgress {
   }
 
   get isDue(): boolean {
-    return Date.now() >= this.nextReviewTime
+    return now() >= this.nextReviewTime
   }
 
   get accuracy(): number {
@@ -55,7 +56,7 @@ export class DictProgress implements IDictProgress {
     this.totalWords = totalWords
     this.learnedWords = 0
     this.masteredWords = 0
-    this.lastStudyTime = Date.now()
+    this.lastStudyTime = now()
     this.studyDays = 0
     this.currentChapter = 0
   }
@@ -86,7 +87,7 @@ export class DailyRecord implements IDailyRecord {
     this.learnedCount = 0
     this.extraReviewedCount = 0
     this.masteredCount = 0
-    this.lastUpdateTime = Date.now()
+    this.lastUpdateTime = now()
   }
 
   get totalToday(): number {

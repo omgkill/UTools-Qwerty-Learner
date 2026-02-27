@@ -1,13 +1,14 @@
 import { REVIEW_INTERVALS } from './constants'
 import type { MasteryLevel } from './types'
+import { now, getCurrentDate } from '@/utils/timeService'
 
 export function getTodayDate(): string {
-  return new Date().toISOString().split('T')[0]
+  return new Date(now()).toISOString().split('T')[0]
 }
 
 export function getNextReviewTime(masteryLevel: MasteryLevel): number {
   const baseDays = REVIEW_INTERVALS[masteryLevel] ?? 1
-  const today = new Date()
+  const today = getCurrentDate()
   today.setHours(0, 0, 0, 0)
   const todayStart = today.getTime()
   return todayStart + baseDays * 24 * 60 * 60 * 1000

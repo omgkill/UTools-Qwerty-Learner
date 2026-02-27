@@ -5,6 +5,7 @@ import { determineLearningType } from '@/pages/Typing/hooks/learningLogic'
 import type { LearningType } from '@/pages/Typing/hooks/learningLogic'
 import type Dexie from 'dexie'
 import type { Table } from 'dexie'
+import { now } from '@/utils/timeService'
 
 type WordProgressTables = {
   wordProgress: Table<IWordProgress, number>
@@ -70,8 +71,8 @@ export class WordProgressService {
     }
 
     progress.masteryLevel = MASTERY_LEVELS.MASTERED
-    progress.nextReviewTime = Date.now() + 30 * 24 * 60 * 60 * 1000
-    progress.lastReviewTime = Date.now()
+    progress.nextReviewTime = now() + 30 * 24 * 60 * 60 * 1000
+    progress.lastReviewTime = now()
     progress.correctCount++
     progress.streak++
 
@@ -101,7 +102,7 @@ export class WordProgressService {
 
     progress.masteryLevel = newLevel
     progress.nextReviewTime = getNextReviewTime(newLevel)
-    progress.lastReviewTime = Date.now()
+    progress.lastReviewTime = now()
     progress.reps = (progress.reps || 0) + 1
 
     if (wasFirstAttempt && !isCorrect) {
@@ -144,10 +145,9 @@ export class WordProgressService {
   }
 
   async getDueWords(dictID: string, limit = 20): Promise<IWordProgress[]> {
-    const now = Date.now()
     const allDictProgress = await this.wordProgress.where('dict').equals(dictID).toArray()
     const dueWords = allDictProgress.filter(
-      (p) => p.nextReviewTime <= now && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED,
+      (p) => p.nextReviewTime <= now() && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED,
     )
     return dueWords.slice(0, limit)
   }
@@ -174,14 +174,13 @@ export class WordProgressService {
     due: number
   }> {
     const allProgress = await this.getAllProgress(dictID)
-    const now = Date.now()
 
     return {
       total: allProgress.length,
       new: allProgress.filter((p) => p.masteryLevel === MASTERY_LEVELS.NEW).length,
       learning: allProgress.filter((p) => p.masteryLevel > MASTERY_LEVELS.NEW && p.masteryLevel < MASTERY_LEVELS.MASTERED).length,
       mastered: allProgress.filter((p) => p.masteryLevel >= MASTERY_LEVELS.MASTERED).length,
-      due: allProgress.filter((p) => p.nextReviewTime <= now && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED).length,
+      due: allProgress.filter((p) => p.nextReviewTime <= now() && p.reps > 0 && p.masteryLevel < MASTERY_LEVELS.MASTERED).length,
     }
   }
 }
@@ -213,7 +212,7 @@ export class DailyRecordService {
     } else {
       record.reviewedCount++
     }
-    record.lastUpdateTime = Date.now()
+    record.lastUpdateTime = now()
 
     if (record.id) {
       await this.dailyRecords.update(record.id, record)
@@ -228,7 +227,7 @@ export class DailyRecordService {
     const record = await this.getTodayRecord(dictID)
 
     record.learnedCount++
-    record.lastUpdateTime = Date.now()
+    record.lastUpdateTime = now()
 
     if (record.id) {
       await this.dailyRecords.update(record.id, record)

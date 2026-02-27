@@ -1,5 +1,57 @@
 # 变更记录
 
+## 2026-02-27 修复掌握词不包含在今日目标的问题
+
+- 修复 `DailyRecord.totalToday` 方法，将 `masteredCount` 包含在今日目标计算中
+- 现在今日目标计算逻辑：`reviewedCount + learnedCount + masteredCount`
+- 这样掌握词也会被计入每日学习目标，更加合理
+- 修改文件：
+  - `src/utils/db/progress/models.ts`
+
+## 2026-02-27 修复背单词集成测试 - 使用真实服务层API
+
+- 修复测试中自己定义函数的问题，改为调用真实的服务层API
+- 测试现在使用真实的服务层方法：
+  - `wordProgressService.updateProgress()` - 更新单词进度
+  - `dailyRecordService.incrementLearned()` - 更新每日记录
+  - `loadTypingSession()` - 加载学习会话
+- 测试结果从学习详情（wordRecords）验证，使用与 `useWordDetails` 相同的逻辑
+- 预期结果验证：
+  - 所有学习的单词都是新词（masteryLevel从NEW变为LEARNED）
+  - 学了20个新词（learnedCount = 20）
+  - 没有复习词（reviewedCount = 0）
+  - 学习详情中显示20个新词，0个复习词，0个掌握词
+- 包含3个测试用例：
+  - 词库100词 -> 第一天背20个新词 -> 中间多次输入失败
+  - 词库100词 -> 第一天背20个新词 -> 每个单词都正确输入
+  - 词库100词 -> 第一天背20个新词 -> 部分单词错误输入后正确
+- 修改文件：
+  - `src/pages/Typing/hooks/wordLearning.integration.test.ts`
+
+## 2026-02-27 增加背单词集成测试
+
+- 新增背单词集成测试，测试第一天学习新词的场景
+- 测试调用真实的服务层逻辑，并从学习详情（wordRecords）查询结果进行验证
+- 预期结果验证：
+  - 所有学习的单词都是新词（masteryLevel从NEW变为LEARNED）
+  - 学了20个新词（learnedCount = 20）
+  - 没有复习词（reviewedCount = 0）
+  - 学习详情中显示20个新词，0个复习词，0个掌握词
+- 包含3个测试用例：
+  - 词库100词 -> 第一天背20个新词 -> 中间多次输入失败
+  - 词库100词 -> 第一天背20个新词 -> 每个单词都正确输入
+  - 词库100词 -> 第一天背20个新词 -> 部分单词错误输入后正确
+- 修复 repeatLearning.test.ts 中重复定义 utools 属性的问题
+- 修改文件：
+  - `src/pages/Typing/hooks/wordLearning.integration.test.ts`（新增）
+  - `src/pages/Typing/hooks/repeatLearning.test.ts`
+
+## 2026-02-27 补充存储结构文档
+
+- 输出学习记录与学习进度的存储结构文档
+- 修改文件：
+  - `doc/storage_structure.md`
+
 ## 2026-02-27 备份状态与恢复版本校验
 
 - 增加本地写入时间与备份时间的对比，避免旧备份覆盖新数据

@@ -35,9 +35,11 @@ if (!globalWindow.window) {
 Object.defineProperty(globalWindow, 'utools', {
   value: { db: utoolsDbMock },
 })
-Object.defineProperty(globalWindow.window, 'utools', {
-  value: { db: utoolsDbMock },
-})
+if (globalWindow.window && !globalWindow.window.utools) {
+  Object.defineProperty(globalWindow.window, 'utools', {
+    value: { db: utoolsDbMock },
+  })
+}
 
 const createWordList = (count: number): Word[] => {
   const words: Word[] = []
