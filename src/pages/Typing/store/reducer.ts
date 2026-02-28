@@ -7,6 +7,19 @@ export function typingReducer(state: TypingState, action: TypingStateAction): Ty
   switch (action.type) {
     case TypingStateActionType.SET_WORDS: {
       const newWords = action.payload.words
+      const initialIndex = action.payload.initialIndex
+      
+      if (initialIndex !== undefined) {
+        const safeIndex = Math.min(initialIndex, newWords.length - 1)
+        return {
+          ...state,
+          wordListData: {
+            words: newWords,
+            index: safeIndex >= 0 ? safeIndex : 0,
+          },
+        }
+      }
+      
       const currentWordName = state.wordListData.words[state.wordListData.index]?.name
       const newIndex = currentWordName 
         ? newWords.findIndex(w => w.name === currentWordName)
@@ -18,8 +31,6 @@ export function typingReducer(state: TypingState, action: TypingStateAction): Ty
           words: newWords,
           index: newIndex >= 0 ? newIndex : 0,
         },
-        // 只负责设置词库，不改动 isTyping
-        // 是否开始打字由调用方（useWordSync）通过 SET_IS_TYPING 显式控制
       }
     }
 

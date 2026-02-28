@@ -14,6 +14,7 @@ export type { LearningType }
 
 export type UseWordListResult = {
   words: WordWithIndex[] | undefined
+  learningWords: WordWithIndex[]
   isLoading: boolean
   error: Error | undefined
   learningType: LearningType
@@ -245,6 +246,7 @@ export function useWordList(isRepeatLearning: boolean = false): UseWordListResul
   }, [currentWordBank, isWordListLoading, wordList, mutate])
 
   useEffect(() => {
+    if (isRepeatLearning) return
     if (
       learningWords.length === 0 &&
       learningType !== 'complete' &&
@@ -254,7 +256,7 @@ export function useWordList(isRepeatLearning: boolean = false): UseWordListResul
     ) {
       reloadWords()
     }
-  }, [learningWords.length, learningType, isWordListLoading, wordList, reloadWords])
+  }, [learningWords.length, learningType, isWordListLoading, wordList, reloadWords, isRepeatLearning])
 
   const baseWords: WordWithIndex[] = useMemo(() => {
     return learningWords
@@ -262,6 +264,7 @@ export function useWordList(isRepeatLearning: boolean = false): UseWordListResul
 
   return {
     words: wordList === undefined ? undefined : baseWords,
+    learningWords,
     isLoading: isWordListLoading,
     error,
     learningType,

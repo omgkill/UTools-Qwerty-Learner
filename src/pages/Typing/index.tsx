@@ -16,7 +16,7 @@ import { useTypingTimer } from './hooks/useTypingTimer'
 import { useExtraReviewPopup } from './hooks/useExtraReviewPopup'
 import { useKeyboardStartListener } from './hooks/useKeyboardStartListener'
 import { useWordSync } from './hooks/useWordSync'
-import { useRepeatLearningPersistence } from './hooks/useRepeatLearningPersistence'
+import { useRepeatLearningManager } from './hooks/useRepeatLearningManager'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
 import type { WordBank } from '@/typings'
@@ -48,8 +48,11 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
   const isRepeatLearning = state.uiState.isRepeatLearning
   const currentDictId = useAtomValue(currentDictIdAtom)
 
+  const repeatLearningInitialIndexRef = useRef<number | undefined>(undefined)
+
   const {
     words,
+    learningWords,
     learningType,
     todayLearned,
     todayReviewed,
@@ -72,7 +75,7 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
   const { incrementMastered } = useDailyRecord()
   const dictID = useAtomValue(currentDictIdAtom)
 
-  const { loadRepeatLearningState, saveRepeatLearningState, clearRepeatLearningState } = useRepeatLearningPersistence()
+  const repeatLearningManager = useRepeatLearningManager()
   const normalLearningWordsRef = useRef<typeof words>(undefined)
   const normalLearningTypeRef = useRef<LearningType>(learningType)
   const prevIsRepeatLearningRef = useRef(isRepeatLearning)
@@ -92,7 +95,7 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
 
   useTypingTimer(state.uiState.isTyping)
   useKeyboardStartListener(state.uiState.isTyping, false)
-  useWordSync(words, state.uiState.isTyping)
+  useWordSync(words, state.uiState.isTyping, isRepeatLearning, repeatLearningInitialIndexRef.current)
 
   useEffect(() => {
     const handleModeChange = () => {
@@ -154,34 +157,30 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
   }, [dispatch])
 
   useEffect(() => {
-    const restore = async () => {
-      if (!currentDictId) return
-      const saved = await loadRepeatLearningState(currentDictId)
-      if (saved?.isRepeatLearning && saved.learningWords.length > 0) {
+    if (!currentDictId) return
+
+    const initializeRepeatLearning = async () => {
+      const savedState = await repeatLearningManager.initialize(currentDictId)
+      if (savedState) {
         dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: true })
-        setLearningWords(saved.learningWords)
+        repeatLearningInitialIndexRef.current = savedState.currentIndex
+        setLearningWords(savedState.learningWords)
         setLearningType('review')
-        if (saved.currentIndex > 0) {
-          dispatch({ type: TypingStateActionType.SET_CURRENT_INDEX, payload: saved.currentIndex })
-        }
       }
     }
-    restore()
-  }, [currentDictId, loadRepeatLearningState, dispatch, setLearningWords, setLearningType])
+
+    initializeRepeatLearning()
+  }, [currentDictId, dispatch, setLearningWords, setLearningType, repeatLearningManager])
 
   useEffect(() => {
-    if (isRepeatLearning && words && words.length > 0) {
-      saveRepeatLearningState(currentDictId, {
-        isRepeatLearning: true,
-        learningWords: words,
-        currentIndex: state.wordListData.index,
-      })
-    }
-  }, [isRepeatLearning, words, state.wordListData.index, currentDictId, saveRepeatLearningState])
+    if (!currentDictId || !repeatLearningManager.isRepeatLearning()) return
+
+    repeatLearningManager.updateIndex(currentDictId, state.wordListData.index)
+  }, [currentDictId, state.wordListData.index, repeatLearningManager])
 
   useEffect(() => {
     if (prevIsRepeatLearningRef.current && !isRepeatLearning) {
-      clearRepeatLearningState(currentDictId)
+      repeatLearningManager.clear(currentDictId)
       if (normalLearningWordsRef.current && normalLearningWordsRef.current.length > 0) {
         setLearningWords(normalLearningWordsRef.current)
       }
@@ -191,7 +190,7 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
       reloadWords()
     }
     prevIsRepeatLearningRef.current = isRepeatLearning
-  }, [isRepeatLearning, currentDictId, clearRepeatLearningState, setLearningWords, setLearningType, reloadWords])
+  }, [isRepeatLearning, currentDictId, repeatLearningManager, setLearningWords, setLearningType, reloadWords])
 
   const handleStartRepeatLearning = useCallback(async () => {
     const repeatWords = await startRepeatLearning()
@@ -200,17 +199,13 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
     normalLearningWordsRef.current = words
     normalLearningTypeRef.current = learningType
 
+    await repeatLearningManager.start(currentDictId, repeatWords)
+
     dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: true })
     setLearningWords(repeatWords)
     setLearningType('review')
     dispatch({ type: TypingStateActionType.RESET_PROGRESS })
-
-    saveRepeatLearningState(currentDictId, {
-      isRepeatLearning: true,
-      learningWords: repeatWords,
-      currentIndex: 0,
-    })
-  }, [startRepeatLearning, words, learningType, dispatch, setLearningWords, setLearningType, saveRepeatLearningState, currentDictId])
+  }, [startRepeatLearning, words, learningType, dispatch, setLearningWords, setLearningType, repeatLearningManager, currentDictId])
 
   useConfetti(state.uiState.isFinished && !state.isImmersiveMode)
 

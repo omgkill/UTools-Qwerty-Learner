@@ -14,11 +14,12 @@ import { useCallback, useContext } from 'react'
 
 export type ITypingState = {
   id?: number
-  dictId: string
+  dict: string
   date: string
   isRepeatLearning: boolean
   learningWords: unknown[]
   currentIndex: number
+  version?: number
 }
 
 class RecordDB extends Dexie {

@@ -28,7 +28,7 @@ async function writeRepeatLearningState(currentDictId: string, state: Omit<ITypi
   try {
     if (db.typingStates) {
       const allStates = await db.typingStates.toArray()
-      const existing = allStates.find(item => item.dictId === currentDictId && item.date === state.date)
+      const existing = allStates.find(item => item.dict === currentDictId && item.date === state.date)
       if (existing) {
         await db.typingStates.update(existing.id!, state)
       } else {
@@ -44,7 +44,7 @@ async function readRepeatLearningState(currentDictId: string): Promise<ITypingSt
   try {
     if (db.typingStates) {
       const allStates = await db.typingStates.toArray()
-      return allStates.find(item => item.dictId === currentDictId && item.date === getTodayString()) ?? null
+      return allStates.find(item => item.dict === currentDictId && item.date === getTodayString()) ?? null
     }
     return null
   } catch (e) {
@@ -119,7 +119,7 @@ describe('重复学习功能测试', () => {
       isRepeatLearning: true,
       learningWords: repeatWords,
       date: getTodayString(),
-      dictId: dictId,
+      dict: dictId,
       currentIndex: 0,
     })
     
@@ -149,7 +149,7 @@ describe('重复学习功能测试', () => {
       isRepeatLearning: true,
       learningWords: repeatWords,
       date: yesterdayDate,
-      dictId: dictId,
+      dict: dictId,
       currentIndex: 0,
     })
     
@@ -253,7 +253,7 @@ describe('重复学习功能测试', () => {
       isRepeatLearning: true,
       learningWords: repeatWords,
       date: todayString,
-      dictId: dictId,
+      dict: dictId,
       currentIndex: 0,
     })
     
@@ -264,7 +264,7 @@ describe('重复学习功能测试', () => {
       isRepeatLearning: true,
       learningWords: remainingWords,
       date: todayString,
-      dictId: dictId,
+      dict: dictId,
       currentIndex: 5,
     })
     

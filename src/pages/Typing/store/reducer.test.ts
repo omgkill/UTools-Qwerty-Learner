@@ -227,3 +227,140 @@ describe('Typing Reducer - ADD_REPLACEMENT_WORD', () => {
     expect(currentState.wordListData.index).toBe(40)
   })
 })
+
+describe('Typing Reducer - SET_WORDS with initialIndex', () => {
+  let state: TypingState
+
+  beforeEach(() => {
+    state = createInitialState()
+  })
+
+  it('SET_WORDS 不带 initialIndex 时，应该尝试保留当前单词位置', () => {
+    const normalWords = [createWord('apple', [], 0), createWord('banana', [], 1), createWord('cherry', [], 2)]
+    state = createInitialState(normalWords, 1)
+
+    const newWords = [createWord('banana', [], 0), createWord('cherry', [], 1), createWord('apple', [], 2)]
+    const newState = typingReducer(state, { type: TypingStateActionType.SET_WORDS, payload: { words: newWords } })
+
+    expect(newState.wordListData.index).toBe(0)
+    expect(newState.wordListData.words[0].name).toBe('banana')
+  })
+
+  it('SET_WORDS 带 initialIndex 时，应该直接设置 index', () => {
+    const normalWords = [createWord('apple', [], 0), createWord('banana', [], 1), createWord('cherry', [], 2)]
+    state = createInitialState(normalWords, 1)
+
+    const repeatWords = [createWord('word1', [], 0), createWord('word2', [], 1), createWord('word3', [], 2)]
+    const newState = typingReducer(state, {
+      type: TypingStateActionType.SET_WORDS,
+      payload: { words: repeatWords, initialIndex: 2 },
+    })
+
+    expect(newState.wordListData.index).toBe(2)
+    expect(newState.wordListData.words[2].name).toBe('word3')
+  })
+
+  it('SET_WORDS 带 initialIndex 越界时，应该设置为最后一个单词', () => {
+    const normalWords = [createWord('apple', [], 0), createWord('banana', [], 1), createWord('cherry', [], 2)]
+    state = createInitialState(normalWords, 1)
+
+    const repeatWords = [createWord('word1', [], 0), createWord('word2', [], 1)]
+    const newState = typingReducer(state, {
+      type: TypingStateActionType.SET_WORDS,
+      payload: { words: repeatWords, initialIndex: 10 },
+    })
+
+    expect(newState.wordListData.index).toBe(1)
+    expect(newState.wordListData.words[1].name).toBe('word2')
+  })
+
+  it('模拟重复学习场景：正常学习 index=15，重复学习恢复 index=5', () => {
+    const normalWords: WordWithIndex[] = []
+    for (let i = 0; i < 20; i++) {
+      normalWords.push(createWord(`normal${i}`, [], i))
+    }
+    state = createInitialState(normalWords, 15)
+
+    const repeatWords: WordWithIndex[] = []
+    for (let i = 0; i < 10; i++) {
+      repeatWords.push(createWord(`repeat${i}`, [], i))
+    }
+
+    const newState = typingReducer(state, {
+      type: TypingStateActionType.SET_WORDS,
+      payload: { words: repeatWords, initialIndex: 5 },
+    })
+
+    expect(newState.wordListData.index).toBe(5)
+    expect(newState.wordListData.words.length).toBe(10)
+    expect(newState.wordListData.words[5].name).toBe('repeat5')
+  })
+
+  it('模拟完整数据流：正常学习 → 重复学习 → 恢复进度', () => {
+    // 1. 正常学习状态
+    const normalWords: WordWithIndex[] = []
+    for (let i = 0; i < 30; i++) {
+      normalWords.push(createWord(`normal${i}`, [], i))
+    }
+    let currentState = createInitialState(normalWords, 0)
+
+    // 2. 正常学习到 index=15
+    for (let i = 0; i < 15; i++) {
+      currentState = typingReducer(currentState, { type: TypingStateActionType.NEXT_WORD })
+    }
+    expect(currentState.wordListData.index).toBe(15)
+
+    // 3. 模拟重复学习恢复：从 RepeatLearningManager 获取的数据
+    const savedIndex = 5
+    const repeatWords: WordWithIndex[] = []
+    for (let i = 0; i < 10; i++) {
+      repeatWords.push(createWord(`repeat${i}`, [], i))
+    }
+
+    // 4. 设置重复学习单词列表，使用 initialIndex
+    currentState = typingReducer(currentState, {
+      type: TypingStateActionType.SET_WORDS,
+      payload: { words: repeatWords, initialIndex: savedIndex },
+    })
+
+    // 5. 验证 index 正确恢复
+    expect(currentState.wordListData.index).toBe(5)
+    expect(currentState.wordListData.words.length).toBe(10)
+    expect(currentState.wordListData.words[5].name).toBe('repeat5')
+
+    // 6. 继续学习
+    currentState = typingReducer(currentState, { type: TypingStateActionType.NEXT_WORD })
+    expect(currentState.wordListData.index).toBe(6)
+  })
+
+  it('模拟错误场景：不使用 initialIndex 导致 index 错误', () => {
+    // 1. 正常学习状态
+    const normalWords: WordWithIndex[] = []
+    for (let i = 0; i < 30; i++) {
+      normalWords.push(createWord(`normal${i}`, [], i))
+    }
+    let currentState = createInitialState(normalWords, 0)
+
+    // 2. 正常学习到 index=15
+    for (let i = 0; i < 15; i++) {
+      currentState = typingReducer(currentState, { type: TypingStateActionType.NEXT_WORD })
+    }
+    expect(currentState.wordListData.index).toBe(15)
+
+    // 3. 模拟重复学习恢复
+    const repeatWords: WordWithIndex[] = []
+    for (let i = 0; i < 10; i++) {
+      repeatWords.push(createWord(`repeat${i}`, [], i))
+    }
+
+    // 4. 不使用 initialIndex（模拟之前的 bug）
+    currentState = typingReducer(currentState, {
+      type: TypingStateActionType.SET_WORDS,
+      payload: { words: repeatWords },  // 没有 initialIndex
+    })
+
+    // 5. index 会被重置为 0（因为找不到 normal15 在 repeatWords 中）
+    expect(currentState.wordListData.index).toBe(0)
+    expect(currentState.wordListData.words.length).toBe(10)
+  })
+})
