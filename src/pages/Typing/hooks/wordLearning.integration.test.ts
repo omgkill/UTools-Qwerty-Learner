@@ -1576,14 +1576,32 @@ describe('背单词集成测试 - 第一天学习新词', () => {
     expect(reopenSession.learningWords.length).toBe(0)
   })
 
+  /**
+   * 测试用例：边界条件 - 新词配额计算
+   * 
+   * 业务场景：
+   * 第一天：用户只学习了 15 个新词（没学满 20 个就停了）
+   * 第二天：打开界面时，系统应该自动补充新词，凑满 20 个（15 个复习 + 5 个新词）
+   * 
+   * 核心逻辑：
+   * 1. 每日配额 = 20 个词（新词 + 复习词）
+   * 2. 第二天有 15 个到期词（第一天学习的 15 个）
+   * 3. 系统应该立即补充 5 个新词，凑满 20 个（20 - 15 = 5）
+   * 4. 用户可以先复习 15 个词，然后学习 5 个新词
+   * 
+   * 验证点：
+   * - 界面打开时自动补充新词，无需重新打开界面
+   * - 复习词优先，新词补充
+   * - 每日配额计算正确：reviewedCount + learnedCount = 20
+   */
   it('边界条件：新词配额计算 - 复习 15 个词后还能学习 5 个新词', async () => {
     const wordList = createWordList(100)
     
-    // 初始化所有单词
+    // ========== 初始化阶段 ==========
+    // 初始化所有单词的进度
     await wordProgressService.initProgressBatch(dictId, wordList.map((word) => word.name))
     
-    // 真实业务场景：
-    // 第一天：用户只学习了 15 个新词（没学满 20 个就停了）
+    // ========== 第一天：只学习 15 个新词 ==========
     const firstDayRecord = await dailyRecordService.getTodayRecord(dictId)
     const firstDaySession = await loadTypingSession({
       wordList,
@@ -1595,10 +1613,11 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
 
+    // 验证第一天：应该学习 20 个新词
     expect(firstDaySession.learningType).toBe('new')
     expect(firstDaySession.learningWords.length).toBe(20)
     
-    // 只学习 15 个（模拟用户没学完就停了）
+    // 只学习 15 个（模拟用户没学满 20 个就停了）
     for (let i = 0; i < 15; i++) {
       const word = firstDaySession.learningWords[i]
       await wordProgressService.updateProgress(dictId, word.name, true, 0)
@@ -1607,10 +1626,11 @@ describe('背单词集成测试 - 第一天学习新词', () => {
     }
 
     try {
-      // 前进到第二天
+      // ========== 第二天：系统应该自动补充新词 ==========
+      // 前进到第二天，让第一天的 15 个词到期
       advanceDays(1)
       
-      // 第二天：应该有 15 个到期词（第一天学习的 15 个）
+      // 加载第二天的学习会话
       const secondDayRecord = await dailyRecordService.getTodayRecord(dictId)
       const secondDaySession = await loadTypingSession({
         wordList,
@@ -1622,55 +1642,56 @@ describe('背单词集成测试 - 第一天学习新词', () => {
         getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
       })
 
-      // 验证：有 15 个到期词
+      // ========== 验证：系统自动补充新词，凑满 20 个 ==========
+      // 学习类型是复习（因为有到期词）
       expect(secondDaySession.learningType).toBe('review')
-      expect(secondDaySession.learningWords.length).toBe(15)
+      // 总共 20 个词（15 个复习 + 5 个新词）
+      expect(secondDaySession.learningWords.length).toBe(20)
+      // 其中有 15 个到期词
       expect(secondDaySession.dueCount).toBe(15)
+      
+      // 验证单词顺序：前 15 个是复习词，后 5 个是新词
+      const first15Words = secondDaySession.learningWords.slice(0, 15)
+      const last5Words = secondDaySession.learningWords.slice(15, 20)
+      
+      // 验证前 15 个词是第一天学习的词（到期词）
+      const firstDayLearnedWords = firstDaySession.learningWords.slice(0, 15)
+      first15Words.forEach((word, index) => {
+        expect(word.name).toBe(firstDayLearnedWords[index].name)
+      })
 
-      // 复习 15 个词
-      for (let i = 0; i < secondDaySession.learningWords.length; i++) {
+      // ========== 用户学习过程：先复习 15 个词 ==========
+      for (let i = 0; i < 15; i++) {
         const word = secondDaySession.learningWords[i]
         await wordProgressService.updateProgress(dictId, word.name, true, 0)
         await saveWordRecord(word.name, dictId, [100], 0, {})
         await dailyRecordService.incrementReviewed(dictId)
       }
 
-      // 验证：复习完后，dailyRecord 显示只复习了 15 个
+      // 验证：复习完后，dailyRecord 显示只复习了 15 个，还没学新词
       const afterReviewRecord = await dailyRecordService.getTodayRecord(dictId)
       expect(afterReviewRecord.reviewedCount).toBe(15)
       expect(afterReviewRecord.learnedCount).toBe(0)
 
-      // 重新打开界面，系统会补充 5 个新词（因为还有配额）
-      const reopenSession = await loadTypingSession({
-        wordList,
-        reviewedCount: 15,
-        learnedCount: 0,
-        isExtraReview: false,
-        getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
-        getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
-        getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
-      })
-
-      // 验证：复习了 15 个词，还能学习 5 个新词（20 - 15 = 5）
-      expect(reopenSession.learningType).toBe('new')
-      expect(reopenSession.learningWords.length).toBe(5)
-
-      // 学习 5 个新词
-      for (let i = 0; i < reopenSession.learningWords.length; i++) {
-        const word = reopenSession.learningWords[i]
+      // ========== 用户学习过程：继续学习剩下的 5 个新词 ==========
+      for (let i = 15; i < 20; i++) {
+        const word = secondDaySession.learningWords[i]
         await wordProgressService.updateProgress(dictId, word.name, true, 0)
         await saveWordRecord(word.name, dictId, [100], 0, {})
         await dailyRecordService.incrementLearned(dictId)
       }
 
-      // 验证最终结果：15 个复习 + 5 个新词 = 20 个
+      // ========== 验证最终结果 ==========
       const finalRecord = await dailyRecordService.getTodayRecord(dictId)
+      // 15 个复习词
       expect(finalRecord.reviewedCount).toBe(15)
+      // 5 个新词
       expect(finalRecord.learnedCount).toBe(5)
+      // 总计 20 个词，符合每日配额
       expect(finalRecord.reviewedCount + finalRecord.learnedCount).toBe(20)
 
     } finally {
-      // 重置时间差异
+      // 重置时间差异，避免影响其他测试
       resetTimeDiff()
     }
   })

@@ -55,6 +55,22 @@ export function determineLearningType(params: DetermineLearningTypeParams): Dete
   if (dueWords.length > 0) {
     const wordsToReturn = isExtraReview ? dueWords : dueWords.slice(0, remaining)
     const hasMore = isExtraReview ? false : dueWords.length > remaining
+    
+    // 如果到期词不足剩余配额，应该补充新词
+    if (!isExtraReview && dueWords.length < remaining) {
+      const newWordQuota = remaining - dueWords.length
+      const wordsToReturnWithNew = [
+        ...wordsToReturn,
+        ...newWords.slice(0, newWordQuota)
+      ]
+      return {
+        learningType: 'review',
+        learningWords: wordsToReturnWithNew,
+        hasMoreDueWords: hasMore,
+        remainingDueCount: hasMore ? dueWords.length - remaining : 0,
+      }
+    }
+    
     return {
       learningType: 'review',
       learningWords: wordsToReturn,

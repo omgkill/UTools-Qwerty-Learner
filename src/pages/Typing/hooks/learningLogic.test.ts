@@ -307,8 +307,13 @@ describe('规则不变式', () => {
       wordList,
     })
 
+    // 复习优先，但到期词不足时会补充新词凑满配额
     expect(result.learningType).toBe('review')
-    expect(result.learningWords.length).toBe(2)
+    expect(result.learningWords.length).toBe(4) // 2 个到期词 + 2 个新词
+    expect(result.learningWords[0].name).toBe('apple')
+    expect(result.learningWords[1].name).toBe('banana')
+    expect(result.learningWords[2].name).toBe('cherry')
+    expect(result.learningWords[3].name).toBe('date')
   })
 
   it('should return complete with empty list when target reached and no due words', () => {
