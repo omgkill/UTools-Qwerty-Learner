@@ -16,6 +16,7 @@ import { useTypingTimer } from './hooks/useTypingTimer'
 import { useExtraReviewPopup } from './hooks/useExtraReviewPopup'
 import { useKeyboardStartListener } from './hooks/useKeyboardStartListener'
 import { useWordSync } from './hooks/useWordSync'
+import { useRepeatLearningPersistence } from './hooks/useRepeatLearningPersistence'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
 import type { WordBank } from '@/typings'
@@ -27,7 +28,7 @@ import { currentDictIdAtom } from '@/store'
 import { getUtoolsValue } from '@/utils/utools'
 import { useAtomValue } from 'jotai'
 import type React from 'react'
-import { useCallback, useContext, useEffect } from 'react'
+import { useCallback, useContext, useEffect, useRef } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useImmerReducer } from 'use-immer'
 
@@ -44,6 +45,9 @@ interface TypingAppInnerProps {
 
 const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
   const { state, dispatch } = useTypingContext()
+  const isRepeatLearning = state.uiState.isRepeatLearning
+  const currentDictId = useAtomValue(currentDictIdAtom)
+
   const {
     words,
     learningType,
@@ -56,15 +60,22 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
     hasMoreDueWords,
     remainingDueCount,
     isExtraReview,
-    isRepeatLearning,
     startExtraReview,
     startRepeatLearning,
     getNextNewWord,
-  } = useWordList()
+    setLearningWords,
+    setLearningType,
+    reloadWords,
+  } = useWordList(isRepeatLearning)
 
   const { markAsMastered } = useWordProgress()
   const { incrementMastered } = useDailyRecord()
   const dictID = useAtomValue(currentDictIdAtom)
+
+  const { loadRepeatLearningState, saveRepeatLearningState, clearRepeatLearningState } = useRepeatLearningPersistence()
+  const normalLearningWordsRef = useRef<typeof words>(undefined)
+  const normalLearningTypeRef = useRef<LearningType>(learningType)
+  const prevIsRepeatLearningRef = useRef(isRepeatLearning)
 
   useLearningRecordSaver(state)
 
@@ -72,13 +83,13 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
     const resolvedDictId = dictID || getUtoolsValue('currentWordBank', '')
     if (!resolvedDictId) return
     try {
-      // 创建掌握单词的记录（简化版）
       const wordRecord = new WordRecord(word, resolvedDictId, null, [], 0, {})
       await db.wordRecords.add(wordRecord)
     } catch (e) {
       console.error('Failed to save mastered word record:', e)
     }
   }, [dictID])
+
   useTypingTimer(state.uiState.isTyping)
   useKeyboardStartListener(state.uiState.isTyping, false)
   useWordSync(words, state.uiState.isTyping)
@@ -111,7 +122,6 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
       createWordRecord,
     })
 
-    // 记录掌握数量
     await incrementMastered()
 
     if (result.replacementWord) {
@@ -142,6 +152,65 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
       window.removeEventListener('blur', onBlur)
     }
   }, [dispatch])
+
+  useEffect(() => {
+    const restore = async () => {
+      if (!currentDictId) return
+      const saved = await loadRepeatLearningState(currentDictId)
+      if (saved?.isRepeatLearning && saved.learningWords.length > 0) {
+        dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: true })
+        setLearningWords(saved.learningWords)
+        setLearningType('review')
+        if (saved.currentIndex > 0) {
+          dispatch({ type: TypingStateActionType.SET_CURRENT_INDEX, payload: saved.currentIndex })
+        }
+      }
+    }
+    restore()
+  }, [currentDictId, loadRepeatLearningState, dispatch, setLearningWords, setLearningType])
+
+  useEffect(() => {
+    if (isRepeatLearning && words && words.length > 0) {
+      saveRepeatLearningState(currentDictId, {
+        isRepeatLearning: true,
+        learningWords: words,
+        currentIndex: state.wordListData.index,
+      })
+    }
+  }, [isRepeatLearning, words, state.wordListData.index, currentDictId, saveRepeatLearningState])
+
+  useEffect(() => {
+    if (prevIsRepeatLearningRef.current && !isRepeatLearning) {
+      clearRepeatLearningState(currentDictId)
+      if (normalLearningWordsRef.current && normalLearningWordsRef.current.length > 0) {
+        setLearningWords(normalLearningWordsRef.current)
+      }
+      if (normalLearningTypeRef.current) {
+        setLearningType(normalLearningTypeRef.current)
+      }
+      reloadWords()
+    }
+    prevIsRepeatLearningRef.current = isRepeatLearning
+  }, [isRepeatLearning, currentDictId, clearRepeatLearningState, setLearningWords, setLearningType, reloadWords])
+
+  const handleStartRepeatLearning = useCallback(async () => {
+    const repeatWords = await startRepeatLearning()
+    if (repeatWords.length === 0) return
+
+    normalLearningWordsRef.current = words
+    normalLearningTypeRef.current = learningType
+
+    dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: true })
+    setLearningWords(repeatWords)
+    setLearningType('review')
+    dispatch({ type: TypingStateActionType.RESET_PROGRESS })
+
+    saveRepeatLearningState(currentDictId, {
+      isRepeatLearning: true,
+      learningWords: repeatWords,
+      currentIndex: 0,
+    })
+  }, [startRepeatLearning, words, learningType, dispatch, setLearningWords, setLearningType, saveRepeatLearningState, currentDictId])
 
   useConfetti(state.uiState.isFinished && !state.isImmersiveMode)
 
@@ -198,11 +267,7 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
                   </p>
                   <div className="flex gap-3">
                     <button
-                      onClick={async () => {
-                        await startRepeatLearning()
-                        dispatch({ type: TypingStateActionType.RESET_PROGRESS })
-                        dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: true })
-                      }}
+                      onClick={handleStartRepeatLearning}
                       className="rounded-lg bg-indigo-500 px-4 py-2 text-white transition-colors hover:bg-indigo-600"
                     >
                       🔄 重复学习

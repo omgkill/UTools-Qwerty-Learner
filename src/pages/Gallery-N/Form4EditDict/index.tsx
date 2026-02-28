@@ -2,7 +2,6 @@ import { languageType } from '../constants'
 import { InnerContext } from '../index'
 import ConfirmDialog from './ConfirmationDialog'
 import { Dialog, Transition } from '@headlessui/react'
-import mixpanel from 'mixpanel-browser'
 import type { ChangeEvent, FC, FormEvent, MouseEvent } from 'react'
 import { Fragment, useContext, useState } from 'react'
 import { toast } from 'react-toastify'
@@ -85,10 +84,8 @@ const Form4EditDict: FC<Form4EditDictProps> = ({ wordBankId }) => {
     const result = await window.delLocalWordBank(wordBankId)
     if (result) {
       toast.success('删除成功')
-      mixpanel.track('Delete WordBank', { status: 'Success' })
     } else {
       toast.error('删除失败')
-      mixpanel.track('Delete WordBank', { status: 'Failed' })
     }
     window.initLocalWordBanks()
     handleRefresh()

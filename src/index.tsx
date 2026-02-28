@@ -5,7 +5,6 @@ import type { BackupMeta } from '@/utils/db'
 import { BACKUP_META_KEY, LOCAL_WRITE_KEY } from '@/utils/db'
 import { VIP_STATE_KEY, getUtoolsValue, setConcealFeature, setUtoolsValue } from '@/utils/utools'
 import { now } from '@/utils/timeService'
-import mixpanel from 'mixpanel-browser'
 import React, { Suspense, lazy, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
@@ -33,25 +32,6 @@ function AppToastContainer() {
       pauseOnHover
     />
   )
-}
-
-const disabledMixpanelTrack: typeof mixpanel.track = () => undefined
-const mixpanelMutable = mixpanel as unknown as { track: typeof mixpanel.track }
-
-if (import.meta.env.DEV || window.utools?.isDev?.()) {
-  const devKey = import.meta.env.VITE_MIXPANEL_KEY_DEV
-  if (devKey) {
-    mixpanel.init(devKey, { debug: true })
-  } else {
-    mixpanelMutable.track = disabledMixpanelTrack
-  }
-} else {
-  const prodKey = import.meta.env.VITE_MIXPANEL_KEY_PROD
-  if (prodKey) {
-    mixpanel.init(prodKey)
-  } else {
-    mixpanelMutable.track = disabledMixpanelTrack
-  }
 }
 
 const container = document.getElementById('root')
@@ -195,7 +175,6 @@ function Root() {
     if (!mode) return
     setUtoolsValue(VIP_STATE_KEY, 'c')
     setConcealFeature()
-    mixpanel.track('Open', { mode: mode })
   }, [mode])
 
   if (!isModeReady || !isDataRestored) {

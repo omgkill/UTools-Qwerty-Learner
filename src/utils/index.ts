@@ -2,8 +2,6 @@ import { CHAPTER_LENGTH } from '@/constants'
 import type { Howl } from 'howler'
 import { now } from './timeService'
 
-export * from './mixpanel'
-
 const bannedKeys = [
   'Enter',
   'Backspace',

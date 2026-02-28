@@ -1,7 +1,6 @@
 import { TypingContext, TypingStateActionType } from '../store'
 import { useContext } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
-import mixpanel from 'mixpanel-browser'
 import { toast } from 'react-toastify'
 
 export function useTypingHotkeys(
@@ -15,7 +14,6 @@ export function useTypingHotkeys(
     () => {
       if (!dispatch) return
       dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE })
-      mixpanel.track('ImmersiveMode', { state: isImmersiveMode ? 'close' : 'open' })
       if (!isImmersiveMode) {
         toast('再次按下 Alt + I 可退出沉浸模式🤞', {
           position: 'top-center',

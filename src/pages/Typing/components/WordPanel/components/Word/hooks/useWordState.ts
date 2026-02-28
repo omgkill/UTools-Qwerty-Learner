@@ -1,5 +1,5 @@
 import { EXPLICIT_SPACE } from '@/constants'
-import { getLocalTimeString } from '@/utils'
+import { getLocalTimeString } from '@/utils/timeService'
 import type { LetterMistakes } from '@/utils/db/record'
 import { useImmer } from 'use-immer'
 import { useEffect, useRef } from 'react'

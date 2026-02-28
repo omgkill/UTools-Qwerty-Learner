@@ -279,6 +279,15 @@ export function typingReducer(state: TypingState, action: TypingStateAction): Ty
         uiState: { ...state.uiState, isRepeatLearning: action.payload },
       }
 
+    case TypingStateActionType.SET_CURRENT_INDEX:
+      return {
+        ...state,
+        wordListData: {
+          ...state.wordListData,
+          index: action.payload,
+        },
+      }
+
     default:
       return state
   }

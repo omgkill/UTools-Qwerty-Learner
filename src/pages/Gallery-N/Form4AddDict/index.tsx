@@ -7,7 +7,6 @@ import LoadingIndicator from '@/components/LoadingIndicator'
 import Tooltip from '@/components/Tooltip'
 import type { LanguageCategoryType, LanguageType, Word, WordBank } from '@/typings'
 import { Dialog, Transition } from '@headlessui/react'
-import mixpanel from 'mixpanel-browser'
 import type { ChangeEvent, FC, FormEvent } from 'react'
 import { Fragment, useContext, useState } from 'react'
 import { toast } from 'react-toastify'
@@ -210,7 +209,6 @@ const Form4AddDict: FC<Props> = ({ onSaveDictSuccess }) => {
         : '未导入有效单词'
     setImportResult(`导入成功：${formData.name}，${summaryText}`)
     toast.success(`自定义词库添加成功，${summaryText}`)
-    mixpanel.track('Import WordBank')
 
     onSaveDictSuccess()
     setIsOpen(false)

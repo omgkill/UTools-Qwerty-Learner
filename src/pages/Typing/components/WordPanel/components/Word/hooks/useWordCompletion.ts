@@ -3,7 +3,6 @@ import type { WordState } from './useWordState'
 import { TypingContext, TypingStateActionType, initialState } from '@/pages/Typing/store'
 import { useDailyRecord, useWordProgress } from '@/utils/db/useProgress'
 import { useSaveWordRecord } from '@/utils/db'
-import { useMixPanelWordLogUploader } from '@/utils'
 import { useCallback, useContext, useEffect, useRef } from 'react'
 
 export function useWordCompletion(
@@ -26,7 +25,6 @@ export function useWordCompletion(
   )
   const onFinishCalledRef = useRef(false)
   const saveWordRecord = useSaveWordRecord()
-  const wordLogUploader = useMixPanelWordLogUploader(state)
   const { updateWordProgress } = useWordProgress()
   const { incrementReviewed, incrementLearned } = useDailyRecord()
 
@@ -49,60 +47,49 @@ export function useWordCompletion(
       const isCorrect = true
       const startTime = performance.now()
 
-      Promise.all([
-        saveWordRecord({
-          word: word.name,
-          wrongCount: wordState.wrongCount,
-          letterTimeArray: wordState.letterTimeArray,
-          letterMistake: wordState.letterMistake,
-        }).then((id) => {
-          console.log(`[DB] saveWordRecord done in ${performance.now() - startTime}ms, id=${id}`)
-          return id
-        }),
-        updateWordProgress(word.name, isCorrect, wordState.wrongCount).then((progress) => {
-          console.log(`[DB] updateWordProgress done in ${performance.now() - startTime}ms`)
-          return progress
-        }),
-      ])
-        .then(([, progress]) => {
-          if (!isRepeatLearning && progress) {
-            const isNewWord = progress.reps === 1
-            if (isNewWord) {
-              return incrementLearned()
-            } else {
-              return incrementReviewed(isExtraReview)
+      if (!isRepeatLearning) {
+        Promise.all([
+          saveWordRecord({
+            word: word.name,
+            wrongCount: wordState.wrongCount,
+            letterTimeArray: wordState.letterTimeArray,
+            letterMistake: wordState.letterMistake,
+          }).then((id) => {
+            console.log(`[DB] saveWordRecord done in ${performance.now() - startTime}ms, id=${id}`)
+            return id
+          }),
+          updateWordProgress(word.name, isCorrect, wordState.wrongCount).then((progress) => {
+            console.log(`[DB] updateWordProgress done in ${performance.now() - startTime}ms`)
+            return progress
+          }),
+        ])
+          .then(([, progress]) => {
+            if (progress) {
+              const isNewWord = progress.reps === 1
+              if (isNewWord) {
+                return incrementLearned()
+              } else {
+                return incrementReviewed(isExtraReview)
+              }
             }
-          }
-        })
-        .then(() => {
-          console.log(`[DB] All IndexedDB operations done in ${performance.now() - startTime}ms`)
-        })
-        .catch((e) => console.error('Failed to save word records:', e))
-
-      wordLogUploader({
-        headword: word.name,
-        timeStart: wordState.startTime,
-        timeEnd: wordState.endTime,
-        countInput: wordState.correctCount + wordState.wrongCount,
-        countCorrect: wordState.correctCount,
-        countTypo: wordState.wrongCount,
-      })
+          })
+          .then(() => {
+            console.log(`[DB] All IndexedDB operations done in ${performance.now() - startTime}ms`)
+          })
+          .catch((e) => console.error('Failed to save word records:', e))
+      }
 
       onFinish()
     }
   }, [
     wordState.isFinished,
     wordState.hasMadeInputWrong,
-    wordState.startTime,
-    wordState.endTime,
-    wordState.correctCount,
-    wordState.wrongCount,
     wordState.letterTimeArray,
     wordState.letterMistake,
     wordState.wordName,
+    wordState.wrongCount,
     word.name,
     dispatch,
-    wordLogUploader,
     saveWordRecord,
     updateWordProgress,
     incrementLearned,

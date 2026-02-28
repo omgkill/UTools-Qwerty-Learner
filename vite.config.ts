@@ -50,7 +50,7 @@ export default defineConfig(async () => {
             ],
             'vendor-echarts': ['echarts'],
             'vendor-dexie': ['dexie', 'dexie-react-hooks', 'dexie-export-import'],
-            'vendor-misc': ['dayjs', 'immer', 'use-immer', 'classnames', 'mixpanel-browser', 'swr'],
+            'vendor-misc': ['dayjs', 'immer', 'use-immer', 'classnames', 'swr'],
           },
         },
       },

@@ -18,6 +18,7 @@ export type ITypingState = {
   date: string
   isRepeatLearning: boolean
   learningWords: unknown[]
+  currentIndex: number
 }
 
 class RecordDB extends Dexie {

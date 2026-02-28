@@ -1,7 +1,6 @@
 import starBar from '@/assets/starBar.svg'
 import { DISMISS_START_CARD_DATE_KEY } from '@/constants'
 import { dismissStartCardDateAtom } from '@/store'
-import { recordStarAction } from '@/utils'
 import { getUtoolsValue } from '@/utils/utools'
 import { Transition } from '@headlessui/react'
 import { useSetAtom } from 'jotai'
@@ -24,15 +23,11 @@ export default function StarCard() {
   const onClickCloseStar = useCallback(() => {
     setIsShow(false)
     setDismissStartCardDate(new Date())
-    if (!isCounting) {
-      recordStarAction('dismiss')
-    }
   }, [setIsShow, setDismissStartCardDate, isCounting])
 
   const onClickWantStar = useCallback(() => {
     setIsCounting(true)
     setDismissStartCardDate(new Date())
-    recordStarAction('star')
   }, [setDismissStartCardDate])
 
   useEffect(() => {

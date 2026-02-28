@@ -120,6 +120,7 @@ describe('重复学习功能测试', () => {
       learningWords: repeatWords,
       date: getTodayString(),
       dictId: dictId,
+      currentIndex: 0,
     })
     
     const loadedState = await readRepeatLearningState(dictId)
@@ -129,7 +130,7 @@ describe('重复学习功能测试', () => {
     expect(loadedState?.learningWords.length).toBe(20)
     expect(loadedState?.date).toBe(getTodayString())
     
-    const loadedWordNames = loadedState?.learningWords.map((w: WordWithIndex) => w.name)
+    const loadedWordNames = (loadedState?.learningWords as WordWithIndex[])?.map(w => w.name)
     const originalWordNames = repeatWords.map(w => w.name)
     expect(loadedWordNames?.sort()).toEqual(originalWordNames.sort())
   })
@@ -149,6 +150,7 @@ describe('重复学习功能测试', () => {
       learningWords: repeatWords,
       date: yesterdayDate,
       dictId: dictId,
+      currentIndex: 0,
     })
     
     const loadedState = await readRepeatLearningState(dictId)
@@ -252,6 +254,7 @@ describe('重复学习功能测试', () => {
       learningWords: repeatWords,
       date: todayString,
       dictId: dictId,
+      currentIndex: 0,
     })
     
     const learnedWords = repeatWords.slice(0, 5)
@@ -262,6 +265,7 @@ describe('重复学习功能测试', () => {
       learningWords: remainingWords,
       date: todayString,
       dictId: dictId,
+      currentIndex: 5,
     })
     
     const loadedState = await readRepeatLearningState(dictId)
@@ -271,7 +275,7 @@ describe('重复学习功能测试', () => {
     expect(loadedState?.learningWords.length).toBe(15)
     expect(loadedState?.date).toBe(todayString)
     
-    const loadedWordNames = loadedState?.learningWords.map((w: WordWithIndex) => w.name)
+    const loadedWordNames = (loadedState?.learningWords as WordWithIndex[])?.map(w => w.name)
     const remainingWordNames = remainingWords.map(w => w.name)
     expect(loadedWordNames?.sort()).toEqual(remainingWordNames.sort())
   })

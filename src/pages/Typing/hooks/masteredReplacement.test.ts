@@ -8,8 +8,9 @@ describe('掌握单词替换逻辑测试', () => {
   const dictID = 'test-dict-mastered-replacement'
   const wordList: Word[] = Array.from({ length: 100 }, (_, i) => ({
     name: `word-${i + 1}`,
-    translation: `翻译-${i + 1}`,
-    phonetic: `音标-${i + 1}`,
+    trans: [`翻译-${i + 1}`],
+    usphone: `音标-${i + 1}`,
+    ukphone: `音标-${i + 1}`,
   }))
 
   beforeAll(async () => {
