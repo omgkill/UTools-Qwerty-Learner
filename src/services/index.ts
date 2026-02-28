@@ -235,6 +235,21 @@ export class DailyRecordService {
     return record
   }
 
+  async incrementMastered(dictID: string): Promise<IDailyRecord> {
+    const record = await this.getTodayRecord(dictID)
+
+    record.masteredCount++
+    record.lastUpdateTime = now()
+
+    if (record.id) {
+      await this.dailyRecords.update(record.id, record)
+    } else {
+      record.id = await this.dailyRecords.add(record)
+    }
+
+    return record
+  }
+
   async getRecord(dictID: string, date: string): Promise<IDailyRecord | undefined> {
     return this.dailyRecords.where('[dict+date]').equals([dictID, date]).first()
   }

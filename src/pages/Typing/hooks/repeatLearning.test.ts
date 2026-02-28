@@ -4,42 +4,7 @@ import { db } from '@/utils/db'
 import { DailyRecordService, WordProgressService, getRepeatLearningWords } from '@/services'
 import { getTodayStartTime, getTodayString, getTomorrowDateString } from '@/utils/timeService'
 import 'fake-indexeddb/auto'
-
-const REPEAT_STATE_KEY = 'typing-state'
-
-const utoolsDbMock = (() => {
-  let store: Record<string, { data: unknown; _rev?: string }> = {}
-  let rev = 0
-  return {
-    get: (id: string) => store[id] ?? null,
-    put: (doc: { _id: string; data: unknown; _rev?: string }) => {
-      rev += 1
-      store[doc._id] = { data: doc.data, _rev: String(rev) }
-      return { ok: true }
-    },
-    remove: (id: string) => {
-      delete store[id]
-      return { ok: true }
-    },
-    clear: () => {
-      store = {}
-      rev = 0
-    },
-  }
-})()
-
-const globalWindow = globalThis as typeof globalThis & { window?: Window }
-if (!globalWindow.window) {
-  Object.defineProperty(globalWindow, 'window', { value: globalThis as unknown as Window })
-}
-Object.defineProperty(globalWindow, 'utools', {
-  value: { db: utoolsDbMock },
-})
-if (globalWindow.window && !globalWindow.window.utools) {
-  Object.defineProperty(globalWindow.window, 'utools', {
-    value: { db: utoolsDbMock },
-  })
-}
+import type { ITypingState } from '@/utils/db'
 
 const createWordList = (count: number): Word[] => {
   const words: Word[] = []
@@ -59,6 +24,35 @@ const createWordWithIndex = (word: Word, index: number): WordWithIndex => {
   return { ...word, index }
 }
 
+async function writeRepeatLearningState(currentDictId: string, state: Omit<ITypingState, 'id'>): Promise<void> {
+  try {
+    if (db.typingStates) {
+      const allStates = await db.typingStates.toArray()
+      const existing = allStates.find(item => item.dictId === currentDictId && item.date === state.date)
+      if (existing) {
+        await db.typingStates.update(existing.id!, state)
+      } else {
+        await db.typingStates.add(state)
+      }
+    }
+  } catch (e) {
+    console.error('Failed to save state:', e)
+  }
+}
+
+async function readRepeatLearningState(currentDictId: string): Promise<ITypingState | null> {
+  try {
+    if (db.typingStates) {
+      const allStates = await db.typingStates.toArray()
+      return allStates.find(item => item.dictId === currentDictId && item.date === getTodayString()) ?? null
+    }
+    return null
+  } catch (e) {
+    console.error('Failed to load saved state:', e)
+    return null
+  }
+}
+
 describe('重复学习功能测试', () => {
   const dictId = 'test-dict-repeat-learning'
   let wordProgressService: WordProgressService
@@ -68,16 +62,16 @@ describe('重复学习功能测试', () => {
     await db.wordProgress.clear()
     await db.dailyRecords.clear()
     await db.wordRecords.clear()
+    await db.typingStates.clear()
     wordProgressService = new WordProgressService(db)
     dailyRecordService = new DailyRecordService(db)
-    utoolsDbMock.clear()
   })
 
   afterEach(async () => {
     await db.wordProgress.clear()
     await db.dailyRecords.clear()
     await db.wordRecords.clear()
-    utoolsDbMock.clear()
+    await db.typingStates.clear()
   })
 
   it('今日学习完成后，点击重复学习，应该能够正确保存和恢复状态', async () => {
@@ -121,26 +115,23 @@ describe('重复学习功能测试', () => {
     console.log('重复学习单词列表:', repeatWords.map(w => w.name))
     expect(repeatWords.length).toBe(20)
     
-    const savedState = {
+    await writeRepeatLearningState(dictId, {
       isRepeatLearning: true,
       learningWords: repeatWords,
       date: getTodayString(),
-    }
-    utoolsDbMock.put({ _id: REPEAT_STATE_KEY, data: savedState })
+      dictId: dictId,
+    })
     
-    const loadedStateDoc = utoolsDbMock.get(REPEAT_STATE_KEY)
-    expect(loadedStateDoc).not.toBeNull()
+    const loadedState = await readRepeatLearningState(dictId)
+    expect(loadedState).not.toBeNull()
     
-    const loadedState = loadedStateDoc?.data as typeof savedState
-    console.log('加载的状态:', loadedState)
+    expect(loadedState?.isRepeatLearning).toBe(true)
+    expect(loadedState?.learningWords.length).toBe(20)
+    expect(loadedState?.date).toBe(getTodayString())
     
-    expect(loadedState.isRepeatLearning).toBe(true)
-    expect(loadedState.learningWords.length).toBe(20)
-    expect(loadedState.date).toBe(getTodayString())
-    
-    const loadedWordNames = loadedState.learningWords.map((w: WordWithIndex) => w.name)
+    const loadedWordNames = loadedState?.learningWords.map((w: WordWithIndex) => w.name)
     const originalWordNames = repeatWords.map(w => w.name)
-    expect(loadedWordNames.sort()).toEqual(originalWordNames.sort())
+    expect(loadedWordNames?.sort()).toEqual(originalWordNames.sort())
   })
 
   it('第二天应该清除昨天的重复学习状态', async () => {
@@ -153,22 +144,17 @@ describe('重复学习功能测试', () => {
     const wordList = createWordList(10)
     const repeatWords = wordList.map((word, index) => createWordWithIndex(word, index))
     
-    const savedState = {
+    await writeRepeatLearningState(dictId, {
       isRepeatLearning: true,
       learningWords: repeatWords,
       date: yesterdayDate,
-    }
-    utoolsDbMock.put({ _id: REPEAT_STATE_KEY, data: savedState })
+      dictId: dictId,
+    })
     
-    const loadedStateDoc = utoolsDbMock.get(REPEAT_STATE_KEY)
-    const loadedState = loadedStateDoc?.data as typeof savedState
+    const loadedState = await readRepeatLearningState(dictId)
     
     const today = getTodayString()
-    expect(loadedState.date).not.toBe(today)
-    
-    if (loadedState.date !== today) {
-      console.log('日期不匹配，应该清除昨天的状态')
-    }
+    expect(loadedState?.date).not.toBe(today)
   })
 
   it('重复学习模式下，学习单词应该正确显示', async () => {
@@ -261,39 +247,32 @@ describe('重复学习功能测试', () => {
     expect(repeatWords.length).toBe(20)
     
     const todayString = getTodayString()
-    const savedState = {
+    await writeRepeatLearningState(dictId, {
       isRepeatLearning: true,
       learningWords: repeatWords,
       date: todayString,
-    }
-    utoolsDbMock.put({ _id: REPEAT_STATE_KEY, data: savedState })
+      dictId: dictId,
+    })
     
     const learnedWords = repeatWords.slice(0, 5)
     const remainingWords = repeatWords.slice(5)
     
-    const updatedState = {
+    await writeRepeatLearningState(dictId, {
       isRepeatLearning: true,
       learningWords: remainingWords,
       date: todayString,
-    }
-    utoolsDbMock.put({ _id: REPEAT_STATE_KEY, data: updatedState })
-    
-    const loadedStateDoc = utoolsDbMock.get(REPEAT_STATE_KEY)
-    expect(loadedStateDoc).not.toBeNull()
-    
-    const loadedState = loadedStateDoc?.data as typeof updatedState
-    console.log('重新进入后加载的状态:', {
-      isRepeatLearning: loadedState.isRepeatLearning,
-      learningWordsCount: loadedState.learningWords.length,
-      date: loadedState.date,
+      dictId: dictId,
     })
     
-    expect(loadedState.isRepeatLearning).toBe(true)
-    expect(loadedState.learningWords.length).toBe(15)
-    expect(loadedState.date).toBe(todayString)
+    const loadedState = await readRepeatLearningState(dictId)
+    expect(loadedState).not.toBeNull()
     
-    const loadedWordNames = loadedState.learningWords.map((w: WordWithIndex) => w.name)
+    expect(loadedState?.isRepeatLearning).toBe(true)
+    expect(loadedState?.learningWords.length).toBe(15)
+    expect(loadedState?.date).toBe(todayString)
+    
+    const loadedWordNames = loadedState?.learningWords.map((w: WordWithIndex) => w.name)
     const remainingWordNames = remainingWords.map(w => w.name)
-    expect(loadedWordNames.sort()).toEqual(remainingWordNames.sort())
+    expect(loadedWordNames?.sort()).toEqual(remainingWordNames.sort())
   })
 })

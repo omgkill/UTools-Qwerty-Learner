@@ -9,6 +9,8 @@ import { useAtomValue } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import useSWR from 'swr'
 import type { LearningType } from './learningLogic'
+import type { ITypingState } from '@/utils/db'
+import { TypingStateRecord } from '@/utils/db'
 
 export type { LearningType }
 
@@ -35,25 +37,11 @@ export type UseWordListResult = {
   getNextNewWord: () => Promise<WordWithIndex | null>
 }
 
-type RepeatLearningState = {
-  isRepeatLearning: boolean
-  learningWords: WordWithIndex[]
-  date: string
-  dictId: string | null
-}
-
-const REPEAT_STATE_KEY = 'typing-state'
-
-function readRepeatLearningState(): RepeatLearningState | null {
+async function readRepeatLearningState(currentDictId: string): Promise<ITypingState | null> {
   try {
-    if (typeof window !== 'undefined' && window.utools?.db) {
-      const doc = window.utools.db.get(REPEAT_STATE_KEY)
-      const data = doc?.data
-      if (!data) return null
-      if (typeof data === 'string') {
-        return JSON.parse(data) as RepeatLearningState
-      }
-      return data as RepeatLearningState
+    if (typeof window !== 'undefined' && db.typingStates) {
+      const allStates = await db.typingStates.toArray()
+      return allStates.find(item => item.dictId === currentDictId && item.date === getTodayDate()) ?? null
     }
     return null
   } catch (e) {
@@ -62,15 +50,16 @@ function readRepeatLearningState(): RepeatLearningState | null {
   }
 }
 
-function writeRepeatLearningState(state: RepeatLearningState): void {
+async function writeRepeatLearningState(currentDictId: string, state: Omit<ITypingState, 'id'>): Promise<void> {
   try {
-    if (typeof window !== 'undefined' && window.utools?.db) {
-      const doc = window.utools.db.get(REPEAT_STATE_KEY)
-      window.utools.db.put({
-        _id: REPEAT_STATE_KEY,
-        data: state,
-        _rev: doc ? doc._rev : undefined,
-      })
+    if (typeof window !== 'undefined' && db.typingStates) {
+      const allStates = await db.typingStates.toArray()
+      const existing = allStates.find(item => item.dictId === currentDictId && item.date === state.date)
+      if (existing) {
+        await db.typingStates.update(existing.id!, state)
+      } else {
+        await db.typingStates.add(state)
+      }
     }
   } catch (e) {
     console.error('Failed to save state:', e)
@@ -104,31 +93,34 @@ export function useWordList(): UseWordListResult {
   // 用于取消过期的异步加载请求
   const loadVersionRef = useRef(0)
 
-  // 从 utools db 加载重复学习状态和学习单词
+  // 从 IndexedDB 加载重复学习状态和学习单词
   useEffect(() => {
-    const parsedState = readRepeatLearningState()
-    if (!parsedState) return
-    const today = getTodayDate()
-    const isValidDate = parsedState.date === today
-    const isValidDict = parsedState.dictId === currentDictId
-    if (!isValidDate || !isValidDict) {
-      setIsRepeatLearning(false)
-      setIsExtraReview(false)
-      setLearningType('review')
-      setLearningWords([])
-      writeRepeatLearningState({
-        isRepeatLearning: false,
-        learningWords: [],
-        date: today,
-        dictId: currentDictId,
-      })
-      return
+    const loadState = async () => {
+      const parsedState = await readRepeatLearningState(currentDictId)
+      if (!parsedState) return
+      const today = getTodayDate()
+      const isValidDate = parsedState.date === today
+      const isValidDict = parsedState.dictId === currentDictId
+      if (!isValidDate || !isValidDict) {
+        setIsRepeatLearning(false)
+        setIsExtraReview(false)
+        setLearningType('review')
+        setLearningWords([])
+        await writeRepeatLearningState(currentDictId, {
+          isRepeatLearning: false,
+          learningWords: [],
+          date: today,
+          dictId: currentDictId,
+        })
+        return
+      }
+      setIsRepeatLearning(parsedState.isRepeatLearning)
+      if (parsedState.isRepeatLearning && parsedState.learningWords && parsedState.learningWords.length > 0) {
+        setLearningWords(parsedState.learningWords as WordWithIndex[])
+        lastLearningWordsRef.current = parsedState.learningWords as WordWithIndex[]
+      }
     }
-    setIsRepeatLearning(parsedState.isRepeatLearning)
-    if (parsedState.isRepeatLearning && parsedState.learningWords && parsedState.learningWords.length > 0) {
-      setLearningWords(parsedState.learningWords)
-      lastLearningWordsRef.current = parsedState.learningWords
-    }
+    loadState()
   }, [currentDictId])
 
   const isLocalWordBank = useMemo(() => {
@@ -150,14 +142,17 @@ export function useWordList(): UseWordListResult {
     mutate,
   } = useSWR(swrKey, fetcher)
 
-  // 监听重复学习状态和学习单词变化，保存到 utools db
+  // 监听重复学习状态和学习单词变化，保存到 IndexedDB
   useEffect(() => {
-    writeRepeatLearningState({
-      isRepeatLearning,
-      learningWords: isRepeatLearning ? learningWords : [],
-      date: getTodayDate(),
-      dictId: currentDictId,
-    })
+    const saveState = async () => {
+      await writeRepeatLearningState(currentDictId, {
+        isRepeatLearning,
+        learningWords: isRepeatLearning ? learningWords : [],
+        date: getTodayDate(),
+        dictId: currentDictId,
+      })
+    }
+    saveState()
   }, [isRepeatLearning, learningWords, currentDictId])
 
   const { getDueWordsWithInfo, getNewWords } = useReviewWords()
@@ -296,6 +291,14 @@ export function useWordList(): UseWordListResult {
     setLearningType('review')
     setLearningWords(repeatWords)
     lastLearningWordsRef.current = repeatWords
+    
+    // 立即保存重复学习状态到 IndexedDB
+    await writeRepeatLearningState(currentDictId, {
+      isRepeatLearning: true,
+      learningWords: repeatWords,
+      date: getTodayDate(),
+      dictId: currentDictId,
+    })
   }, [wordList, currentDictId, learningWords, learningType])
 
   // 当重复学习状态为true且学习单词为空时，自动加载重复学习单词

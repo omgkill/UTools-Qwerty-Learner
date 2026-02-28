@@ -12,15 +12,33 @@ import Dexie from 'dexie'
 import { useAtomValue } from 'jotai'
 import { useCallback, useContext } from 'react'
 
+export type ITypingState = {
+  id?: number
+  dictId: string
+  date: string
+  isRepeatLearning: boolean
+  learningWords: unknown[]
+}
+
 class RecordDB extends Dexie {
   wordRecords!: Table<IWordRecord, number>
   learningRecords!: Table<ILearningRecord, number>
   wordProgress!: Table<IWordProgress, number>
   dictProgress!: Table<IDictProgress, number>
   dailyRecords!: Table<IDailyRecord, number>
+  typingStates!: Table<ITypingState, number>
 
   constructor() {
     super('RecordDB')
+    this.version(5)
+      .stores({
+        wordRecords: '++id,word,timeStamp,dict,learning,errorCount,[dict+learning],[dict+timeStamp]',
+        learningRecords: '++id,timeStamp,dict,learning,time,[dict+learning]',
+        wordProgress: '++id,word,dict,masteryLevel,nextReviewTime,lastReviewTime,[dict+word],[dict+masteryLevel]',
+        dictProgress: '++id,dict',
+        dailyRecords: '++id,dict,date,[dict+date]',
+        typingStates: '++id,dict,date,[dict+date]',
+      })
     this.version(4)
       .stores({
         wordRecords: '++id,word,timeStamp,dict,learning,errorCount,[dict+learning],[dict+timeStamp]',
