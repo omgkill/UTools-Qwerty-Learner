@@ -31,7 +31,7 @@ export enum TypingStateActionType {
 }
 
 export type TypingStateAction =
-  | { type: TypingStateActionType.SET_WORDS; payload: { words: WordWithIndex[]; initialIndex?: number } }
+  | { type: TypingStateActionType.SET_WORDS; payload: { words: WordWithIndex[] } }
   | { type: TypingStateActionType.RESET_PROGRESS }
   | { type: TypingStateActionType.SET_IS_SKIP; payload: boolean }
   | { type: TypingStateActionType.SET_IS_TYPING; payload: boolean }

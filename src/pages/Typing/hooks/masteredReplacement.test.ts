@@ -112,8 +112,7 @@ describe('掌握单词替换逻辑测试', () => {
       wordList,
       reviewedCount: 0,
       learnedCount: todayRecord.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: async (wordList, limit) => {
+            getDueWordsWithInfo: async (wordList, limit) => {
         return await wordProgressService.getDueWordsWithInfo(dictID, wordList, limit)
       },
       getNewWords: async (wordList, limit) => {
@@ -124,8 +123,8 @@ describe('掌握单词替换逻辑测试', () => {
       },
     })
 
-    // 验证学习类型是否为complete（已达到每日目标）
-    expect(typingSession.learningType).toBe('complete')
+    // 验证学习类型是否为consolidate（已达到每日目标，进入巩固模式）
+    expect(typingSession.learningType).toBe('consolidate')
   })
 
   it('验证掌握单词不影响今日目标计数', async () => {

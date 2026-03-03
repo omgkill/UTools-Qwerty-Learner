@@ -1,7 +1,6 @@
 import { currentDictIdAtom, currentWordBankAtom } from '@/store'
 import { dailyRecordAtom } from '../store/atoms'
 import type { Word, WordWithIndex } from '@/typings/index'
-import { LEARNING_CONFIG } from '@/utils/db/progress'
 import { useDailyRecord, useReviewWords, useWordProgress } from '@/utils/db/useProgress'
 import { db } from '@/utils/db'
 import { getNextReplacementWord, getRepeatLearningWords, loadTypingSession } from '@/services'
@@ -9,6 +8,7 @@ import { useAtomValue } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import useSWR from 'swr'
 import type { LearningType } from './learningLogic'
+import type { LearningMode } from './useTypingMode'
 
 export type { LearningType }
 
@@ -24,13 +24,6 @@ export type UseWordListResult = {
   todayLearned: number
   todayReviewed: number
   todayMastered: number
-  newWordQuota: number
-  remainingForTarget: number
-  hasReachedTarget: boolean
-  hasMoreDueWords: boolean
-  remainingDueCount: number
-  isExtraReview: boolean
-  startExtraReview: () => void
   startRepeatLearning: () => Promise<WordWithIndex[]>
   getNextNewWord: () => Promise<WordWithIndex | null>
   setLearningWords: (words: WordWithIndex[]) => void
@@ -38,12 +31,10 @@ export type UseWordListResult = {
   reloadWords: () => void
 }
 
-export function useWordList(isRepeatLearning: boolean = false): UseWordListResult {
+export function useWordList(mode: LearningMode | null): UseWordListResult {
   const currentWordBank = useAtomValue(currentWordBankAtom)
   const currentDictId = useAtomValue(currentDictIdAtom)
   const dailyRecord = useAtomValue(dailyRecordAtom)
-  const dailyRecordRef = useRef(dailyRecord)
-  dailyRecordRef.current = dailyRecord
 
   const { refreshDailyRecord } = useDailyRecord()
 
@@ -53,9 +44,6 @@ export function useWordList(isRepeatLearning: boolean = false): UseWordListResul
   const [masteredCount, setMasteredCount] = useState(0)
   const [learningWords, setLearningWords] = useState<WordWithIndex[]>([])
   const [loadVersion, setLoadVersion] = useState(0)
-  const [hasMoreDueWords, setHasMoreDueWords] = useState(false)
-  const [remainingDueCount, setRemainingDueCount] = useState(0)
-  const [isExtraReview, setIsExtraReview] = useState(false)
   const [isLoadingLearningWords, setIsLoadingLearningWords] = useState(false)
   const lastLearningWordsRef = useRef<WordWithIndex[]>([])
   const loadVersionRef = useRef(0)
@@ -90,20 +78,10 @@ export function useWordList(isRepeatLearning: boolean = false): UseWordListResul
   const todayReviewed = dailyRecord?.reviewedCount ?? 0
   const todayMastered = dailyRecord?.masteredCount ?? 0
 
-  const newWordQuota = useMemo(() => {
-    return Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - todayReviewed - todayLearned)
-  }, [todayReviewed, todayLearned])
-
-  const remainingForTarget = newWordQuota
-
-  const hasReachedTarget = useMemo(() => {
-    return todayReviewed + todayLearned >= LEARNING_CONFIG.DAILY_LIMIT
-  }, [todayReviewed, todayLearned])
-
   const retryWordListRef = useRef<string | null>(null)
 
   const loadLearningWords = useCallback(async () => {
-    if (isRepeatLearning) {
+    if (mode !== 'normal') {
       return
     }
 
@@ -120,14 +98,14 @@ export function useWordList(isRepeatLearning: boolean = false): UseWordListResul
     const currentVersion = loadVersionRef.current
 
     try {
-      const record = dailyRecordRef.current
+      const record = dailyRecord
       const reviewedCount = record?.reviewedCount ?? 0
       const learnedCount = record?.learnedCount ?? 0
+      
       const result = await loadTypingSession({
         wordList,
         reviewedCount,
         learnedCount,
-        isExtraReview,
         getDueWordsWithInfo,
         getNewWords,
         getWordProgress,
@@ -146,9 +124,6 @@ export function useWordList(isRepeatLearning: boolean = false): UseWordListResul
         lastLearningWordsRef.current = result.learningWords
         setLearningWords(result.learningWords)
       }
-
-      setHasMoreDueWords(result.hasMoreDueWords)
-      setRemainingDueCount(result.remainingDueCount)
     } catch (e) {
       console.error('Failed to load learning words:', e)
       setLearningWords([])
@@ -158,26 +133,21 @@ export function useWordList(isRepeatLearning: boolean = false): UseWordListResul
   }, [
     wordList,
     currentWordBank,
+    dailyRecord,
     getDueWordsWithInfo,
     getNewWords,
     getWordProgress,
-    isExtraReview,
     isLoadingLearningWords,
-    isRepeatLearning,
+    mode,
   ])
 
   const reloadWords = useCallback(() => {
-    if (isRepeatLearning) {
+    if (mode !== 'normal') {
       return
     }
     loadVersionRef.current += 1
     setLoadVersion((v) => v + 1)
-  }, [isRepeatLearning])
-
-  const startExtraReview = useCallback(() => {
-    setIsExtraReview(true)
-    reloadWords()
-  }, [reloadWords])
+  }, [mode])
 
   const startRepeatLearning = useCallback(async (): Promise<WordWithIndex[]> => {
     if (!wordList || wordList.length === 0 || !currentDictId) {
@@ -219,18 +189,6 @@ export function useWordList(isRepeatLearning: boolean = false): UseWordListResul
   }, [loadLearningWords, loadVersion])
 
   useEffect(() => {
-    if (dailyRecord) {
-      reloadWords()
-    }
-  }, [dailyRecord, reloadWords])
-
-  useEffect(() => {
-    if (isExtraReview) {
-      reloadWords()
-    }
-  }, [isExtraReview, reloadWords])
-
-  useEffect(() => {
     if (!currentWordBank) return
     if (isWordListLoading) return
     if (!wordList) return
@@ -246,7 +204,7 @@ export function useWordList(isRepeatLearning: boolean = false): UseWordListResul
   }, [currentWordBank, isWordListLoading, wordList, mutate])
 
   useEffect(() => {
-    if (isRepeatLearning) return
+    if (mode !== 'normal') return
     if (
       learningWords.length === 0 &&
       learningType !== 'complete' &&
@@ -256,7 +214,7 @@ export function useWordList(isRepeatLearning: boolean = false): UseWordListResul
     ) {
       reloadWords()
     }
-  }, [learningWords.length, learningType, isWordListLoading, wordList, reloadWords, isRepeatLearning])
+  }, [learningWords.length, learningType, isWordListLoading, wordList, reloadWords, mode])
 
   const baseWords: WordWithIndex[] = useMemo(() => {
     return learningWords
@@ -274,13 +232,6 @@ export function useWordList(isRepeatLearning: boolean = false): UseWordListResul
     todayLearned,
     todayReviewed,
     todayMastered,
-    newWordQuota,
-    remainingForTarget,
-    hasReachedTarget,
-    hasMoreDueWords,
-    remainingDueCount,
-    isExtraReview,
-    startExtraReview,
     startRepeatLearning,
     getNextNewWord,
     setLearningWords,

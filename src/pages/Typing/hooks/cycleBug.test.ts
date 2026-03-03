@@ -45,8 +45,7 @@ describe('Typing Page - 真实流程复现', () => {
       wordList,
       reviewedCount: record.reviewedCount,
       learnedCount: record.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })

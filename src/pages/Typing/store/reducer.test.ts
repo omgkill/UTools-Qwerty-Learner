@@ -228,14 +228,14 @@ describe('Typing Reducer - ADD_REPLACEMENT_WORD', () => {
   })
 })
 
-describe('Typing Reducer - SET_WORDS with initialIndex', () => {
+describe('Typing Reducer - SET_WORDS and SET_CURRENT_INDEX', () => {
   let state: TypingState
 
   beforeEach(() => {
     state = createInitialState()
   })
 
-  it('SET_WORDS 不带 initialIndex 时，应该尝试保留当前单词位置', () => {
+  it('SET_WORDS 应该尝试保留当前单词位置', () => {
     const normalWords = [createWord('apple', [], 0), createWord('banana', [], 1), createWord('cherry', [], 2)]
     state = createInitialState(normalWords, 1)
 
@@ -246,32 +246,17 @@ describe('Typing Reducer - SET_WORDS with initialIndex', () => {
     expect(newState.wordListData.words[0].name).toBe('banana')
   })
 
-  it('SET_WORDS 带 initialIndex 时，应该直接设置 index', () => {
+  it('SET_CURRENT_INDEX 应该直接设置 index', () => {
     const normalWords = [createWord('apple', [], 0), createWord('banana', [], 1), createWord('cherry', [], 2)]
-    state = createInitialState(normalWords, 1)
+    state = createInitialState(normalWords, 0)
 
-    const repeatWords = [createWord('word1', [], 0), createWord('word2', [], 1), createWord('word3', [], 2)]
     const newState = typingReducer(state, {
-      type: TypingStateActionType.SET_WORDS,
-      payload: { words: repeatWords, initialIndex: 2 },
+      type: TypingStateActionType.SET_CURRENT_INDEX,
+      payload: 2,
     })
 
     expect(newState.wordListData.index).toBe(2)
-    expect(newState.wordListData.words[2].name).toBe('word3')
-  })
-
-  it('SET_WORDS 带 initialIndex 越界时，应该设置为最后一个单词', () => {
-    const normalWords = [createWord('apple', [], 0), createWord('banana', [], 1), createWord('cherry', [], 2)]
-    state = createInitialState(normalWords, 1)
-
-    const repeatWords = [createWord('word1', [], 0), createWord('word2', [], 1)]
-    const newState = typingReducer(state, {
-      type: TypingStateActionType.SET_WORDS,
-      payload: { words: repeatWords, initialIndex: 10 },
-    })
-
-    expect(newState.wordListData.index).toBe(1)
-    expect(newState.wordListData.words[1].name).toBe('word2')
+    expect(newState.wordListData.words[2].name).toBe('cherry')
   })
 
   it('模拟重复学习场景：正常学习 index=15，重复学习恢复 index=5', () => {
@@ -286,9 +271,14 @@ describe('Typing Reducer - SET_WORDS with initialIndex', () => {
       repeatWords.push(createWord(`repeat${i}`, [], i))
     }
 
-    const newState = typingReducer(state, {
+    // 新架构：SET_WORDS + SET_CURRENT_INDEX
+    let newState = typingReducer(state, {
       type: TypingStateActionType.SET_WORDS,
-      payload: { words: repeatWords, initialIndex: 5 },
+      payload: { words: repeatWords },
+    })
+    newState = typingReducer(newState, {
+      type: TypingStateActionType.SET_CURRENT_INDEX,
+      payload: 5,
     })
 
     expect(newState.wordListData.index).toBe(5)
@@ -317,10 +307,14 @@ describe('Typing Reducer - SET_WORDS with initialIndex', () => {
       repeatWords.push(createWord(`repeat${i}`, [], i))
     }
 
-    // 4. 设置重复学习单词列表，使用 initialIndex
+    // 4. 新架构：SET_WORDS + SET_CURRENT_INDEX
     currentState = typingReducer(currentState, {
       type: TypingStateActionType.SET_WORDS,
-      payload: { words: repeatWords, initialIndex: savedIndex },
+      payload: { words: repeatWords },
+    })
+    currentState = typingReducer(currentState, {
+      type: TypingStateActionType.SET_CURRENT_INDEX,
+      payload: savedIndex,
     })
 
     // 5. 验证 index 正确恢复
@@ -333,7 +327,7 @@ describe('Typing Reducer - SET_WORDS with initialIndex', () => {
     expect(currentState.wordListData.index).toBe(6)
   })
 
-  it('模拟错误场景：不使用 initialIndex 导致 index 错误', () => {
+  it('模拟错误场景：不使用 SET_CURRENT_INDEX 导致 index 错误', () => {
     // 1. 正常学习状态
     const normalWords: WordWithIndex[] = []
     for (let i = 0; i < 30; i++) {
@@ -353,10 +347,10 @@ describe('Typing Reducer - SET_WORDS with initialIndex', () => {
       repeatWords.push(createWord(`repeat${i}`, [], i))
     }
 
-    // 4. 不使用 initialIndex（模拟之前的 bug）
+    // 4. 不使用 SET_CURRENT_INDEX（模拟之前的 bug）
     currentState = typingReducer(currentState, {
       type: TypingStateActionType.SET_WORDS,
-      payload: { words: repeatWords },  // 没有 initialIndex
+      payload: { words: repeatWords },
     })
 
     // 5. index 会被重置为 0（因为找不到 normal15 在 repeatWords 中）

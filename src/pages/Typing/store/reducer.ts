@@ -7,19 +7,6 @@ export function typingReducer(state: TypingState, action: TypingStateAction): Ty
   switch (action.type) {
     case TypingStateActionType.SET_WORDS: {
       const newWords = action.payload.words
-      const initialIndex = action.payload.initialIndex
-      
-      if (initialIndex !== undefined) {
-        const safeIndex = Math.min(initialIndex, newWords.length - 1)
-        return {
-          ...state,
-          wordListData: {
-            words: newWords,
-            index: safeIndex >= 0 ? safeIndex : 0,
-          },
-        }
-      }
-      
       const currentWordName = state.wordListData.words[state.wordListData.index]?.name
       const newIndex = currentWordName 
         ? newWords.findIndex(w => w.name === currentWordName)

@@ -22,70 +22,53 @@ export type DetermineLearningTypeParams = {
   learnedCount: number
   allProgress: (IWordProgress | undefined)[]
   wordList: Word[]
-  isExtraReview?: boolean
 }
 
 export type DetermineLearningTypeResult = {
   learningType: LearningType
   learningWords: WordWithIndex[]
-  hasMoreDueWords?: boolean
-  remainingDueCount?: number
+  dueCount: number
+  newCount: number
 }
 
 export function determineLearningType(params: DetermineLearningTypeParams): DetermineLearningTypeResult {
-  const { dueWords, newWords, reviewedCount, learnedCount, allProgress, wordList, isExtraReview = false } = params
-
-  const remaining = Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
-
-  if (!isExtraReview && reviewedCount + learnedCount >= LEARNING_CONFIG.DAILY_LIMIT) {
-    if (dueWords.length > 0) {
-      return {
-        learningType: 'complete',
-        learningWords: [],
-        hasMoreDueWords: true,
-        remainingDueCount: dueWords.length,
-      }
-    }
-    return {
-      learningType: 'complete',
-      learningWords: [],
-    }
-  }
+  const { dueWords, newWords, reviewedCount, learnedCount, allProgress, wordList } = params
 
   if (dueWords.length > 0) {
-    const wordsToReturn = isExtraReview ? dueWords : dueWords.slice(0, remaining)
-    const hasMore = isExtraReview ? false : dueWords.length > remaining
-    
-    // 如果到期词不足剩余配额，应该补充新词
-    if (!isExtraReview && dueWords.length < remaining) {
-      const newWordQuota = remaining - dueWords.length
-      const wordsToReturnWithNew = [
-        ...wordsToReturn,
-        ...newWords.slice(0, newWordQuota)
-      ]
+    if (dueWords.length > LEARNING_CONFIG.DAILY_LIMIT) {
       return {
         learningType: 'review',
-        learningWords: wordsToReturnWithNew,
-        hasMoreDueWords: hasMore,
-        remainingDueCount: hasMore ? dueWords.length - remaining : 0,
+        learningWords: dueWords,
+        dueCount: dueWords.length,
+        newCount: newWords.length,
       }
     }
+
+    const remaining = Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
+    const newWordQuota = Math.max(0, remaining - dueWords.length)
     
+    const wordsToReturn = [
+      ...dueWords,
+      ...newWords.slice(0, newWordQuota)
+    ]
+
     return {
       learningType: 'review',
       learningWords: wordsToReturn,
-      hasMoreDueWords: hasMore,
-      remainingDueCount: hasMore ? dueWords.length - remaining : 0,
+      dueCount: dueWords.length,
+      newCount: newWords.length,
     }
   }
 
-  const quota = remaining
+  const remaining = Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
 
-  if (quota > 0 && newWords.length > 0) {
-    const wordsToLearn = newWords.slice(0, quota)
+  if (remaining > 0 && newWords.length > 0) {
+    const wordsToLearn = newWords.slice(0, remaining)
     return {
       learningType: 'new',
       learningWords: wordsToLearn,
+      dueCount: 0,
+      newCount: newWords.length,
     }
   }
 
@@ -96,11 +79,21 @@ export function determineLearningType(params: DetermineLearningTypeParams): Dete
       return progress && progress.masteryLevel > 0 && progress.masteryLevel < 7
     })
 
-  const shuffled = [...learnedWords].sort(() => Math.random() - 0.5)
+  if (learnedWords.length > 0) {
+    const shuffled = [...learnedWords].sort(() => Math.random() - 0.5)
+    return {
+      learningType: 'consolidate',
+      learningWords: shuffled,
+      dueCount: 0,
+      newCount: 0,
+    }
+  }
 
   return {
-    learningType: 'consolidate',
-    learningWords: shuffled.slice(0, remaining),
+    learningType: 'complete',
+    learningWords: [],
+    dueCount: 0,
+    newCount: 0,
   }
 }
 

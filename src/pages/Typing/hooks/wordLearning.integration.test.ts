@@ -58,8 +58,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: record.reviewedCount,
       learnedCount: record.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
@@ -174,8 +173,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: record.reviewedCount,
       learnedCount: record.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
@@ -286,8 +284,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: record.reviewedCount,
       learnedCount: record.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
@@ -385,8 +382,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: record.reviewedCount,
       learnedCount: record.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
@@ -434,8 +430,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: updatedRecord.reviewedCount,
       learnedCount: updatedRecord.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
@@ -464,8 +459,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: firstDayRecord.reviewedCount,
       learnedCount: firstDayRecord.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
@@ -525,8 +519,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
         wordList,
         reviewedCount: secondDayRecord.reviewedCount,
         learnedCount: secondDayRecord.learnedCount,
-        isExtraReview: false,
-        getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+                getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
         getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
         getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
       })
@@ -558,8 +551,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: record.reviewedCount,
       learnedCount: record.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
@@ -615,8 +607,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: updatedRecord.reviewedCount,
       learnedCount: updatedRecord.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
@@ -642,8 +633,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: firstDayRecord.reviewedCount,
       learnedCount: firstDayRecord.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
@@ -784,8 +774,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
         wordList,
         reviewedCount: secondDayRecord.reviewedCount,
         learnedCount: secondDayRecord.learnedCount,
-        isExtraReview: false,
-        getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+                getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
         getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
         getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
       })
@@ -970,8 +959,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
         wordList,
         reviewedCount: updatedSecondDayRecord.reviewedCount,
         learnedCount: updatedSecondDayRecord.learnedCount,
-        isExtraReview: false,
-        getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+                getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
         getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
         getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
       })
@@ -999,8 +987,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: firstDayRecord.reviewedCount,
       learnedCount: firstDayRecord.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
@@ -1105,8 +1092,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
         wordList,
         reviewedCount: secondDayRecord.reviewedCount,
         learnedCount: secondDayRecord.learnedCount,
-        isExtraReview: false,
-        getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+                getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
         getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
         getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
       })
@@ -1186,19 +1172,18 @@ describe('背单词集成测试 - 第一天学习新词', () => {
         wordList,
         reviewedCount: updatedSecondDayRecord.reviewedCount,
         learnedCount: updatedSecondDayRecord.learnedCount,
-        isExtraReview: false,
-        getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+                getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
         getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
         getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
       })
 
-      // 验证重新打开界面后应该达到了每日目标
+      // 验证重新打开界面后应该进入巩固模式（有已学习的词但没有到期词和新词）
       console.log('重新打开界面后的学习类型:', reopenSession.learningType)
       console.log('重新打开界面后的学习单词数:', reopenSession.learningWords.length)
       console.log('重新打开界面后的新词数量:', reopenSession.newCount)
 
-      // 验证应该达到了每日目标（20 个有效学习：18 个复习 + 2 个新词）
-      expect(reopenSession.learningType).toBe('complete')
+      // 验证：达到每日目标后，没有到期词和新词时进入巩固模式
+      expect(reopenSession.learningType).toBe('consolidate')
       expect(updatedSecondDayRecord.reviewedCount + updatedSecondDayRecord.learnedCount).toBe(20)
 
     } finally {
@@ -1219,8 +1204,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: firstDayRecord.reviewedCount,
       learnedCount: firstDayRecord.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
@@ -1246,8 +1230,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
         wordList,
         reviewedCount: secondDayRecord.reviewedCount,
         learnedCount: secondDayRecord.learnedCount,
-        isExtraReview: false,
-        getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+                getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
         getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
         getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
       })
@@ -1272,8 +1255,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
         wordList,
         reviewedCount: thirdDayRecord.reviewedCount,
         learnedCount: thirdDayRecord.learnedCount,
-        isExtraReview: false,
-        getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+                getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
         getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
         getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
       })
@@ -1302,19 +1284,17 @@ describe('背单词集成测试 - 第一天学习新词', () => {
         wordList,
         reviewedCount: fourthDayRecord.reviewedCount,
         learnedCount: fourthDayRecord.learnedCount,
-        isExtraReview: false,
-        getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+                getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
         getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
         getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
       })
 
-      // 验证：有 40 个到期词，但只加载 20 个
+      // 验证：有 40 个到期词，新逻辑返回所有 40 个（到期词 > 20 时不限制）
       expect(fourthDaySession.learningType).toBe('review')
-      expect(fourthDaySession.learningWords.length).toBe(20)
+      expect(fourthDaySession.learningWords.length).toBe(40)
       expect(fourthDaySession.dueCount).toBe(40) // 实际到期词数量
-      expect(fourthDaySession.hasMoreDueWords).toBe(true) // 还有更多到期词
 
-      // 学习前 20 个到期词
+      // 学习所有 40 个到期词
       for (let i = 0; i < fourthDaySession.learningWords.length; i++) {
         const word = fourthDaySession.learningWords[i]
         await wordProgressService.updateProgress(dictId, word.name, true, 0)
@@ -1322,25 +1302,22 @@ describe('背单词集成测试 - 第一天学习新词', () => {
         await dailyRecordService.incrementReviewed(dictId)
       }
 
-      // 验证达到每日上限
+      // 验证学习了 40 个词（到期词 > 20 时不限制）
       const updatedFourthDayRecord = await dailyRecordService.getTodayRecord(dictId)
-      expect(updatedFourthDayRecord.reviewedCount).toBe(20)
+      expect(updatedFourthDayRecord.reviewedCount).toBe(40)
 
-      // 重新加载会话，验证是否标记为还有更多到期词
+      // 重新加载会话
       const reopenSession = await loadTypingSession({
         wordList,
         reviewedCount: updatedFourthDayRecord.reviewedCount,
         learnedCount: updatedFourthDayRecord.learnedCount,
-        isExtraReview: false,
-        getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+                getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
         getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
         getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
       })
 
-      // 验证：达到上限，但还有到期词
-      expect(reopenSession.learningType).toBe('complete')
-      expect(reopenSession.hasMoreDueWords).toBe(true)
-      expect(reopenSession.remainingDueCount).toBe(20) // 还有 20 个到期词可以额外复习
+      // 验证：所有到期词都学完了，进入巩固模式
+      expect(reopenSession.learningType).toBe('consolidate')
 
     } finally {
       // 重置时间差异
@@ -1360,8 +1337,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: firstDayRecord.reviewedCount,
       learnedCount: firstDayRecord.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
@@ -1386,15 +1362,14 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: updatedFirstDayRecord.reviewedCount,
       learnedCount: updatedFirstDayRecord.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
 
-    // 验证：所有词都学完了，没有新词也没有复习词
-    expect(reopenSession.learningType).toBe('complete')
-    expect(reopenSession.learningWords.length).toBe(0)
+    // 验证：所有词都学完了，没有新词也没有复习词，进入巩固模式
+    expect(reopenSession.learningType).toBe('consolidate')
+    expect(reopenSession.learningWords.length).toBeGreaterThan(0) // 有已学习的词可以巩固
     expect(reopenSession.newCount).toBe(0) // 没有新词了
     expect(reopenSession.dueCount).toBe(0) // 没有到期词
   })
@@ -1411,8 +1386,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: firstDayRecord.reviewedCount,
       learnedCount: firstDayRecord.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
@@ -1438,8 +1412,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
         wordList,
         reviewedCount: secondDayRecord.reviewedCount,
         learnedCount: secondDayRecord.learnedCount,
-        isExtraReview: false,
-        getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+                getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
         getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
         getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
       })
@@ -1502,15 +1475,15 @@ describe('背单词集成测试 - 第一天学习新词', () => {
         wordList,
         reviewedCount: thirdDayRecord.reviewedCount,
         learnedCount: thirdDayRecord.learnedCount,
-        isExtraReview: false,
-        getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+                getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
         getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
         getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
       })
 
       // 验证：第三天没有到期词（因为第二天复习的词还没到期）
-      // 但还有新词可以学习
-      expect(thirdDaySession.newCount).toBeGreaterThanOrEqual(79) // 还有大量新词可学（100 - 20 - 1）
+      // 但还有新词可以学习，进入新词模式
+      expect(thirdDaySession.learningType).toBe('new')
+      expect(thirdDaySession.newCount).toBeGreaterThan(0) // 还有新词可学
       
       // 前进到第四天，第二天复习的词应该还没到期（取决于复习间隔）
       // 这个测试主要验证掌握单词后补充新词的机制
@@ -1537,8 +1510,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: firstDayRecord.reviewedCount,
       learnedCount: firstDayRecord.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
@@ -1565,15 +1537,14 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: updatedFirstDayRecord.reviewedCount,
       learnedCount: updatedFirstDayRecord.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
 
-    // 验证：达到上限，不能继续学习
-    expect(reopenSession.learningType).toBe('complete')
-    expect(reopenSession.learningWords.length).toBe(0)
+    // 验证：达到上限，进入巩固模式（有已学习的词但没有到期词和新词配额）
+    expect(reopenSession.learningType).toBe('consolidate')
+    expect(reopenSession.learningWords.length).toBeGreaterThan(0) // 有已学习的词可以巩固
   })
 
   /**
@@ -1607,8 +1578,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       wordList,
       reviewedCount: firstDayRecord.reviewedCount,
       learnedCount: firstDayRecord.learnedCount,
-      isExtraReview: false,
-      getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
       getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
@@ -1636,8 +1606,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
         wordList,
         reviewedCount: secondDayRecord.reviewedCount,
         learnedCount: secondDayRecord.learnedCount,
-        isExtraReview: false,
-        getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
+                getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
         getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
         getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
       })

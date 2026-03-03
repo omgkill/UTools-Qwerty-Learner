@@ -80,102 +80,6 @@ describe('Word Completion Integration Tests', () => {
     })
   })
 
-  describe('Extra Review Flow', () => {
-    it('should count as extraReviewedCount when isExtraReview is true', () => {
-      const dailyRecord = new DailyRecord(dict, today)
-      dailyRecord.reviewedCount = 20
-      dailyRecord.extraReviewedCount = 0
-
-      dailyRecord.extraReviewedCount++
-
-      expect(dailyRecord.extraReviewedCount).toBe(1)
-      expect(dailyRecord.reviewedCount).toBe(20)
-    })
-
-    it('should not affect daily limit when doing extra review', () => {
-      const dailyRecord = new DailyRecord(dict, today)
-      dailyRecord.reviewedCount = 20
-
-      for (let i = 0; i < 5; i++) {
-        dailyRecord.extraReviewedCount++
-        expect(dailyRecord.reviewedCount).toBe(20)
-      }
-
-      expect(dailyRecord.extraReviewedCount).toBe(5)
-    })
-
-    it('should keep quota unchanged while extraReviewedCount increases', () => {
-      const dailyRecord = new DailyRecord(dict, today)
-      dailyRecord.reviewedCount = 20
-      dailyRecord.learnedCount = 0
-
-      expect(dailyRecord.getNewWordQuota()).toBe(0)
-
-      dailyRecord.extraReviewedCount += 3
-
-      expect(dailyRecord.reviewedCount).toBe(20)
-      expect(dailyRecord.extraReviewedCount).toBe(3)
-      expect(dailyRecord.getNewWordQuota()).toBe(0)
-      expect(dailyRecord.totalReviewed).toBe(23)
-    })
-
-    it('should keep counts separated after extra review flow', () => {
-      const dueWords = createWordWithIndexList(5)
-      const reviewedCount = 20
-      const learnedCount = 0
-
-      const beforeClick = determineLearningType({
-        dueWords,
-        newWords: [],
-        reviewedCount,
-        learnedCount,
-        allProgress: [],
-        wordList: dueWords,
-        isExtraReview: false,
-      })
-
-      expect(beforeClick.learningType).toBe('complete')
-      expect(beforeClick.hasMoreDueWords).toBe(true)
-
-      const afterClick = determineLearningType({
-        dueWords,
-        newWords: [],
-        reviewedCount,
-        learnedCount,
-        allProgress: [],
-        wordList: dueWords,
-        isExtraReview: true,
-      })
-
-      expect(afterClick.learningType).toBe('review')
-      expect(afterClick.learningWords.length).toBe(5)
-
-      const dailyRecord = new DailyRecord(dict, today)
-      dailyRecord.reviewedCount = 20
-      dailyRecord.extraReviewedCount = 0
-      dailyRecord.extraReviewedCount += afterClick.learningWords.length
-
-      expect(dailyRecord.reviewedCount).toBe(20)
-      expect(dailyRecord.extraReviewedCount).toBe(5)
-      expect(dailyRecord.getNewWordQuota()).toBe(0)
-      expect(dailyRecord.totalReviewed).toBe(25)
-    })
-
-    it('should keep target reached state unchanged after extra review', () => {
-      const dailyRecord = new DailyRecord(dict, today)
-      dailyRecord.reviewedCount = 20
-      dailyRecord.learnedCount = 0
-
-      expect(dailyRecord.hasReachedTarget).toBe(true)
-
-      dailyRecord.extraReviewedCount += 4
-
-      expect(dailyRecord.hasReachedTarget).toBe(true)
-      expect(dailyRecord.getNewWordQuota()).toBe(0)
-      expect(dailyRecord.totalReviewed).toBe(24)
-    })
-  })
-
   describe('Daily Limit Scenarios', () => {
     it('should correctly track progress towards daily limit', () => {
       const dailyRecord = new DailyRecord(dict, today)
@@ -197,6 +101,57 @@ describe('Word Completion Integration Tests', () => {
 
       expect(totalToday).toBe(20)
       expect(totalToday >= LEARNING_CONFIG.DAILY_LIMIT).toBe(true)
+    })
+  })
+
+  describe('Due Words > DAILY_LIMIT Scenarios', () => {
+    it('should return ALL due words when due words > DAILY_LIMIT', () => {
+      const dueWords = createWordWithIndexList(30)
+
+      const result = determineLearningType({
+        dueWords,
+        newWords: [],
+        reviewedCount: 0,
+        learnedCount: 0,
+        allProgress: [],
+        wordList: dueWords,
+      })
+
+      expect(result.learningType).toBe('review')
+      expect(result.learningWords.length).toBe(30)
+      expect(result.dueCount).toBe(30)
+    })
+
+    it('should return ALL due words even when reviewedCount + learnedCount >= DAILY_LIMIT', () => {
+      const dueWords = createWordWithIndexList(25)
+
+      const result = determineLearningType({
+        dueWords,
+        newWords: [],
+        reviewedCount: 20,
+        learnedCount: 0,
+        allProgress: [],
+        wordList: dueWords,
+      })
+
+      expect(result.learningType).toBe('review')
+      expect(result.learningWords.length).toBe(25)
+    })
+
+    it('should return ALL due words when there are 50 due words', () => {
+      const dueWords = createWordWithIndexList(50)
+
+      const result = determineLearningType({
+        dueWords,
+        newWords: [],
+        reviewedCount: 0,
+        learnedCount: 0,
+        allProgress: [],
+        wordList: dueWords,
+      })
+
+      expect(result.learningType).toBe('review')
+      expect(result.learningWords.length).toBe(50)
     })
   })
 
@@ -255,19 +210,6 @@ describe('Daily Record State Transitions', () => {
     record.learnedCount = 0
     record.reviewedCount = 20
     expect(record.hasReachedTarget).toBe(true)
-  })
-
-  it('should track extra review separately from main count', () => {
-    const record = new DailyRecord(dict, today)
-    record.reviewedCount = 20
-    record.extraReviewedCount = 0
-
-    expect(record.hasReachedTarget).toBe(true)
-    expect(record.getNewWordQuota()).toBe(0)
-
-    record.extraReviewedCount = 5
-    expect(record.reviewedCount).toBe(20)
-    expect(record.getNewWordQuota()).toBe(0)
   })
 })
 
@@ -336,120 +278,5 @@ describe('Critical Bug Scenarios', () => {
     }
 
     expect(dailyRecord.learnedCount).toBe(5)
-  })
-})
-
-describe('Extra Review Button Bug', () => {
-  it('should return all due words when isExtraReview is true', () => {
-    const dueWords = createWordWithIndexList(18)
-    const reviewedCount = 20
-    const learnedCount = 0
-
-    const result = determineLearningType({
-      dueWords,
-      newWords: [],
-      reviewedCount,
-      learnedCount,
-      allProgress: [],
-      wordList: dueWords,
-      isExtraReview: true,
-    })
-
-    expect(result.learningType).toBe('review')
-    expect(result.learningWords.length).toBe(18)
-    expect(result.hasMoreDueWords).toBe(false)
-  })
-
-  it('should return EMPTY learningWords when isExtraReview is false and target reached', () => {
-    const dueWords = createWordWithIndexList(18)
-    const reviewedCount = 20
-    const learnedCount = 0
-
-    const result = determineLearningType({
-      dueWords,
-      newWords: [],
-      reviewedCount,
-      learnedCount,
-      allProgress: [],
-      wordList: dueWords,
-      isExtraReview: false,
-    })
-
-    expect(result.learningType).toBe('complete')
-    expect(result.learningWords.length).toBe(0)
-    expect(result.hasMoreDueWords).toBe(true)
-    expect(result.remainingDueCount).toBe(18)
-  })
-
-  it('should show different results before and after clicking extra review button', () => {
-    const dueWords = createWordWithIndexList(18)
-    const reviewedCount = 20
-    const learnedCount = 0
-
-    const beforeClick = determineLearningType({
-      dueWords,
-      newWords: [],
-      reviewedCount,
-      learnedCount,
-      allProgress: [],
-      wordList: dueWords,
-      isExtraReview: false,
-    })
-
-    const afterClick = determineLearningType({
-      dueWords,
-      newWords: [],
-      reviewedCount,
-      learnedCount,
-      allProgress: [],
-      wordList: dueWords,
-      isExtraReview: true,
-    })
-
-    expect(beforeClick.learningType).toBe('complete')
-    expect(beforeClick.learningWords.length).toBe(0)
-    expect(beforeClick.hasMoreDueWords).toBe(true)
-    expect(beforeClick.remainingDueCount).toBe(18)
-
-    expect(afterClick.learningType).toBe('review')
-    expect(afterClick.learningWords.length).toBe(18)
-    expect(afterClick.hasMoreDueWords).toBe(false)
-
-    expect(beforeClick.learningWords.length).not.toBe(afterClick.learningWords.length)
-  })
-
-  it('should correctly handle extra review flow: popup -> click -> load words', () => {
-    const dueWords = createWordWithIndexList(18)
-    const reviewedCount = 20
-    const learnedCount = 0
-
-    const beforeClick = determineLearningType({
-      dueWords,
-      newWords: [],
-      reviewedCount,
-      learnedCount,
-      allProgress: [],
-      wordList: dueWords,
-      isExtraReview: false,
-    })
-
-    expect(beforeClick.learningType).toBe('complete')
-    expect(beforeClick.learningWords.length).toBe(0)
-    expect(beforeClick.hasMoreDueWords).toBe(true)
-    expect(beforeClick.remainingDueCount).toBe(18)
-
-    const afterClick = determineLearningType({
-      dueWords,
-      newWords: [],
-      reviewedCount,
-      learnedCount,
-      allProgress: [],
-      wordList: dueWords,
-      isExtraReview: true,
-    })
-
-    expect(afterClick.learningType).toBe('review')
-    expect(afterClick.learningWords.length).toBe(18)
-    expect(afterClick.hasMoreDueWords).toBe(false)
   })
 })

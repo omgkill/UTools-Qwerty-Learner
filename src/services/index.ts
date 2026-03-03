@@ -266,7 +266,6 @@ export type TypingSessionParams = {
   wordList: Word[]
   reviewedCount: number
   learnedCount: number
-  isExtraReview: boolean
   getDueWordsWithInfo: (wordList: Word[], limit: number) => Promise<WordWithIndex[]>
   getNewWords: (wordList: Word[], limit: number) => Promise<WordWithIndex[]>
   getWordProgress: (word: string) => Promise<IWordProgress | undefined>
@@ -278,8 +277,6 @@ export type TypingSessionResult = {
   dueCount: number
   newCount: number
   masteredCount: number
-  hasMoreDueWords: boolean
-  remainingDueCount: number
 }
 
 export type ReplacementWordParams = {
@@ -300,14 +297,14 @@ export async function getNextReplacementWord(params: ReplacementWordParams): Pro
 }
 
 export async function loadTypingSession(params: TypingSessionParams): Promise<TypingSessionResult> {
-  const { wordList, reviewedCount, learnedCount, isExtraReview, getDueWordsWithInfo, getNewWords, getWordProgress } = params
+  const { wordList, reviewedCount, learnedCount, getDueWordsWithInfo, getNewWords, getWordProgress } = params
   const [dueWords, newWords] = await Promise.all([
-    getDueWordsWithInfo(wordList, 100),
-    getNewWords(wordList, 100),
+    getDueWordsWithInfo(wordList, 1000),
+    getNewWords(wordList, 1000),
   ])
 
   const allProgress = await Promise.all(
-    wordList.slice(0, 200).map(async (word) => getWordProgress(word.name)),
+    wordList.slice(0, 500).map(async (word) => getWordProgress(word.name)),
   )
 
   const mastered = allProgress.filter((p) => p && p.masteryLevel >= 7).length
@@ -319,17 +316,14 @@ export async function loadTypingSession(params: TypingSessionParams): Promise<Ty
     learnedCount,
     allProgress,
     wordList,
-    isExtraReview,
   })
 
   return {
     learningType: result.learningType,
     learningWords: result.learningWords,
-    dueCount: dueWords.length,
-    newCount: newWords.length,
+    dueCount: result.dueCount,
+    newCount: result.newCount,
     masteredCount: mastered,
-    hasMoreDueWords: result.hasMoreDueWords ?? false,
-    remainingDueCount: result.remainingDueCount ?? 0,
   }
 }
 

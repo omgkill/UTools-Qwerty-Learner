@@ -14,6 +14,11 @@
       "cmds": ["English"]
     },
     {
+      "code": "repeat",
+      "explain": "🔄重复学习模式",
+      "cmds": ["重复学习", "repeat"]
+    },
+    {
       "code": "conceal",
       "explain": "🐟背单词打字摸鱼模式，摸鱼一时爽,一直摸鱼一直爽~~",
       "cmds": ["moyu"]

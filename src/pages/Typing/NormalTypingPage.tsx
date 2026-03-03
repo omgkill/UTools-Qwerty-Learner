@@ -13,10 +13,8 @@ import { useTypingInitializer } from './hooks/useTypingInitializer'
 import { useTypingHotkeys } from './hooks/useTypingHotkeys'
 import { useLearningRecordSaver } from './hooks/useLearningRecordSaver'
 import { useTypingTimer } from './hooks/useTypingTimer'
-import { useExtraReviewPopup } from './hooks/useExtraReviewPopup'
 import { useKeyboardStartListener } from './hooks/useKeyboardStartListener'
-import { useWordSync } from './hooks/useWordSync'
-import { useRepeatLearningManager } from './hooks/useRepeatLearningManager'
+import { useNormalLearningSync } from './hooks/useNormalLearningSync'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
 import type { WordBank } from '@/typings'
@@ -28,7 +26,7 @@ import { currentDictIdAtom } from '@/store'
 import { getUtoolsValue } from '@/utils/utools'
 import { useAtomValue } from 'jotai'
 import type React from 'react'
-import { useCallback, useContext, useEffect, useRef } from 'react'
+import { useCallback, useContext, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useImmerReducer } from 'use-immer'
 
@@ -39,46 +37,39 @@ const LEARNING_TYPE_LABELS: Record<LearningType, { icon: string; label: string }
   complete: { icon: '✅', label: '完成' },
 }
 
-interface TypingAppInnerProps {
+interface NormalTypingAppInnerProps {
   currentWordBank: WordBank
 }
 
-const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
+const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWordBank }) => {
   const { state, dispatch } = useTypingContext()
-  const isRepeatLearning = state.uiState.isRepeatLearning
   const currentDictId = useAtomValue(currentDictIdAtom)
-
-  const repeatLearningInitialIndexRef = useRef<number | undefined>(undefined)
 
   const {
     words,
-    learningWords,
     learningType,
+    dueCount,
+    newCount,
     todayLearned,
     todayReviewed,
     todayMastered,
-    newWordQuota,
-    remainingForTarget,
-    hasReachedTarget,
-    hasMoreDueWords,
-    remainingDueCount,
-    isExtraReview,
-    startExtraReview,
     startRepeatLearning,
     getNextNewWord,
     setLearningWords,
     setLearningType,
     reloadWords,
-  } = useWordList(isRepeatLearning)
+  } = useWordList('normal')
 
   const { markAsMastered } = useWordProgress()
   const { incrementMastered } = useDailyRecord()
   const dictID = useAtomValue(currentDictIdAtom)
 
-  const repeatLearningManager = useRepeatLearningManager()
-  const normalLearningWordsRef = useRef<typeof words>(undefined)
-  const normalLearningTypeRef = useRef<LearningType>(learningType)
-  const prevIsRepeatLearningRef = useRef(isRepeatLearning)
+  useNormalLearningSync({
+    isActive: true,
+    words,
+    isTyping: state.uiState.isTyping,
+    dispatch,
+  })
 
   useLearningRecordSaver(state)
 
@@ -95,12 +86,11 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
 
   useTypingTimer(state.uiState.isTyping)
   useKeyboardStartListener(state.uiState.isTyping, false)
-  useWordSync(words, state.uiState.isTyping, isRepeatLearning, repeatLearningInitialIndexRef.current)
 
   useEffect(() => {
     const handleModeChange = () => {
-      const mode = window.getMode()
-      if (mode === 'conceal' || mode === 'moyu') {
+      const windowMode = window.getMode()
+      if (windowMode === 'conceal' || windowMode === 'moyu') {
         dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE, payload: true })
       } else {
         dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE, payload: false })
@@ -138,13 +128,6 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
 
   useTypingHotkeys(state.isImmersiveMode)
 
-  const { showPopup, handleConfirm, handleDismiss } = useExtraReviewPopup(
-    hasReachedTarget,
-    hasMoreDueWords,
-    isExtraReview,
-    startExtraReview,
-  )
-
   useEffect(() => {
     const onBlur = () => {
       dispatch({ type: TypingStateActionType.SET_IS_TYPING, payload: false })
@@ -155,57 +138,6 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
       window.removeEventListener('blur', onBlur)
     }
   }, [dispatch])
-
-  useEffect(() => {
-    if (!currentDictId) return
-
-    const initializeRepeatLearning = async () => {
-      const savedState = await repeatLearningManager.initialize(currentDictId)
-      if (savedState) {
-        dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: true })
-        repeatLearningInitialIndexRef.current = savedState.currentIndex
-        setLearningWords(savedState.learningWords)
-        setLearningType('review')
-      }
-    }
-
-    initializeRepeatLearning()
-  }, [currentDictId, dispatch, setLearningWords, setLearningType, repeatLearningManager])
-
-  useEffect(() => {
-    if (!currentDictId || !repeatLearningManager.isRepeatLearning()) return
-
-    repeatLearningManager.updateIndex(currentDictId, state.wordListData.index)
-  }, [currentDictId, state.wordListData.index, repeatLearningManager])
-
-  useEffect(() => {
-    if (prevIsRepeatLearningRef.current && !isRepeatLearning) {
-      repeatLearningManager.clear(currentDictId)
-      if (normalLearningWordsRef.current && normalLearningWordsRef.current.length > 0) {
-        setLearningWords(normalLearningWordsRef.current)
-      }
-      if (normalLearningTypeRef.current) {
-        setLearningType(normalLearningTypeRef.current)
-      }
-      reloadWords()
-    }
-    prevIsRepeatLearningRef.current = isRepeatLearning
-  }, [isRepeatLearning, currentDictId, repeatLearningManager, setLearningWords, setLearningType, reloadWords])
-
-  const handleStartRepeatLearning = useCallback(async () => {
-    const repeatWords = await startRepeatLearning()
-    if (repeatWords.length === 0) return
-
-    normalLearningWordsRef.current = words
-    normalLearningTypeRef.current = learningType
-
-    await repeatLearningManager.start(currentDictId, repeatWords)
-
-    dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: true })
-    setLearningWords(repeatWords)
-    setLearningType('review')
-    dispatch({ type: TypingStateActionType.RESET_PROGRESS })
-  }, [startRepeatLearning, words, learningType, dispatch, setLearningWords, setLearningType, repeatLearningManager, currentDictId])
 
   useConfetti(state.uiState.isFinished && !state.isImmersiveMode)
 
@@ -234,14 +166,11 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
               {todayMastered > 0 && (
                 <span className="rounded bg-purple-500/30 px-2 py-0.5 text-purple-200">✓ 已掌握 {todayMastered}</span>
               )}
-              {learningType === 'new' && newWordQuota > 0 && (
-                <span className="rounded bg-green-500/30 px-2 py-0.5 text-green-200">新词配额 {newWordQuota}</span>
+              {dueCount > 0 && (
+                <span className="rounded bg-orange-500/30 px-2 py-0.5 text-orange-200">待复习 {dueCount}</span>
               )}
-              {!hasReachedTarget && remainingForTarget > 0 && (
-                <span className="rounded bg-white/10 px-2 py-0.5">距目标 {remainingForTarget} 词</span>
-              )}
-              {hasReachedTarget && (
-                <span className="rounded bg-green-500/30 px-2 py-0.5 text-green-200">✓ 今日目标达成</span>
+              {newCount > 0 && learningType === 'new' && (
+                <span className="rounded bg-green-500/30 px-2 py-0.5 text-green-200">新词 {newCount}</span>
               )}
             </div>
             <PronunciationSwitcher />
@@ -252,21 +181,21 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
         <div className="container mx-auto flex h-full flex-1 flex-col items-center justify-center pb-4">
           <div className="container relative mx-auto flex h-full flex-col items-center">
             <div className="container flex flex-grow items-center justify-center">
-              {(learningType === 'complete' || state.uiState.isFinished) && !isRepeatLearning ? (
+              {learningType === 'complete' ? (
                 <div className="flex flex-col items-center justify-center space-y-6">
                   <div className="text-6xl">🎉</div>
-                  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">✓ 今日目标达成</h2>
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">✓ 学习完成</h2>
                   <p className="text-gray-600 dark:text-gray-400">
                     今日学习 <span className="font-bold text-indigo-600 dark:text-indigo-400">{todayLearned + todayReviewed}</span> 个单词
                     （新词 <span className="font-bold">{todayLearned}</span> 个，复习 <span className="font-bold">{todayReviewed}</span> 个）
                   </p>
                   <div className="flex gap-3">
-                    <button
-                      onClick={handleStartRepeatLearning}
+                    <NavLink
+                      to="/repeat"
                       className="rounded-lg bg-indigo-500 px-4 py-2 text-white transition-colors hover:bg-indigo-600"
                     >
                       🔄 重复学习
-                    </button>
+                    </NavLink>
                   </div>
                   <p className="text-sm text-gray-500 dark:text-gray-500">明天继续加油！</p>
                 </div>
@@ -280,38 +209,11 @@ const TypingAppInner: React.FC<TypingAppInnerProps> = ({ currentWordBank }) => {
       </Layout>
 
       {!state.isImmersiveMode && <WordList />}
-
-      {showPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800 max-w-md mx-4">
-            <div className="text-center">
-              <div className="mb-4 text-5xl">📚</div>
-              <h3 className="mb-2 text-xl font-bold text-gray-800 dark:text-gray-200">还有 {remainingDueCount} 个单词待复习</h3>
-              <p className="mb-4 text-gray-600 dark:text-gray-400">
-                今日目标已达成，是否继续额外复习？
-                <br />
-                <span className="text-sm text-gray-500">（额外复习不计入今日上限）</span>
-              </p>
-              <div className="flex gap-3 justify-center">
-                <button
-                  onClick={handleDismiss}
-                  className="rounded-lg bg-gray-200 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                >
-                  稍后再说
-                </button>
-                <button onClick={handleConfirm} className="rounded-lg bg-indigo-500 px-4 py-2 text-white transition-colors hover:bg-indigo-600">
-                  继续复习
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   )
 }
 
-const App: React.FC = () => {
+const NormalTypingPage: React.FC = () => {
   const [state, dispatch] = useImmerReducer(typingReducer, structuredClone(initialState))
   const { isInitialized, currentWordBank } = useTypingInitializer()
 
@@ -330,7 +232,7 @@ const App: React.FC = () => {
 
   return (
     <TypingContext.Provider value={{ state, dispatch }}>
-      <TypingAppInner currentWordBank={currentWordBank} />
+      <NormalTypingAppInner currentWordBank={currentWordBank} />
     </TypingContext.Provider>
   )
 }
@@ -343,4 +245,4 @@ function useTypingContext() {
   return context
 }
 
-export default App
+export default NormalTypingPage

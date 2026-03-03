@@ -11,7 +11,8 @@ import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
-const TypingPage = lazy(() => import('./pages/Typing'))
+const NormalTypingPage = lazy(() => import('./pages/Typing/NormalTypingPage'))
+const RepeatTypingPage = lazy(() => import('./pages/Typing/RepeatTypingPage'))
 const MdxQueryPage = lazy(() => import('./pages/MdxQuery'))
 const MdxManagePage = lazy(() => import('./pages/MdxManage'))
 const AnalysisPage = lazy(() => import('./pages/Analysis'))
@@ -209,12 +210,15 @@ function Root() {
     )
   }
 
+  const isRepeatMode = mode === 'repeat'
+
   return (
     <React.StrictMode>
       <HashRouter basename="" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Suspense fallback={<Loading />}>
           <Routes>
-            <Route index element={<TypingPage />} />
+            <Route index element={isRepeatMode ? <RepeatTypingPage /> : <NormalTypingPage />} />
+            <Route path="/repeat" element={<RepeatTypingPage />} />
             <Route path="/gallery" element={<GalleryPage />} />
             <Route path="/analysis" element={<AnalysisPage />} />
             <Route path="/query/:word?" element={<MdxQueryPage />} />
