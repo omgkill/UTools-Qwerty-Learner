@@ -24,7 +24,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useImmerReducer } from 'use-immer'
 
-const REPEAT_PROGRESS_KEY = 'repeat-learning-progress'
+const CONSOLIDATE_PROGRESS_KEY = 'consolidate-learning-progress'
 
 type SavedProgress = {
   dictId: string
@@ -44,7 +44,7 @@ function shuffleWithSeed<T>(array: T[], seed: string): T[] {
     hash = ((hash << 5) - hash) + seed.charCodeAt(i)
     hash = hash & hash
   }
-  
+
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.abs((hash = (hash * 1103515245 + 12345) & 0x7fffffff)) % (i + 1)
     ;[result[i], result[j]] = [result[j], result[i]]
@@ -54,9 +54,9 @@ function shuffleWithSeed<T>(array: T[], seed: string): T[] {
 
 function loadSavedProgress(dictId: string): { index: number; wordNames: string[] | null } {
   try {
-    const saved = localStorage.getItem(REPEAT_PROGRESS_KEY)
+    const saved = localStorage.getItem(CONSOLIDATE_PROGRESS_KEY)
     if (!saved) return { index: 0, wordNames: null }
-    
+
     const progress: SavedProgress = JSON.parse(saved)
     if (progress.dictId === dictId && progress.date === getTodayDate()) {
       return { index: progress.index, wordNames: progress.wordNames }
@@ -74,26 +74,26 @@ function saveProgress(dictId: string, index: number, wordNames: string[]): void 
     index,
     wordNames,
   }
-  localStorage.setItem(REPEAT_PROGRESS_KEY, JSON.stringify(progress))
+  localStorage.setItem(CONSOLIDATE_PROGRESS_KEY, JSON.stringify(progress))
 }
 
-interface RepeatTypingAppInnerProps {
+interface ConsolidateTypingAppInnerProps {
   currentWordBank: WordBank
 }
 
-const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWordBank }) => {
+const ConsolidateTypingAppInner: React.FC<ConsolidateTypingAppInnerProps> = ({ currentWordBank }) => {
   const { state, dispatch } = useTypingContext()
   const currentDictId = useAtomValue(currentDictIdAtom)
   const navigate = useNavigate()
   const isInitializedRef = useRef(false)
 
-  const [repeatWords, setRepeatWords] = useState<WordWithIndex[]>([])
+  const [consolidateWords, setConsolidateWords] = useState<WordWithIndex[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [hasWords, setHasWords] = useState(true)
   const wordNamesRef = useRef<string[]>([])
 
-  const loadRepeatWords = useCallback(async () => {
+  const loadConsolidateWords = useCallback(async () => {
     if (!currentDictId) return
 
     setIsLoading(true)
@@ -104,13 +104,19 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
         return
       }
 
-      const todayWordRecords = await db.wordRecords
-        .where('[dict+timeStamp]')
-        .between([currentDictId, Math.floor(getTodayStartTime() / 1000)], [currentDictId, Math.floor(getTodayStartTime() / 1000) + 24 * 60 * 60])
+      // 获取已学习但未掌握的单词（masteryLevel > 0 && masteryLevel < 7）
+      const allProgress = await db.wordProgress
+        .where('dictId')
+        .equals(currentDictId)
         .toArray()
 
-      const todayWordNames = [...new Set(todayWordRecords.map((r) => r.word))]
-      if (todayWordNames.length === 0) {
+      const learnedButNotMasteredNames = new Set(
+        allProgress
+          .filter((p) => p.masteryLevel > 0 && p.masteryLevel < 7)
+          .map((p) => p.word)
+      )
+
+      if (learnedButNotMasteredNames.size === 0) {
         setHasWords(false)
         return
       }
@@ -121,27 +127,17 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
 
       if (saved.wordNames && saved.wordNames.length > 0) {
         const savedSet = new Set(saved.wordNames)
-        finalWords = todayWordNames
-          .filter((name) => savedSet.has(name))
-          .map((name) => {
-            const idx = wordList.findIndex((w) => w.name === name)
-            return idx !== -1 ? { ...wordList[idx], index: idx } : null
-          })
-          .filter((w): w is WordWithIndex => w !== null)
-        
+        finalWords = wordList
+          .filter((w) => savedSet.has(w.name) && learnedButNotMasteredNames.has(w.name))
+          .filter((w) => learnedButNotMasteredNames.has(w.name))
+
         const orderedNames = saved.wordNames.filter((name) => finalWords.some((w) => w.name === name))
         finalWords = orderedNames.map((name) => finalWords.find((w) => w.name === name)).filter((w): w is WordWithIndex => w !== undefined)
         finalIndex = Math.min(saved.index, finalWords.length - 1)
       } else {
-        const todayWords = todayWordNames
-          .map((name) => {
-            const idx = wordList.findIndex((w) => w.name === name)
-            return idx !== -1 ? { ...wordList[idx], index: idx } : null
-          })
-          .filter((w): w is WordWithIndex => w !== null)
-        
+        const consolidateWords = wordList.filter((w) => learnedButNotMasteredNames.has(w.name))
         const date = getTodayDate()
-        finalWords = shuffleWithSeed(todayWords, `${currentDictId}-${date}`)
+        finalWords = shuffleWithSeed(consolidateWords, `${currentDictId}-${date}`)
         finalIndex = 0
       }
 
@@ -151,9 +147,9 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
       }
 
       wordNamesRef.current = finalWords.map((w) => w.name)
-      setRepeatWords(finalWords)
+      setConsolidateWords(finalWords)
       setCurrentIndex(finalIndex)
-      
+
       dispatch({
         type: TypingStateActionType.SET_WORDS,
         payload: { words: finalWords },
@@ -163,11 +159,11 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
         payload: finalIndex,
       })
       dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: true })
-      
+
       saveProgress(currentDictId, finalIndex, wordNamesRef.current)
       isInitializedRef.current = true
     } catch (e) {
-      console.error('Failed to load repeat words:', e)
+      console.error('Failed to load consolidate words:', e)
       setHasWords(false)
     } finally {
       setIsLoading(false)
@@ -175,8 +171,8 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
   }, [currentDictId, currentWordBank, dispatch])
 
   useEffect(() => {
-    loadRepeatWords()
-  }, [loadRepeatWords])
+    loadConsolidateWords()
+  }, [loadConsolidateWords])
 
   useLearningRecordSaver(state)
   useTypingTimer(state.uiState.isTyping)
@@ -219,7 +215,7 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
     }
   }, [state.wordListData.index, currentIndex, currentDictId])
 
-  const handleExitRepeatLearning = useCallback(() => {
+  const handleExitConsolidateLearning = useCallback(() => {
     dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: false })
     navigate('/')
   }, [dispatch, navigate])
@@ -244,9 +240,9 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
       <Layout>
         <div className="flex h-full flex-col items-center justify-center space-y-6">
           <div className="text-6xl">📚</div>
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">暂无可重复学习的单词</h2>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">暂无可巩固的单词</h2>
           <p className="text-gray-600 dark:text-gray-400">
-            请先进行正常学习，积累一定数量的单词后再来重复学习
+            请先进行正常学习，积累一定数量的单词后再来巩固学习
           </p>
           <button
             onClick={() => navigate('/')}
@@ -273,19 +269,19 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
               </NavLink>
             </Tooltip>
             <div className="flex items-center gap-2 text-sm text-white/80">
-              <span className="rounded bg-indigo-500/30 px-2 py-0.5 text-indigo-200">🔄 重复学习</span>
+              <span className="rounded bg-indigo-500/30 px-2 py-0.5 text-indigo-200">🔁 巩固学习</span>
               <span className="rounded bg-white/20 px-2 py-0.5">
-                {currentIndex + 1} / {repeatWords.length}
+                {currentIndex + 1} / {consolidateWords.length}
               </span>
             </div>
             <PronunciationSwitcher />
             <Switcher />
             <StartButton isLoading={false} />
             <button
-              onClick={handleExitRepeatLearning}
+              onClick={handleExitConsolidateLearning}
               className="rounded-lg bg-gray-500 px-3 py-1 text-sm text-white transition-colors hover:bg-gray-600"
             >
-              退出重复学习
+              退出巩固学习
             </button>
           </Header>
         )}
@@ -304,7 +300,7 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
   )
 }
 
-const RepeatTypingPage: React.FC = () => {
+const ConsolidateTypingPage: React.FC = () => {
   const [state, dispatch] = useImmerReducer(typingReducer, structuredClone(initialState))
   const { isInitialized, currentWordBank } = useTypingInitializer()
 
@@ -323,7 +319,7 @@ const RepeatTypingPage: React.FC = () => {
 
   return (
     <TypingContext.Provider value={{ state, dispatch }}>
-      <RepeatTypingAppInner currentWordBank={currentWordBank} />
+      <ConsolidateTypingAppInner currentWordBank={currentWordBank} />
     </TypingContext.Provider>
   )
 }
@@ -343,7 +339,7 @@ async function loadWordList(currentWordBank: WordBank): Promise<WordWithIndex[] 
 
   try {
     let words: Word[] = []
-    
+
     if (isLocalWordBank) {
       const rawWords = await window.readLocalWordBank(currentWordBank.id)
       words = rawWords.map((w: Partial<Word>) => ({
@@ -377,4 +373,4 @@ async function loadWordList(currentWordBank: WordBank): Promise<WordWithIndex[] 
   }
 }
 
-export default RepeatTypingPage
+export default ConsolidateTypingPage

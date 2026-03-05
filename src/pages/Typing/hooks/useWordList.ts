@@ -1,14 +1,14 @@
 import { currentDictIdAtom, currentWordBankAtom } from '@/store'
 import { dailyRecordAtom } from '../store/atoms'
 import type { Word, WordWithIndex } from '@/typings/index'
-import { useDailyRecord, useReviewWords, useWordProgress } from '@/utils/db/useProgress'
 import { db } from '@/utils/db'
-import { getNextReplacementWord, getRepeatLearningWords, loadTypingSession } from '@/services'
+import { getRepeatLearningWords as getRepeatLearningWordsFunc, loadTypingSession } from '@/services'
 import { useAtomValue } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import useSWR from 'swr'
 import type { LearningType } from './learningLogic'
 import type { LearningMode } from './useTypingMode'
+import { DailyRecord, getTodayDate } from '@/utils/db/progress'
 
 export type { LearningType }
 
@@ -35,8 +35,6 @@ export function useWordList(mode: LearningMode | null): UseWordListResult {
   const currentWordBank = useAtomValue(currentWordBankAtom)
   const currentDictId = useAtomValue(currentDictIdAtom)
   const dailyRecord = useAtomValue(dailyRecordAtom)
-
-  const { refreshDailyRecord } = useDailyRecord()
 
   const [learningType, setLearningType] = useState<LearningType>('review')
   const [dueCount, setDueCount] = useState(0)
@@ -67,12 +65,18 @@ export function useWordList(mode: LearningMode | null): UseWordListResult {
     mutate,
   } = useSWR(swrKey, fetcher)
 
-  const { getDueWordsWithInfo, getNewWords } = useReviewWords()
-  const { getWordProgress } = useWordProgress()
-
   useEffect(() => {
-    refreshDailyRecord()
-  }, [refreshDailyRecord])
+    // 触发今日记录的创建（如果不存在）
+    if (currentDictId) {
+      db.dailyRecords.where('[dict+date]').equals([currentDictId, getTodayDate()]).first().then((record) => {
+        if (!record) {
+          const today = getTodayDate()
+          const newRecord = new DailyRecord(currentDictId, today)
+          db.dailyRecords.add(newRecord).catch(console.error)
+        }
+      }).catch(console.error)
+    }
+  }, [currentDictId])
 
   const todayLearned = dailyRecord?.learnedCount ?? 0
   const todayReviewed = dailyRecord?.reviewedCount ?? 0
@@ -98,17 +102,50 @@ export function useWordList(mode: LearningMode | null): UseWordListResult {
     const currentVersion = loadVersionRef.current
 
     try {
-      const record = dailyRecord
-      const reviewedCount = record?.reviewedCount ?? 0
-      const learnedCount = record?.learnedCount ?? 0
-      
+      const reviewedCount = todayReviewed
+      const learnedCount = todayLearned
+
       const result = await loadTypingSession({
         wordList,
         reviewedCount,
         learnedCount,
-        getDueWordsWithInfo,
-        getNewWords,
-        getWordProgress,
+        getDueWordsWithInfo: async (wordList, limit) => {
+          return db.wordProgress
+            .where('dict')
+            .equals(currentDictId || '')
+            .toArray()
+            .then((allProgress) => {
+              const dueWords = allProgress.filter(
+                (p) => p.nextReviewTime <= Date.now() && p.reps > 0 && p.masteryLevel < 7,
+              )
+              const dueWordSet = new Set(dueWords.slice(0, limit).map((p) => p.word))
+              return wordList
+                .map((word, index) => ({ ...word, index }))
+                .filter((word) => dueWordSet.has(word.name))
+            })
+        },
+        getNewWords: async (wordList, limit) => {
+          return db.wordProgress
+            .where('dict')
+            .equals(currentDictId || '')
+            .toArray()
+            .then((existingProgress) => {
+              const progressMap = new Map(existingProgress.map((p) => [p.word, p]))
+              return wordList
+                .map((word, index) => ({ ...word, index }))
+                .filter((word) => {
+                  const progress = progressMap.get(word.name)
+                  return !progress || progress.masteryLevel === 0
+                })
+                .slice(0, limit)
+            })
+        },
+        getWordProgress: async (word) => {
+          return db.wordProgress
+            .where('[dict+word]')
+            .equals([currentDictId || '', word])
+            .first()
+        },
       })
 
       if (currentVersion !== loadVersionRef.current) return
@@ -133,12 +170,11 @@ export function useWordList(mode: LearningMode | null): UseWordListResult {
   }, [
     wordList,
     currentWordBank,
-    dailyRecord,
-    getDueWordsWithInfo,
-    getNewWords,
-    getWordProgress,
+    todayReviewed,
+    todayLearned,
     isLoadingLearningWords,
     mode,
+    currentDictId,
   ])
 
   const reloadWords = useCallback(() => {
@@ -154,7 +190,7 @@ export function useWordList(mode: LearningMode | null): UseWordListResult {
       return []
     }
 
-    const repeatWords = await getRepeatLearningWords({
+    const repeatWords = await getRepeatLearningWordsFunc({
       currentDictId,
       wordList,
       listWordRecordsInRange: async (dictId, start, end) => {
@@ -177,12 +213,24 @@ export function useWordList(mode: LearningMode | null): UseWordListResult {
       return null
     }
 
-    return getNextReplacementWord({
-      wordList,
-      currentLearningWords: learningWords,
-      getNewWords,
-    })
-  }, [wordList, currentWordBank, getNewWords, learningWords])
+    const existing = new Set(learningWords.map((w) => w.name))
+    const candidates = await db.wordProgress
+      .where('dict')
+      .equals(currentDictId || '')
+      .toArray()
+      .then((allProgress) => {
+        const progressMap = new Map(allProgress.map((p) => [p.word, p]))
+        return wordList
+          .map((word, index) => ({ ...word, index }))
+          .filter((word) => {
+            const progress = progressMap.get(word.name)
+            return !progress || progress.masteryLevel === 0
+          })
+      })
+
+    const next = candidates.find((word) => !existing.has(word.name))
+    return next ?? null
+  }, [wordList, currentWordBank, learningWords, currentDictId])
 
   useEffect(() => {
     loadLearningWords()

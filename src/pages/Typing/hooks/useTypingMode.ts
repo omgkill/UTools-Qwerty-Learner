@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { RepeatLearningManager } from './RepeatLearningManager'
+import { db } from '@/utils/db'
+import { getTodayDate } from '@/utils/db/progress'
 
 export type LearningMode = 'normal' | 'repeat'
 
-export function useTypingMode(dictId: string | null, forceRepeatMode: boolean = false) {
+export function useTypingMode(dictId: string | null, forceRepeatMode = false) {
   const [mode, setMode] = useState<LearningMode | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
-  const managerRef = useRef(new RepeatLearningManager())
+  const isRepeatLearningRef = useRef<boolean | null>(null)
 
   useEffect(() => {
     if (!dictId) {
@@ -16,21 +17,32 @@ export function useTypingMode(dictId: string | null, forceRepeatMode: boolean = 
     }
 
     const checkMode = async () => {
-      // 如果强制进入重复学习模式，直接检查是否有重复学习记录
       if (forceRepeatMode) {
-        const saved = await managerRef.current.initialize(dictId)
-        if (saved && saved.learningWords.length > 0) {
+        // 强制重复学习模式：检查是否有重复学习记录
+        const today = getTodayDate()
+        const saved = await db.typingStates
+          .where('[dict+date]')
+          .equals([dictId, today])
+          .first()
+
+        if (saved && saved.isRepeatLearning && saved.learningWords && (saved.learningWords as unknown[]).length > 0) {
           setMode('repeat')
         } else {
-          // 没有重复学习记录，回退到正常模式
           setMode('normal')
         }
       } else {
         // 正常流程：检查是否有重复学习记录
-        const saved = await managerRef.current.initialize(dictId)
-        if (saved && saved.learningWords.length > 0) {
+        const today = getTodayDate()
+        const saved = await db.typingStates
+          .where('[dict+date]')
+          .equals([dictId, today])
+          .first()
+
+        if (saved && saved.isRepeatLearning && saved.learningWords && (saved.learningWords as unknown[]).length > 0) {
+          isRepeatLearningRef.current = true
           setMode('repeat')
         } else {
+          isRepeatLearningRef.current = false
           setMode('normal')
         }
       }
@@ -52,5 +64,6 @@ export function useTypingMode(dictId: string | null, forceRepeatMode: boolean = 
     isInitialized,
     switchToNormal,
     switchToRepeat,
+    isRepeatLearning: isRepeatLearningRef.current,
   }
 }

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { IWordProgress } from '@/utils/db/progress'
 import { DailyRecord, LEARNING_CONFIG, MASTERY_LEVELS, getNextReviewTime, updateMasteryLevel } from '@/utils/db/progress'
-import { setTimeTo, advanceDays, resetTimeDiff, now, getTodayStartTime } from '@/utils/timeService'
+import { advanceDays, getTodayStartTime, now, resetTimeDiff, setTimeTo } from '@/utils/timeService'
 import type { LearningType } from './learningLogic'
 import { determineLearningType } from './learningLogic'
 
@@ -81,7 +81,7 @@ function applyProgressUpdate(params: { word: string; dict: string; progress: IWo
 
 function simulateDay(
   words: SimulatedWord[],
-  options?: { doConsolidate?: boolean }
+  options?: { doConsolidate?: boolean } // 保留参数向后兼容，但不再使用（巩固模式已独立）
 ): { result: DayResult; updatedWords: SimulatedWord[] } {
   const dict = 'test-dict'
 
@@ -139,9 +139,7 @@ function simulateDay(
       break
     }
 
-    if (learningResult.learningType === 'consolidate' && !options?.doConsolidate) {
-      break
-    }
+    // 巩固模式已移除，现在直接进入 complete 模式
 
     const batchSize = Math.min(learningResult.learningWords.length, remainingSlots)
     if (batchSize <= 0) break
@@ -365,8 +363,8 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
     })
   })
 
-  describe('Consolidate Stability - No New Words', () => {
-    it('should stay in consolidate mode across consecutive days', () => {
+  describe('Complete Mode - No New Words', () => {
+    it('should stay in complete mode across consecutive days when no due words', () => {
       setTimeTo('2026-02-18T00:00:00.000Z')
       const baseTime = now()
 
@@ -386,17 +384,17 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
         if (day > 1) {
           advanceDays(1)
         }
-        const { result, updatedWords } = simulateDay(words, { doConsolidate: true })
+        const { result, updatedWords } = simulateDay(words, {})
         words.splice(0, words.length, ...updatedWords)
         results.push(result)
       }
 
       results.forEach((result) => {
-        expect(result.learningType).toBe('consolidate')
+        expect(result.learningType).toBe('complete')
         expect(result.dueWordsCount).toBe(0)
         expect(result.newWordsLearned).toBe(0)
-        expect(result.wordsReviewed).toBe(LEARNING_CONFIG.DAILY_LIMIT)
-        expect(result.totalToday).toBe(LEARNING_CONFIG.DAILY_LIMIT)
+        expect(result.wordsReviewed).toBe(0)
+        expect(result.totalToday).toBe(0)
       })
     })
   })

@@ -13,6 +13,7 @@ import 'react-toastify/dist/ReactToastify.css'
 
 const NormalTypingPage = lazy(() => import('./pages/Typing/NormalTypingPage'))
 const RepeatTypingPage = lazy(() => import('./pages/Typing/RepeatTypingPage'))
+const ConsolidateTypingPage = lazy(() => import('./pages/Typing/ConsolidateTypingPage'))
 const MdxQueryPage = lazy(() => import('./pages/MdxQuery'))
 const MdxManagePage = lazy(() => import('./pages/MdxManage'))
 const AnalysisPage = lazy(() => import('./pages/Analysis'))
@@ -211,14 +212,27 @@ function Root() {
   }
 
   const isRepeatMode = mode === 'repeat'
+  const isConsolidateMode = mode === 'consolidate'
 
   return (
     <React.StrictMode>
       <HashRouter basename="" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Suspense fallback={<Loading />}>
           <Routes>
-            <Route index element={isRepeatMode ? <RepeatTypingPage /> : <NormalTypingPage />} />
+            <Route
+              index
+              element={
+                isRepeatMode ? (
+                  <RepeatTypingPage />
+                ) : isConsolidateMode ? (
+                  <ConsolidateTypingPage />
+                ) : (
+                  <NormalTypingPage />
+                )
+              }
+            />
             <Route path="/repeat" element={<RepeatTypingPage />} />
+            <Route path="/consolidate" element={<ConsolidateTypingPage />} />
             <Route path="/gallery" element={<GalleryPage />} />
             <Route path="/analysis" element={<AnalysisPage />} />
             <Route path="/query/:word?" element={<MdxQueryPage />} />

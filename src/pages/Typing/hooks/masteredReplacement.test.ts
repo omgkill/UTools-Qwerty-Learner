@@ -123,8 +123,8 @@ describe('掌握单词替换逻辑测试', () => {
       },
     })
 
-    // 验证学习类型是否为consolidate（已达到每日目标，进入巩固模式）
-    expect(typingSession.learningType).toBe('consolidate')
+    // 验证学习类型是否为complete（已达到每日目标，不再进入巩固模式）
+    expect(typingSession.learningType).toBe('complete')
   })
 
   it('验证掌握单词不影响今日目标计数', async () => {

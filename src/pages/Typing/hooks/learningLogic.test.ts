@@ -221,8 +221,8 @@ describe('determineLearningType', () => {
     })
   })
 
-  describe('consolidate mode', () => {
-    it('should return consolidate when no due words, no quota, but has learned words', () => {
+  describe('complete mode with learned words', () => {
+    it('should return complete when no due words, no quota, but has learned words', () => {
       const progress1 = createProgress('apple', 3)
       const progress2 = createProgress('banana', 2)
       const wordListWithProgress: Word[] = [createWord('apple'), createWord('banana')]
@@ -236,10 +236,11 @@ describe('determineLearningType', () => {
         wordList: wordListWithProgress,
       })
 
-      expect(result.learningType).toBe('consolidate')
+      expect(result.learningType).toBe('complete')
+      expect(result.learningWords).toEqual([])
     })
 
-    it('should only include words with masteryLevel between 1 and 6', () => {
+    it('should return complete even when there are words with masteryLevel between 1 and 6', () => {
       const progress1 = createProgress('apple', 1)
       const progress2 = createProgress('banana', 6)
       const progress3 = createProgress('cherry', 0)
@@ -260,12 +261,8 @@ describe('determineLearningType', () => {
         wordList: wordListWithProgress,
       })
 
-      expect(result.learningType).toBe('consolidate')
-      const wordNames = result.learningWords.map((w) => w.name)
-      expect(wordNames).toContain('apple')
-      expect(wordNames).toContain('banana')
-      expect(wordNames).not.toContain('cherry')
-      expect(wordNames).not.toContain('date')
+      expect(result.learningType).toBe('complete')
+      expect(result.learningWords).toEqual([])
     })
   })
 })

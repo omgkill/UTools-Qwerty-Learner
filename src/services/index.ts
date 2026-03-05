@@ -5,7 +5,7 @@ import { determineLearningType } from '@/pages/Typing/hooks/learningLogic'
 import type { LearningType } from '@/pages/Typing/hooks/learningLogic'
 import type Dexie from 'dexie'
 import type { Table } from 'dexie'
-import { now, getTodayStartTime, getTomorrowDateString } from '@/utils/timeService'
+import { getTodayStartTime, getTomorrowDateString, now } from '@/utils/timeService'
 
 type WordProgressTables = {
   wordProgress: Table<IWordProgress, number>

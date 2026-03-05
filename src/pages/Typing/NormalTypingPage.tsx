@@ -18,22 +18,20 @@ import { useNormalLearningSync } from './hooks/useNormalLearningSync'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
 import type { WordBank } from '@/typings'
-import { useDailyRecord, useWordProgress } from '@/utils/db/useProgress'
-import { handleMasteredFlow } from '@/services'
+import { LearningService, handleMasteredFlow } from '@/services'
 import { WordRecord } from '@/utils/db/record'
 import { db } from '@/utils/db'
 import { currentDictIdAtom } from '@/store'
 import { getUtoolsValue } from '@/utils/utools'
 import { useAtomValue } from 'jotai'
 import type React from 'react'
-import { useCallback, useContext, useEffect } from 'react'
+import { useCallback, useContext, useEffect, useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useImmerReducer } from 'use-immer'
 
 const LEARNING_TYPE_LABELS: Record<LearningType, { icon: string; label: string }> = {
   review: { icon: '🔄', label: '复习' },
   new: { icon: '📚', label: '新词' },
-  consolidate: { icon: '🔁', label: '巩固' },
   complete: { icon: '✅', label: '完成' },
 }
 
@@ -43,7 +41,9 @@ interface NormalTypingAppInnerProps {
 
 const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWordBank }) => {
   const { state, dispatch } = useTypingContext()
-  const currentDictId = useAtomValue(currentDictIdAtom)
+
+  // 使用懒加载的 LearningService 实例
+  const learningService = useMemo(() => new LearningService(db), [])
 
   const {
     words,
@@ -53,15 +53,9 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
     todayLearned,
     todayReviewed,
     todayMastered,
-    startRepeatLearning,
     getNextNewWord,
-    setLearningWords,
-    setLearningType,
-    reloadWords,
   } = useWordList('normal')
 
-  const { markAsMastered } = useWordProgress()
-  const { incrementMastered } = useDailyRecord()
   const dictID = useAtomValue(currentDictIdAtom)
 
   useNormalLearningSync({
@@ -77,7 +71,7 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
     const resolvedDictId = dictID || getUtoolsValue('currentWordBank', '')
     if (!resolvedDictId) return
     try {
-      const wordRecord = new WordRecord(word, resolvedDictId, null, [], 0, {})
+      const wordRecord = new WordRecord(word, resolvedDictId, [], 0, {})
       await db.wordRecords.add(wordRecord)
     } catch (e) {
       console.error('Failed to save mastered word record:', e)
@@ -108,14 +102,26 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
 
   const handleMastered = useCallback(async () => {
     const currentWord = state.wordListData.words?.[state.wordListData.index]
+
+    // 标记单词为已掌握
+    if (currentWord && dictID) {
+      await learningService.markAsMastered(dictID, currentWord.name)
+    }
+
+    // 更新今日掌握计数
+    if (dictID) {
+      await learningService.incrementMastered(dictID)
+    }
+
     const result = await handleMasteredFlow({
       currentWord,
-      markAsMastered,
+      markAsMastered: async (word: string) => {
+        if (dictID) return learningService.markAsMastered(dictID, word)
+        throw new Error('No dict ID')
+      },
       getNextNewWord,
       createWordRecord,
     })
-
-    await incrementMastered()
 
     if (result.replacementWord) {
       dispatch({ type: TypingStateActionType.ADD_REPLACEMENT_WORD, payload: result.replacementWord })
@@ -124,7 +130,7 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
     if (result.shouldSkip) {
       dispatch({ type: TypingStateActionType.SKIP_WORD })
     }
-  }, [state.wordListData.words, state.wordListData.index, markAsMastered, dispatch, getNextNewWord, incrementMastered, createWordRecord])
+  }, [state.wordListData.words, state.wordListData.index, dictID, learningService, dispatch, getNextNewWord, createWordRecord])
 
   useTypingHotkeys(state.isImmersiveMode)
 
@@ -189,14 +195,6 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
                     今日学习 <span className="font-bold text-indigo-600 dark:text-indigo-400">{todayLearned + todayReviewed}</span> 个单词
                     （新词 <span className="font-bold">{todayLearned}</span> 个，复习 <span className="font-bold">{todayReviewed}</span> 个）
                   </p>
-                  <div className="flex gap-3">
-                    <NavLink
-                      to="/repeat"
-                      className="rounded-lg bg-indigo-500 px-4 py-2 text-white transition-colors hover:bg-indigo-600"
-                    >
-                      🔄 重复学习
-                    </NavLink>
-                  </div>
                   <p className="text-sm text-gray-500 dark:text-gray-500">明天继续加油！</p>
                 </div>
               ) : (

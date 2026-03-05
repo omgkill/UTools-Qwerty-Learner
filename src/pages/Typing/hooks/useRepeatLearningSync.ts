@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { WordWithIndex } from '@/typings'
-import { TypingStateActionType } from '../store'
-import { RepeatLearningManager } from './RepeatLearningManager'
+import type { TypingAction } from '../store'
 
 interface UseRepeatLearningSyncProps {
   isActive: boolean
   dictId: string | null
-  dispatch: React.Dispatch<any>
+  dispatch: React.Dispatch<TypingAction>
   onStateRestored?: (words: WordWithIndex[], index: number) => void
 }
 
@@ -16,25 +15,24 @@ export function useRepeatLearningSync({
   dispatch,
   onStateRestored,
 }: UseRepeatLearningSyncProps) {
-  const managerRef = useRef(new RepeatLearningManager())
   const isRestoredRef = useRef(false)
   const isActiveRef = useRef(isActive)
   const hasCheckedForRestoreRef = useRef(false)
+  const repeatLearningStateRef = useRef<{ words: WordWithIndex[]; index: number } | null>(null)
 
   useEffect(() => {
     isActiveRef.current = isActive
   }, [isActive])
 
-  // 检查是否有重复学习记录，如果有，通知父组件
+  // 检查是否有重复学习记录（通过 context 或其他方式传入）
   useEffect(() => {
     if (!dictId) return
     if (hasCheckedForRestoreRef.current) return
 
     const checkAndRestore = async () => {
-      const state = await managerRef.current.initialize(dictId)
-      if (state && state.learningWords.length > 0) {
+      if (repeatLearningStateRef.current && repeatLearningStateRef.current.words.length > 0) {
         // 发现有重复学习记录，通知父组件
-        onStateRestored?.(state.learningWords, state.currentIndex)
+        onStateRestored?.(repeatLearningStateRef.current.words, repeatLearningStateRef.current.index)
         hasCheckedForRestoreRef.current = true
       }
     }
@@ -50,15 +48,14 @@ export function useRepeatLearningSync({
     if (isRestoredRef.current) return
 
     const restore = async () => {
-      const state = await managerRef.current.initialize(dictId)
-      if (state && state.learningWords.length > 0) {
+      if (repeatLearningStateRef.current && repeatLearningStateRef.current.words.length > 0) {
         dispatch({
           type: TypingStateActionType.SET_WORDS,
-          payload: { words: state.learningWords },
+          payload: { words: repeatLearningStateRef.current.words },
         })
         dispatch({
           type: TypingStateActionType.SET_CURRENT_INDEX,
-          payload: state.currentIndex,
+          payload: repeatLearningStateRef.current.index,
         })
         isRestoredRef.current = true
       }
@@ -67,19 +64,19 @@ export function useRepeatLearningSync({
   }, [isActive, dictId, dispatch])
 
   const saveProgress = useCallback(async (index: number) => {
-    if (!dictId || !isActiveRef.current) return
-    await managerRef.current.updateIndex(dictId, index)
+    // 内存中保存进度
+    if (!dictId || !isActiveRef.current || !repeatLearningStateRef.current) return
+    repeatLearningStateRef.current.index = index
   }, [dictId])
 
   const clearState = useCallback(async () => {
-    if (!dictId) return
-    await managerRef.current.clear(dictId)
+    repeatLearningStateRef.current = null
     isRestoredRef.current = false
-  }, [dictId])
+  }, [])
 
   const startNew = useCallback(async (words: WordWithIndex[]) => {
     if (!dictId || words.length === 0) return
-    await managerRef.current.start(dictId, words)
+    repeatLearningStateRef.current = { words, index: 0 }
     isRestoredRef.current = true
   }, [dictId])
 

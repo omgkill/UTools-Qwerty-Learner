@@ -1,5 +1,2 @@
-export { useWordProgress } from './useWordProgress'
-export { useDictProgress } from './useDictProgress'
-export { useReviewWords } from './useReviewWords'
-export { useLearningStats, type LearningStats } from './useLearningStats'
-export { useDailyRecord } from './useDailyRecord'
+// 旧的 hooks 已迁移到 LearningService
+// 保留此文件以避免破坏导入，但不导出任何内容

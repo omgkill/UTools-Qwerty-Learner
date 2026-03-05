@@ -18,7 +18,7 @@ export function getNextReviewTime(masteryLevel: MasteryLevel): number {
 export function updateMasteryLevel(
   currentLevel: MasteryLevel,
   isCorrect: boolean,
-  wrongCount: number,
+  _wrongCount: number,
 ): { newLevel: MasteryLevel } {
   if (isCorrect) {
     return { newLevel: Math.min(currentLevel + 1, 6) as MasteryLevel }

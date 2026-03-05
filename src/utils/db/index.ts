@@ -1,8 +1,7 @@
-import type { IDailyRecord, IDictProgress, IWordProgress } from './progress'
-import { DailyRecord, DictProgress, WordProgress } from './progress'
-import type { ILearningRecord, IWordRecord, LetterMistakes } from './record'
-import { LearningRecord, WordRecord } from './record'
-import type { TypingState } from '@/pages/Typing/store'
+import type { IDailyRecord, IWordProgress } from './progress'
+import { DailyRecord, WordProgress } from './progress'
+import type { IWordRecord, LetterMistakes } from './record'
+import { WordRecord } from './record'
 import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
 import { currentDictIdAtom } from '@/store'
 import { getUtoolsValue, setUtoolsValue } from '@/utils/utools'
@@ -12,57 +11,18 @@ import Dexie from 'dexie'
 import { useAtomValue } from 'jotai'
 import { useCallback, useContext } from 'react'
 
-export type ITypingState = {
-  id?: number
-  dict: string
-  date: string
-  isRepeatLearning: boolean
-  learningWords: unknown[]
-  currentIndex: number
-  version?: number
-}
-
 class RecordDB extends Dexie {
   wordRecords!: Table<IWordRecord, number>
-  learningRecords!: Table<ILearningRecord, number>
   wordProgress!: Table<IWordProgress, number>
-  dictProgress!: Table<IDictProgress, number>
   dailyRecords!: Table<IDailyRecord, number>
-  typingStates!: Table<ITypingState, number>
 
   constructor() {
     super('RecordDB')
-    this.version(5)
+    this.version(6)
       .stores({
-        wordRecords: '++id,word,timeStamp,dict,learning,errorCount,[dict+learning],[dict+timeStamp]',
-        learningRecords: '++id,timeStamp,dict,learning,time,[dict+learning]',
+        wordRecords: '++id,word,timeStamp,dict,[dict+timeStamp]',
         wordProgress: '++id,word,dict,masteryLevel,nextReviewTime,lastReviewTime,[dict+word],[dict+masteryLevel]',
-        dictProgress: '++id,dict',
         dailyRecords: '++id,dict,date,[dict+date]',
-        typingStates: '++id,dict,date,[dict+date]',
-      })
-    this.version(4)
-      .stores({
-        wordRecords: '++id,word,timeStamp,dict,learning,errorCount,[dict+learning],[dict+timeStamp]',
-        learningRecords: '++id,timeStamp,dict,learning,time,[dict+learning]',
-        wordProgress: '++id,word,dict,masteryLevel,nextReviewTime,lastReviewTime,[dict+word],[dict+masteryLevel]',
-        dictProgress: '++id,dict',
-        dailyRecords: '++id,dict,date,[dict+date]',
-      })
-    this.version(3)
-      .stores({
-        wordRecords: '++id,word,timeStamp,dict,learning,errorCount,[dict+learning]',
-        learningRecords: '++id,timeStamp,dict,learning,time,[dict+learning]',
-        wordProgress: '++id,word,dict,masteryLevel,nextReviewTime,lastReviewTime,[dict+word],[dict+masteryLevel]',
-        dictProgress: '++id,dict',
-        dailyRecords: '++id,dict,date,[dict+date]',
-      })
-      .upgrade((tx) => {
-        tx.table('wordProgress').toCollection().modify((record: IWordProgress) => {
-          if (record.reps === undefined) {
-            record.reps = record.masteryLevel > 0 ? 1 : 0
-          }
-        })
       })
   }
 }
@@ -70,9 +30,7 @@ class RecordDB extends Dexie {
 export const db = new RecordDB()
 
 db.wordRecords.mapToClass(WordRecord)
-db.learningRecords.mapToClass(LearningRecord)
 db.wordProgress.mapToClass(WordProgress)
-db.dictProgress.mapToClass(DictProgress)
 db.dailyRecords.mapToClass(DailyRecord)
 
 export const resolveDictId = (dictId: string) => {
@@ -148,42 +106,6 @@ export const scheduleUtoolsBackup = () => {
   }, 1500)
 }
 
-export function useSaveLearningRecord() {
-  const dictID = useAtomValue(currentDictIdAtom)
-
-  const saveLearningRecord = useCallback(
-    async (typingState: TypingState) => {
-      const resolvedDictId = resolveDictId(dictID)
-      if (!resolvedDictId) return
-      const {
-        statsData: { correctCount, wrongCount, wordCount, correctWordIndexes, wordRecordIds, timerData },
-        wordListData: { words },
-      } = typingState
-
-      const learningRecord = new LearningRecord(
-        resolvedDictId,
-        null,
-        timerData.time,
-        correctCount,
-        wrongCount,
-        wordCount,
-        correctWordIndexes,
-        words.length,
-        wordRecordIds ?? [],
-      )
-      try {
-        await db.learningRecords.add(learningRecord)
-        recordDataWrite()
-      } catch (e) {
-        console.error('Failed to save learning record:', e)
-      }
-    },
-    [dictID],
-  )
-
-  return saveLearningRecord
-}
-
 export type WordKeyLogger = {
   letterTimeArray: number[]
   letterMistake: LetterMistakes
@@ -216,7 +138,7 @@ export function useSaveWordRecord() {
         timing.push(diff)
       }
 
-      const wordRecord = new WordRecord(word, resolvedDictId, null, timing, wrongCount, letterMistake)
+      const wordRecord = new WordRecord(word, resolvedDictId, timing, wrongCount, letterMistake)
 
       let dbID = -1
       try {
@@ -234,4 +156,12 @@ export function useSaveWordRecord() {
   )
 
   return saveWordRecord
+}
+
+/**
+ * 旧的 useSaveLearningRecord 已删除
+ * 原因：不再需要区分学习会话，learningRecords 表已被删除
+ */
+export function useSaveLearningRecord() {
+  return useCallback(() => Promise.resolve(), [])
 }

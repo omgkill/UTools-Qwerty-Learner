@@ -1,12 +1,11 @@
 import { LEARNING_CONFIG, MASTERY_LEVELS } from './constants'
-import type { IDailyRecord, IDictProgress, IWordProgress, MasteryLevel } from './types'
 import { now } from '@/utils/timeService'
 
-export class WordProgress implements IWordProgress {
+export class WordProgress {
   id?: number
   word: string
   dict: string
-  masteryLevel: MasteryLevel
+  masteryLevel: number
   nextReviewTime: number
   lastReviewTime: number
   correctCount: number
@@ -41,7 +40,7 @@ export class WordProgress implements IWordProgress {
   }
 }
 
-export class DictProgress implements IDictProgress {
+export class DictProgress {
   id?: number
   dict: string
   totalWords: number
@@ -70,7 +69,7 @@ export class DictProgress implements IDictProgress {
   }
 }
 
-export class DailyRecord implements IDailyRecord {
+export class DailyRecord {
   id?: number
   dict: string
   date: string

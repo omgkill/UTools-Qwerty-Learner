@@ -260,7 +260,8 @@ describe('模拟真实 React 流程测试', () => {
       manager,
       dictId,
       dispatch,
-      () => {}
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      () => {} // onSaveRecord 回调在测试中不需要
     )
 
     // 设置 isActive = false（模拟 mode !== 'repeat'）

@@ -1,9 +1,14 @@
 import type { Word } from '@/typings'
 import type { WordState } from './useWordState'
-import { TypingContext, TypingStateActionType, initialState } from '@/pages/Typing/store'
-import { useDailyRecord, useWordProgress } from '@/utils/db/useProgress'
+import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
+import { LearningService } from '@/services'
 import { useSaveWordRecord } from '@/utils/db'
-import { useCallback, useContext, useEffect, useRef } from 'react'
+import { db } from '@/utils/db'
+import { useCallback, useContext, useEffect, useMemo } from 'react'
+import { currentDictIdAtom } from '@/store'
+import { useAtomValue } from 'jotai'
+
+const onFinishCalledRef = { current: false }
 
 export function useWordCompletion(
   word: Word,
@@ -13,7 +18,6 @@ export function useWordCompletion(
   isRepeatLearning = false,
 ) {
   const typingContext = useContext(TypingContext)
-  const state = typingContext?.state ?? initialState
   const rawDispatch = typingContext?.dispatch
   const dispatch = useCallback(
     (action: Parameters<NonNullable<typeof rawDispatch>>[0]) => {
@@ -23,10 +27,9 @@ export function useWordCompletion(
     },
     [rawDispatch],
   )
-  const onFinishCalledRef = useRef(false)
+  const dictID = useAtomValue(currentDictIdAtom)
   const saveWordRecord = useSaveWordRecord()
-  const { updateWordProgress } = useWordProgress()
-  const { incrementReviewed, incrementLearned } = useDailyRecord()
+  const learningService = useMemo(() => new LearningService(db), [])
 
   useEffect(() => {
     onFinishCalledRef.current = false
@@ -44,7 +47,7 @@ export function useWordCompletion(
         dispatch({ type: TypingStateActionType.REPORT_CORRECT_WORD })
       }
 
-      const isCorrect = true
+      const isCorrect = !wordState.hasMadeInputWrong
       const startTime = performance.now()
 
       if (!isRepeatLearning) {
@@ -58,18 +61,21 @@ export function useWordCompletion(
             console.log(`[DB] saveWordRecord done in ${performance.now() - startTime}ms, id=${id}`)
             return id
           }),
-          updateWordProgress(word.name, isCorrect, wordState.wrongCount).then((progress) => {
+          learningService?.updateProgress(word.name, isCorrect, wordState.wrongCount).then((progress) => {
             console.log(`[DB] updateWordProgress done in ${performance.now() - startTime}ms`)
             return progress
           }),
         ])
           .then(([, progress]) => {
-            if (progress) {
+            if (progress && dictID) {
               const isNewWord = progress.reps === 1
-              if (isNewWord) {
-                return incrementLearned()
-              } else {
-                return incrementReviewed(isExtraReview)
+              // 只有输入正确时才计数
+              if (isCorrect) {
+                if (isNewWord) {
+                  return learningService?.incrementLearned(dictID)
+                } else {
+                  return learningService?.incrementReviewed(dictID, isExtraReview)
+                }
               }
             }
           })
@@ -91,9 +97,8 @@ export function useWordCompletion(
     word.name,
     dispatch,
     saveWordRecord,
-    updateWordProgress,
-    incrementLearned,
-    incrementReviewed,
+    learningService,
+    dictID,
     onFinish,
     isExtraReview,
     isRepeatLearning,

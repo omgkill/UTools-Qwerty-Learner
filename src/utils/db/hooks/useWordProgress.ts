@@ -1,7 +1,7 @@
 import type { IWordProgress } from '../progress'
 import { MASTERY_LEVELS, WordProgress, getNextReviewTime, updateMasteryLevel } from '../progress'
 import { currentDictIdAtom } from '@/store'
-import { now, getTodayStartTime } from '@/utils/timeService'
+import { getTodayStartTime, now } from '@/utils/timeService'
 import { useAtomValue } from 'jotai'
 import { useCallback } from 'react'
 import { db, recordDataWrite, resolveDictId } from '../index'

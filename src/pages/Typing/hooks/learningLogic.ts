@@ -2,7 +2,7 @@ import { LEARNING_CONFIG } from '@/utils/db/progress'
 import type { IWordProgress } from '@/utils/db/progress'
 import type { Word, WordWithIndex } from '@/typings'
 
-export type LearningType = 'review' | 'new' | 'consolidate' | 'complete'
+export type LearningType = 'review' | 'new' | 'complete'
 
 export type LearningState = {
   reviewedCount: number
@@ -32,7 +32,7 @@ export type DetermineLearningTypeResult = {
 }
 
 export function determineLearningType(params: DetermineLearningTypeParams): DetermineLearningTypeResult {
-  const { dueWords, newWords, reviewedCount, learnedCount, allProgress, wordList } = params
+  const { dueWords, newWords, reviewedCount, learnedCount } = params
 
   if (dueWords.length > 0) {
     if (dueWords.length > LEARNING_CONFIG.DAILY_LIMIT) {
@@ -69,23 +69,6 @@ export function determineLearningType(params: DetermineLearningTypeParams): Dete
       learningWords: wordsToLearn,
       dueCount: 0,
       newCount: newWords.length,
-    }
-  }
-
-  const learnedWords = wordList
-    .map((word, index) => ({ ...word, index }))
-    .filter((word) => {
-      const progress = allProgress.find((p) => p?.word === word.name)
-      return progress && progress.masteryLevel > 0 && progress.masteryLevel < 7
-    })
-
-  if (learnedWords.length > 0) {
-    const shuffled = [...learnedWords].sort(() => Math.random() - 0.5)
-    return {
-      learningType: 'consolidate',
-      learningWords: shuffled,
-      dueCount: 0,
-      newCount: 0,
     }
   }
 
