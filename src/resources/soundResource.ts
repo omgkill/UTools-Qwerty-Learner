@@ -1,4 +1,4 @@
-import type { LanguagePronunciationMap } from '@/typings'
+﻿import type { LanguagePronunciationMap } from '@/types'
 
 export const LANG_PRON_MAP: LanguagePronunciationMap = {
   en: {

@@ -1,18 +1,18 @@
-import { TypingContext, TypingStateActionType, initialState } from '../../store'
 import WordCard from './WordCard'
 import Drawer from '@/components/Drawer'
 import { currentDictInfoAtom } from '@/store'
 import { Dialog } from '@headlessui/react'
 import * as ScrollArea from '@radix-ui/react-scroll-area'
-import { useAtomValue } from 'jotai'
-import { useContext, useState } from 'react'
+import { useAtomValue, useSetAtom } from 'jotai'
+import { useState } from 'react'
+import { currentIndexAtom, wordsAtom, setIsTypingAtom } from '../../store'
 import ListIcon from '~icons/tabler/list'
 import IconX from '~icons/tabler/x'
 
 export default function WordList() {
-  const typingContext = useContext(TypingContext)
-  const state = typingContext?.state ?? initialState
-  const dispatch = typingContext?.dispatch ?? (() => undefined)
+  const currentIndex = useAtomValue(currentIndexAtom)
+  const words = useAtomValue(wordsAtom)
+  const setIsTyping = useSetAtom(setIsTypingAtom)
 
   const [isOpen, setIsOpen] = useState(false)
   const currentDictInfo = useAtomValue(currentDictInfoAtom)
@@ -23,7 +23,7 @@ export default function WordList() {
 
   function openModal() {
     setIsOpen(true)
-    dispatch({ type: TypingStateActionType.SET_IS_TYPING, payload: false })
+    setIsTyping(false)
   }
 
   return (
@@ -44,8 +44,8 @@ export default function WordList() {
         <ScrollArea.Root className="flex-1 select-none overflow-y-auto ">
           <ScrollArea.Viewport className="h-full w-full px-3">
             <div className="flex h-full w-full flex-col gap-1">
-              {state.wordListData.words?.map((word, index) => {
-                return <WordCard word={word} key={`${word.name}_${index}`} isActive={state.wordListData.index === index} />
+              {words?.map((word, index) => {
+                return <WordCard word={word} key={`${word.name}_${index}`} isActive={currentIndex === index} />
               })}
             </div>
           </ScrollArea.Viewport>

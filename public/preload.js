@@ -5,7 +5,6 @@ window.fs = fs;
 window.path = path;
 window.process = process;
 
-// 日志功能
 const logFile = path.join(require('os').tmpdir(), 'qwerty-learner-debug.log');
 const log = (msg) => {
   const timestamp = new Date().toISOString().substr(11, 12);
@@ -18,7 +17,6 @@ const log = (msg) => {
 window.debugLog = log;
 log('=== preload.js loaded ===');
 
-// Mode Handling
 let currentMode = null;
 let currentAction = null;
 if (typeof utools !== 'undefined') {
@@ -34,11 +32,9 @@ if (typeof utools !== 'undefined') {
 window.getMode = () => currentMode;
 window.getAction = () => currentAction;
 
-// Dev Mock - 必须在其他函数之前初始化
 if (typeof utools === 'undefined') {
   console.log('uTools environment not detected. Using mock.');
   
-  // 开发环境默认显示背单词界面
   currentMode = 'typing';
   
   let mockDb = {};
@@ -59,15 +55,24 @@ if (typeof utools === 'undefined') {
       remove: (id) => {
         delete mockDb[id];
         return { ok: true };
-      }
+      },
+      allDocs: () => Object.values(mockDb)
     }
   };
   
-  // 暴露 mockDb 供调试
   window.mockDb = mockDb;
+} else {
+  window.utools.db.allDocs = function() {
+    const docs = [];
+    const allKeys = Object.keys(this.storage || {});
+    for (const key of allKeys) {
+      const doc = this.get(key);
+      if (doc) docs.push(doc);
+    }
+    return docs;
+  };
 }
 
-// Database Helpers
 window.postDB = (id, data) => {
   if (typeof utools === 'undefined') return;
   const doc = utools.db.get(id);
@@ -91,11 +96,6 @@ window.getDB = (id) => {
   return null;
 };
 
-// User Data & Mistake DB
-window.postUToolsUserData = (data) => window.postDB('user-data', data);
-window.getUToolsUserData = () => window.getDB('user-data');
-
-// Local Word Bank Management (词库管理 - 用于背单词)
 const WORD_BANK_CONFIG_KEY = 'local-wordbank-config';
 
 window.readLocalWordBankConfig = () => {
@@ -159,7 +159,6 @@ window.initLocalWordBanks = () => {
   }
 };
 
-// 兼容旧接口名称 (Dictionary → WordBank)
 window.readLocalDictConfig = window.readLocalWordBankConfig;
 window.writeLocalDictConfig = window.writeLocalWordBankConfig;
 window.newLocalDictFromJson = window.newLocalWordBankFromJson;
@@ -167,24 +166,23 @@ window.readLocalDict = window.readLocalWordBank;
 window.delLocalDict = window.delLocalWordBank;
 window.initLocalDictionries = window.initLocalWordBanks;
 
-// Export Database
-window.exportDatabase2UTools = () => {
-};
-
-// Clear All Data
 window.clearAllData = () => {
   try {
-    const config = window.readLocalWordBankConfig();
-    config.forEach((wordBank) => {
-      if (wordBank.id) {
-        utools.db.remove(wordBank.id);
+    const allDocs = utools.db.allDocs();
+    
+    for (const doc of allDocs) {
+      const id = doc._id;
+      if (id.startsWith('progress:') || 
+          id.startsWith('daily:') || 
+          id.startsWith('session:') ||
+          id.startsWith('local-wordbank') ||
+          id === 'local-wordbank-config' ||
+          id === 'local-dict-config' ||
+          id === 'mdict-config') {
+        utools.db.remove(id);
       }
-    });
-    utools.db.remove(WORD_BANK_CONFIG_KEY);
-    utools.db.remove('local-dict-config'); // 兼容旧数据
-    utools.db.remove('user-data');
-    utools.db.remove('x-typing-mistake');
-    localStorage.clear();
+    }
+    
     console.log('All data cleared');
     return true;
   } catch (err) {
@@ -193,7 +191,6 @@ window.clearAllData = () => {
   }
 };
 
-// Restart Plugin
 window.restartPlugin = () => {
   if (typeof utools !== 'undefined') {
     utools.outPlugin();
@@ -205,12 +202,7 @@ window.restartPlugin = () => {
   }
 };
 
-// ============================================
-// MDX Dictionary Support (only in uTools environment)
-// ============================================
-
 if (typeof utools !== 'undefined') {
-  // 动态加载 mdict，只在 uTools 环境中
   let mdictParser = null;
   try {
     mdictParser = require('mdict/mdict-parser.js');
@@ -220,7 +212,6 @@ if (typeof utools !== 'undefined') {
 
   const mdxInstances = new Map();
 
-  // 获取 MIME 类型
   function getMimeType(filename) {
     const ext = path.extname(filename).toLowerCase();
     switch (ext) {
@@ -238,7 +229,6 @@ if (typeof utools !== 'undefined') {
     }
   }
 
-  // 替换 HTML 中的资源为 base64
   async function replaceResources(html, mddLookup) {
     if (!html || !mddLookup) return html;
     
@@ -267,9 +257,7 @@ if (typeof utools !== 'undefined') {
           const mime = getMimeType(val);
           replacements.set(val, `data:${mime};base64,${base64}`);
         }
-      } catch (e) {
-        // 资源未找到是正常的，忽略错误
-      }
+      } catch (e) {}
     }));
     
     return html.replace(regex, (match, attr, val) => {
@@ -338,7 +326,6 @@ if (typeof utools !== 'undefined') {
     }
   };
 
-  // MDX Dictionary Management (使用与 voca-plugin 相同的 key)
   const MDX_CONFIG_KEY = 'mdict-config';
 
   window.getMdxDictConfig = () => {
@@ -394,7 +381,6 @@ if (typeof utools !== 'undefined') {
     return dicts;
   };
 
-  // 在单个词典中查询 (与 voca-plugin queryInDict 逻辑一致)
   async function queryInDict(filePath, word) {
     try {
       const { mdxLookup, mddLookup } = await window.dictMdxLoader.load(filePath);
@@ -417,7 +403,6 @@ if (typeof utools !== 'undefined') {
         }
       }
       
-      // 如果有结果且有 MDD，替换资源
       if (result && mddLookup) {
         try {
           result = await replaceResources(result, mddLookup);
@@ -443,14 +428,12 @@ if (typeof utools !== 'undefined') {
     }
   }
 
-  // Query word in MDX dictionaries (与 voca-plugin queryWord 逻辑一致)
   window.queryMdxWord = async (word) => {
     const w = (word || '').trim();
     if (!w) return [];
     
     const config = window.getMdxDictConfig();
     
-    // 过滤存在的词典文件，并行查询
     const promises = config
       .filter(d => fs.existsSync(d.path))
       .map(d => queryInDict(d.path, w));
@@ -469,7 +452,6 @@ if (typeof utools !== 'undefined') {
     return await queryInDict(firstDict.path, w);
   };
 
-  // 兼容 voca-plugin 的接口命名
   window.services = {
     selectDictFiles: window.selectMdxFiles,
     getDictList: window.getMdxDictConfig,
@@ -478,7 +460,6 @@ if (typeof utools !== 'undefined') {
     queryWord: window.queryMdxWord
   };
 } else {
-  // 开发环境 mock
   window.getMdxDictConfig = () => [];
   window.saveMdxDictConfig = () => {};
   window.selectMdxFiles = () => null;

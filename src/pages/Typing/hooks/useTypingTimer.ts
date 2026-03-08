@@ -1,17 +1,17 @@
-import { TypingContext, TypingStateActionType } from '../store'
-import { useContext, useEffect } from 'react'
+import { useEffect } from 'react'
+import { useSetAtom } from 'jotai'
+import { tickTimerAtom } from '../store'
 
 export function useTypingTimer(isTyping: boolean) {
-  const typingContext = useContext(TypingContext)
-  const dispatch = typingContext?.dispatch
+  const tickTimer = useSetAtom(tickTimerAtom)
 
   useEffect(() => {
     let intervalId: number
-    if (isTyping && dispatch) {
+    if (isTyping) {
       intervalId = window.setInterval(() => {
-        dispatch({ type: TypingStateActionType.TICK_TIMER })
+        tickTimer()
       }, 1000)
     }
     return () => clearInterval(intervalId)
-  }, [isTyping, dispatch])
+  }, [isTyping, tickTimer])
 }

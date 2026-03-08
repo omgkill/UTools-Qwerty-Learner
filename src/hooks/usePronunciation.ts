@@ -1,5 +1,5 @@
-import { pronunciationConfigAtom } from '@/store'
-import type { PronunciationType } from '@/typings'
+﻿import { pronunciationConfigAtom } from '@/store'
+import type { PronunciationType } from '@/types'
 import { addHowlListener } from '@/utils'
 import { LruCache } from '@/utils/cache'
 import { Howl } from 'howler'

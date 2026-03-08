@@ -1,4 +1,4 @@
-import type { DictMeta, WordInfo } from '../types'
+import type { DictMeta, WordInfo } from '@/types'
 import { BaseDictAdapter } from '../BaseDictAdapter'
 
 type CustomDictEntry = { name: string; trans: string[]; usphone?: string; ukphone?: string }

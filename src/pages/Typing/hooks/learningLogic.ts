@@ -1,6 +1,4 @@
-import { LEARNING_CONFIG } from '@/utils/db/progress'
-import type { IWordProgress } from '@/utils/db/progress'
-import type { Word, WordWithIndex } from '@/typings'
+import type { Word, WordWithIndex } from '@/types'
 
 export type LearningType = 'review' | 'new' | 'complete'
 
@@ -20,8 +18,8 @@ export type DetermineLearningTypeParams = {
   newWords: WordWithIndex[]
   reviewedCount: number
   learnedCount: number
-  allProgress: (IWordProgress | undefined)[]
   wordList: Word[]
+  dailyLimit: number
 }
 
 export type DetermineLearningTypeResult = {
@@ -32,10 +30,10 @@ export type DetermineLearningTypeResult = {
 }
 
 export function determineLearningType(params: DetermineLearningTypeParams): DetermineLearningTypeResult {
-  const { dueWords, newWords, reviewedCount, learnedCount } = params
+  const { dueWords, newWords, reviewedCount, learnedCount, dailyLimit } = params
 
   if (dueWords.length > 0) {
-    if (dueWords.length > LEARNING_CONFIG.DAILY_LIMIT) {
+    if (dueWords.length > dailyLimit) {
       return {
         learningType: 'review',
         learningWords: dueWords,
@@ -44,7 +42,7 @@ export function determineLearningType(params: DetermineLearningTypeParams): Dete
       }
     }
 
-    const remaining = Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
+    const remaining = Math.max(0, dailyLimit - reviewedCount - learnedCount)
     const newWordQuota = Math.max(0, remaining - dueWords.length)
     
     const wordsToReturn = [
@@ -60,7 +58,7 @@ export function determineLearningType(params: DetermineLearningTypeParams): Dete
     }
   }
 
-  const remaining = Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
+  const remaining = Math.max(0, dailyLimit - reviewedCount - learnedCount)
 
   if (remaining > 0 && newWords.length > 0) {
     const wordsToLearn = newWords.slice(0, remaining)
@@ -80,14 +78,14 @@ export function determineLearningType(params: DetermineLearningTypeParams): Dete
   }
 }
 
-export function calculateNewWordQuota(reviewedCount: number, learnedCount: number): number {
-  return Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
+export function calculateNewWordQuota(reviewedCount: number, learnedCount: number, dailyLimit: number): number {
+  return Math.max(0, dailyLimit - reviewedCount - learnedCount)
 }
 
-export function calculateRemainingForTarget(reviewedCount: number, learnedCount: number): number {
-  return Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
+export function calculateRemainingForTarget(reviewedCount: number, learnedCount: number, dailyLimit: number): number {
+  return Math.max(0, dailyLimit - reviewedCount - learnedCount)
 }
 
-export function hasReachedDailyTarget(reviewedCount: number, learnedCount: number): boolean {
-  return reviewedCount + learnedCount >= LEARNING_CONFIG.DAILY_LIMIT
+export function hasReachedDailyTarget(reviewedCount: number, learnedCount: number, dailyLimit: number): boolean {
+  return reviewedCount + learnedCount >= dailyLimit
 }

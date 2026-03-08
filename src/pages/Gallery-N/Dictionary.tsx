@@ -1,4 +1,4 @@
-import type { WordBank } from '@/typings'
+﻿import type { WordBank } from '@/types'
 import * as Progress from '@radix-ui/react-progress'
 
 interface Props {

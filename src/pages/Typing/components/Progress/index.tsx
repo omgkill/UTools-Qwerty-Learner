@@ -1,24 +1,18 @@
-import { TypingContext, initialState } from '../../store'
-import { useContext, useEffect, useState } from 'react'
+import { useAtomValue } from 'jotai'
+import { currentIndexAtom, wordsAtom } from '../../store'
 
 export default function Progress({ className }: { className?: string }) {
-  const typingContext = useContext(TypingContext)
-  const state = typingContext?.state ?? initialState
-  const [progress, setProgress] = useState(0)
-  const [phase, setPhase] = useState(0)
+  const currentIndex = useAtomValue(currentIndexAtom)
+  const words = useAtomValue(wordsAtom)
+
+  const progress = words.length > 0 ? Math.floor((currentIndex / words.length) * 100) : 0
+  const phase = Math.floor(progress / 33.4)
 
   const colorSwitcher: { [key: number]: string } = {
     0: 'bg-indigo-200 dark:bg-indigo-300',
     1: 'bg-indigo-300 dark:bg-indigo-400',
     2: 'bg-indigo-400 dark:bg-indigo-500',
   }
-
-  useEffect(() => {
-    const newProgress = Math.floor((state.wordListData.index / state.wordListData.words.length) * 100)
-    setProgress(newProgress)
-    const colorPhase = Math.floor(newProgress / 33.4)
-    setPhase(colorPhase)
-  }, [state.wordListData.index, state.wordListData.words.length])
 
   return (
     <div className={`relative w-1/4 pt-1 ${className}`}>

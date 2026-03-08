@@ -1,11 +1,11 @@
-import atomForConfig, { createUtoolsJSONStorage } from './atomForConfig'
+﻿import atomForConfig, { createUtoolsJSONStorage } from './atomForConfig'
 import { DISMISS_START_CARD_DATE_KEY } from '@/constants'
 import type {
   InfoPanelState,
   PhoneticType,
   PronunciationType,
   WordBank,
-} from '@/typings'
+} from '@/types'
 import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 

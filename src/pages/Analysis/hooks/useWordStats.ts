@@ -1,5 +1,4 @@
-import { db } from '@/utils/db'
-import type { IWordRecord } from '@/utils/db/record'
+import { getDailyRecords } from '@/utils/storage'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
 import type { Activity } from 'react-activity-calendar'
@@ -8,11 +7,8 @@ interface IWordStats {
   isEmpty?: boolean
   exerciseRecord: Activity[]
   wordRecord: Activity[]
-  wpmRecord: [string, number][]
-  accuracyRecord: [string, number][]
 }
 
-// 获取两个日期之间的所有日期，使用dayjs计算
 function getDatesBetween(start: number, end: number) {
   const dates = []
   let curr = dayjs(start).startOf('day')
@@ -34,76 +30,55 @@ function getLevel(value: number) {
   else return 4
 }
 
-export function useWordStats(startTimeStamp: number, endTimeStamp: number) {
-  const [wordStats, setWordStats] = useState<IWordStats>({ exerciseRecord: [], wordRecord: [], wpmRecord: [], accuracyRecord: [] })
+export function useWordStats(startTimeStamp: number, endTimeStamp: number, dictId: string | null) {
+  const [wordStats, setWordStats] = useState<IWordStats>({ exerciseRecord: [], wordRecord: [] })
 
   useEffect(() => {
-    const fetchWordStats = async () => {
-      const stats = await getChapterStats(startTimeStamp, endTimeStamp)
-      setWordStats(stats)
+    if (!dictId) {
+      setWordStats({ exerciseRecord: [], wordRecord: [] })
+      return
     }
 
-    fetchWordStats()
-  }, [startTimeStamp, endTimeStamp])
+    const stats = getStats(startTimeStamp, endTimeStamp, dictId)
+    setWordStats(stats)
+  }, [startTimeStamp, endTimeStamp, dictId])
 
   return wordStats
 }
 
-async function getChapterStats(startTimeStamp: number, endTimeStamp: number): Promise<IWordStats> {
-  // indexedDB查找某个数字范围内的数据
-  const records: IWordRecord[] = await db.wordRecords.where('timeStamp').between(startTimeStamp, endTimeStamp).toArray()
-
-  if (records.length === 0) {
-    return { isEmpty: true, exerciseRecord: [], wordRecord: [], wpmRecord: [], accuracyRecord: [] }
+function getStats(startTimeStamp: number, endTimeStamp: number, dictId: string): IWordStats {
+  const dailyRecords = getDailyRecords(dictId)
+  
+  if (dailyRecords.length === 0) {
+    return { isEmpty: true, exerciseRecord: [], wordRecord: [] }
   }
 
-  let data: {
-    [x: string]: {
-      exerciseTime: number //练习次数
-      words: string[] //练习词数组（不去重）
-      totalTime: number //总计用时
-      wrongCount: number //错误次数
-    }
-  } = {}
-
   const dates = getDatesBetween(startTimeStamp * 1000, endTimeStamp * 1000)
-  data = dates
-    .map((date) => ({ [date]: { exerciseTime: 0, words: [], totalTime: 0, wrongCount: 0 } }))
-    .reduce((acc, curr) => ({ ...acc, ...curr }), {})
+  const recordMap = new Map(dailyRecords.map((r) => [r.date, r]))
 
-  for (let i = 0; i < records.length; i++) {
-    const date = dayjs(records[i].timeStamp * 1000).format('YYYY-MM-DD')
-
-    data[date].exerciseTime = data[date].exerciseTime + 1
-    data[date].words = [...data[date].words, records[i].word]
-    data[date].totalTime = data[date].totalTime + records[i].timing.reduce((acc, curr) => acc + curr, 0)
-    data[date].wrongCount = data[date].wrongCount + records[i].wrongCount
+  const data: { [date: string]: { exerciseTime: number; words: number } } = {}
+  
+  for (const date of dates) {
+    const record = recordMap.get(date)
+    data[date] = {
+      exerciseTime: record ? (record.learnedCount + record.reviewedCount + record.masteredCount) : 0,
+      words: record ? record.todayWords.length : 0,
+    }
   }
 
   const RecordArray = Object.entries(data)
 
-  // 练习次数统计
   const exerciseRecord: IWordStats['exerciseRecord'] = RecordArray.map(([date, { exerciseTime }]) => ({
     date,
     count: exerciseTime,
     level: getLevel(exerciseTime),
   }))
-  // 练习词数统计（去重）
+
   const wordRecord: IWordStats['wordRecord'] = RecordArray.map(([date, { words }]) => ({
     date,
-    count: Array.from(new Set(words)).length,
-    level: getLevel(Array.from(new Set(words)).length),
+    count: words,
+    level: getLevel(words),
   }))
-  // wpm=练习词数（不去重）/总时间
-  const wpmRecord: IWordStats['wpmRecord'] = RecordArray.map<[string, number]>(([date, { words, totalTime }]) => [
-    date,
-    Math.round(words.length / (totalTime / 1000 / 60)),
-  ]).filter((d) => d[1])
-  // 正确率=每个单词的长度合计/(每个单词的长度合计+总错误次数)
-  const accuracyRecord: IWordStats['accuracyRecord'] = RecordArray.map<[string, number]>(([date, { words, wrongCount }]) => [
-    date,
-    Math.round((words.join('').length / (words.join('').length + wrongCount)) * 100),
-  ]).filter((d) => d[1])
 
-  return { exerciseRecord, wordRecord, wpmRecord, accuracyRecord }
+  return { exerciseRecord, wordRecord }
 }

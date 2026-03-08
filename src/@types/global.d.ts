@@ -1,4 +1,4 @@
-import type { Word, WordBank } from '@/typings'
+import type { Word, WordBank, DictItem } from '@/types'
 import type * as fs from 'fs'
 import type * as path from 'path'
 import type * as process from 'process'
@@ -17,19 +17,19 @@ declare global {
     readLocalDict: (id: string) => Word[]
     delLocalDict: (id: string) => boolean
     initLocalDictionries: () => void
-    getMdxDictConfig: () => Array<{ path: string; name: string }>
-    saveMdxDictConfig: (dicts: Array<{ path: string; name: string }>) => void
-    selectMdxFiles: () => Array<{ path: string; name: string }> | null
-    removeMdxDict: (path: string) => Array<{ path: string; name: string }>
-    updateMdxDictOrder: (dicts: Array<{ path: string; name: string }>) => Array<{ path: string; name: string }>
+    getMdxDictConfig: () => DictItem[]
+    saveMdxDictConfig: (dicts: DictItem[]) => void
+    selectMdxFiles: () => DictItem[] | null
+    removeMdxDict: (path: string) => DictItem[]
+    updateMdxDictOrder: (dicts: DictItem[]) => DictItem[]
     queryMdxWord: (word: string) => Promise<Array<{ dictPath: string; dictName: string; ok: boolean; content?: string; error?: string }>>
     queryFirstMdxWord: (word: string) => Promise<{ dictPath: string; dictName: string; ok: boolean; content?: string; error?: string } | null>
     services: {
-      getDictList: () => Array<{ path: string; name: string }>
+      getDictList: () => DictItem[]
       queryWord?: (word: string) => Promise<Array<{ dictPath: string; dictName: string; ok: boolean; content?: string; error?: string }>>
-      selectDictFiles?: () => Array<{ path: string; name: string }> | null
-      removeDict?: (filePath: string) => Array<{ path: string; name: string }>
-      updateDictOrder?: (dicts: Array<{ path: string; name: string }>) => Array<{ path: string; name: string }>
+      selectDictFiles?: () => DictItem[] | null
+      removeDict?: (filePath: string) => DictItem[]
+      updateDictOrder?: (dicts: DictItem[]) => DictItem[]
     }
     getMode: () => string
     getAction: () => { code: string; payload?: string } | null
@@ -51,6 +51,7 @@ declare global {
         put: (doc: { _id: string; data: unknown; _rev?: string }) => { ok?: boolean }
         remove: (id: string) => { ok?: boolean }
       }
+      openPayment: (options: { goodsId: string; attach?: string }, callback: (res: unknown) => void) => void
     }
   }
 }

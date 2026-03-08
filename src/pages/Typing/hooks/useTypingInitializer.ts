@@ -1,5 +1,5 @@
-import { currentWordBankAtom, currentWordBankIdAtom, wordBanksAtom } from '@/store'
-import type { WordBank } from '@/typings'
+﻿import { currentWordBankAtom, currentWordBankIdAtom, wordBanksAtom } from '@/store'
+import type { WordBank } from '@/types'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'

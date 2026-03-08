@@ -1,4 +1,4 @@
-import type { DictAdapter, DictMeta, WordInfo } from './types'
+import type { DictAdapter, DictMeta, WordInfo } from '@/types'
 
 export abstract class BaseDictAdapter implements DictAdapter {
   type: 'mdx' | 'custom' | 'online' = 'custom'

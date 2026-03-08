@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { DictItem } from '@/types'
 import './index.css'
-
-interface DictItem {
-  path: string
-  name: string
-}
 
 export default function MdxManagePage() {
   const [dicts, setDicts] = useState<DictItem[]>([])

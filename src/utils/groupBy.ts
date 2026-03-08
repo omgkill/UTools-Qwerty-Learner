@@ -1,4 +1,4 @@
-import type { WordBank } from '@/typings'
+﻿import type { WordBank } from '@/types'
 
 export default function groupBy<T>(elements: T[], iteratee: (value: T) => string) {
   return elements.reduce<Record<string, T[]>>((result, value) => {

@@ -1,5 +1,5 @@
-import { isTextSelectableAtom } from '@/store'
-import type { WordWithIndex } from '@/typings'
+﻿import { isTextSelectableAtom } from '@/store'
+import type { WordWithIndex } from '@/types'
 import { useAtomValue } from 'jotai'
 
 export type PhoneticProps = {

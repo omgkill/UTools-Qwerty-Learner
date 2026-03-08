@@ -1,20 +1,19 @@
-import { TypingContext, TypingStateActionType } from '../../store'
 import AnalysisButton from '../AnalysisButton'
 import Setting from '../Setting'
 import WordDictationSwitcher from '../WordDictationSwitcher'
 import Tooltip from '@/components/Tooltip'
-import { useContext } from 'react'
+import { useAtomValue, useSetAtom } from 'jotai'
 import { useHotkeys } from 'react-hotkeys-hook'
+import { isTransVisibleAtom, toggleTransVisibleAtom } from '../../store'
 import IconLanguage from '~icons/tabler/language'
 import IconLanguageOff from '~icons/tabler/language-off'
 
 export default function Switcher() {
-  const { state, dispatch } = useContext(TypingContext) ?? {}
+  const isTransVisible = useAtomValue(isTransVisibleAtom)
+  const toggleTransVisible = useSetAtom(toggleTransVisibleAtom)
 
   const changeTransVisibleState = () => {
-    if (dispatch) {
-      dispatch({ type: TypingStateActionType.TOGGLE_TRANS_VISIBLE })
-    }
+    toggleTransVisible()
   }
 
   useHotkeys(
@@ -33,7 +32,7 @@ export default function Switcher() {
       </Tooltip>
       <Tooltip className="h-7 w-7" content="开关释义显示（Ctrl + Shift + V）">
         <button
-          className={`p-[2px] ${state?.isTransVisible ? 'text-indigo-500' : 'text-gray-500'} text-lg focus:outline-none`}
+          className={`p-[2px] ${isTransVisible ? 'text-indigo-500' : 'text-gray-500'} text-lg focus:outline-none`}
           type="button"
           onClick={(e) => {
             changeTransVisibleState()
@@ -41,7 +40,7 @@ export default function Switcher() {
           }}
           aria-label="开关释义显示（Ctrl + T）"
         >
-          {state?.isTransVisible ? <IconLanguage /> : <IconLanguageOff />}
+          {isTransVisible ? <IconLanguage /> : <IconLanguageOff />}
         </button>
       </Tooltip>
 

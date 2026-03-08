@@ -16,6 +16,10 @@ export function getTodayString(): string {
   return `${year}-${month}-${day}`
 }
 
+export function getTodayDate(): string {
+  return getTodayString()
+}
+
 export function getTodayStartTime(): number {
   const date = new Date(now())
   return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()

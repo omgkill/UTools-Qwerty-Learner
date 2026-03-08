@@ -1,6 +1,5 @@
 import { wordBanksAtom } from '@/store'
-import { db } from '@/utils/db'
-import dayjs from 'dayjs'
+import { getAllProgress, getDailyRecords } from '@/utils/storage'
 import { useAtomValue } from 'jotai'
 import { useEffect, useState } from 'react'
 
@@ -22,8 +21,6 @@ export interface DayStats {
 
 export interface WordDetail {
   word: string
-  timeStamp: number
-  wrongCount: number
   type: 'new' | 'review' | 'mastered'
 }
 
@@ -42,69 +39,62 @@ export function useStudyStats(): StudyStatsData {
   const wordBanks = useAtomValue(wordBanksAtom)
 
   useEffect(() => {
-    async function fetchStats() {
-      try {
-        const wordRecords = await db.wordRecords.toArray()
-        const dictNameMap = new Map(wordBanks.map((wb) => [wb.id, wb.name]))
+    try {
+      const dictNameMap = new Map(wordBanks.map((wb) => [wb.id, wb.name]))
+      const statsMap = new Map<string, { dates: Set<string>; words: Set<string>; lastStudyDate: string | null }>()
 
-        const dictMap = new Map<
-          string,
-          {
-            dates: Set<string>
-            words: Set<string>
-            lastStudyTime: number
-          }
-        >()
+      for (const wb of wordBanks) {
+        const dailyRecords = getDailyRecords(wb.id)
+        const progress = getAllProgress(wb.id)
+        
+        const dates = new Set<string>()
+        const words = new Set<string>()
+        let lastStudyDate: string | null = null
 
-        for (const record of wordRecords) {
-          const dictId = record.dict
-          if (!dictMap.has(dictId)) {
-            dictMap.set(dictId, {
-              dates: new Set(),
-              words: new Set(),
-              lastStudyTime: 0,
-            })
-          }
-          const dictData = dictMap.get(dictId)
-          if (dictData) {
-            const date = dayjs(record.timeStamp * 1000).format('YYYY-MM-DD')
-            dictData.dates.add(date)
-            dictData.words.add(record.word)
-            if (record.timeStamp > dictData.lastStudyTime) {
-              dictData.lastStudyTime = record.timeStamp
+        for (const record of dailyRecords) {
+          if (record.learnedCount > 0 || record.reviewedCount > 0 || record.masteredCount > 0) {
+            dates.add(record.date)
+            if (!lastStudyDate || record.date > lastStudyDate) {
+              lastStudyDate = record.date
             }
           }
         }
 
-        const dictStats: DictStats[] = Array.from(dictMap.entries()).map(([dictId, data]) => ({
-          dictId,
-          dictName: dictNameMap.get(dictId) || dictId,
-          totalDays: data.dates.size,
-          totalWords: data.words.size,
-          lastStudyDate: data.lastStudyTime > 0 ? dayjs(data.lastStudyTime * 1000).format('YYYY-MM-DD') : null,
-        }))
+        for (const p of progress) {
+          if (p.masteryLevel > 0) {
+            words.add(p.word)
+          }
+        }
 
-        dictStats.sort((a, b) => {
-          if (!a.lastStudyDate) return 1
-          if (!b.lastStudyDate) return -1
-          return b.lastStudyDate.localeCompare(a.lastStudyDate)
-        })
-
-        setData({
-          dictStats,
-          isLoading: false,
-          error: null,
-        })
-      } catch (e) {
-        setData({
-          dictStats: [],
-          isLoading: false,
-          error: e instanceof Error ? e : new Error('Failed to fetch stats'),
-        })
+        statsMap.set(wb.id, { dates, words, lastStudyDate })
       }
-    }
 
-    fetchStats()
+      const dictStats: DictStats[] = Array.from(statsMap.entries()).map(([dictId, stats]) => ({
+        dictId,
+        dictName: dictNameMap.get(dictId) || dictId,
+        totalDays: stats.dates.size,
+        totalWords: stats.words.size,
+        lastStudyDate: stats.lastStudyDate,
+      }))
+
+      dictStats.sort((a, b) => {
+        if (!a.lastStudyDate) return 1
+        if (!b.lastStudyDate) return -1
+        return b.lastStudyDate.localeCompare(a.lastStudyDate)
+      })
+
+      setData({
+        dictStats,
+        isLoading: false,
+        error: null,
+      })
+    } catch (e) {
+      setData({
+        dictStats: [],
+        isLoading: false,
+        error: e instanceof Error ? e : new Error('Failed to fetch stats'),
+      })
+    }
   }, [wordBanks])
 
   return data
@@ -129,40 +119,33 @@ export function useDayStats(dictId: string | null): DayStatsData {
       return
     }
 
-    const currentDictId = dictId
-
     setData((prev) => ({ ...prev, isLoading: true }))
 
-    async function fetchDays() {
-      try {
-        const dailyRecords = await db.dailyRecords.where('dict').equals(currentDictId).toArray()
+    try {
+      const dailyRecords = getDailyRecords(dictId)
 
-        const days: DayStats[] = dailyRecords
-          .filter((r) => (r.learnedCount || 0) > 0 || (r.reviewedCount || 0) > 0 || (r.masteredCount || 0) > 0)
-          .map((r) => ({
-            date: r.date,
-            learnedCount: r.learnedCount || 0,
-            reviewedCount: r.reviewedCount || 0,
-            masteredCount: r.masteredCount || 0,
-            totalWords: (r.learnedCount || 0) + (r.reviewedCount || 0) + (r.masteredCount || 0),
-          }))
-          .sort((a, b) => b.date.localeCompare(a.date))
+      const days: DayStats[] = dailyRecords
+        .filter((r) => (r.learnedCount || 0) > 0 || (r.reviewedCount || 0) > 0 || (r.masteredCount || 0) > 0)
+        .map((r) => ({
+          date: r.date,
+          learnedCount: r.learnedCount || 0,
+          reviewedCount: r.reviewedCount || 0,
+          masteredCount: r.masteredCount || 0,
+          totalWords: (r.learnedCount || 0) + (r.reviewedCount || 0) + (r.masteredCount || 0),
+        }))
 
-        setData({
-          days,
-          isLoading: false,
-          error: null,
-        })
-      } catch (e) {
-        setData({
-          days: [],
-          isLoading: false,
-          error: e instanceof Error ? e : new Error('Failed to fetch day stats'),
-        })
-      }
+      setData({
+        days,
+        isLoading: false,
+        error: null,
+      })
+    } catch (e) {
+      setData({
+        days: [],
+        isLoading: false,
+        error: e instanceof Error ? e : new Error('Failed to fetch day stats'),
+      })
     }
-
-    fetchDays()
   }, [dictId])
 
   return data
@@ -187,65 +170,44 @@ export function useWordDetails(dictId: string | null, date: string | null): Word
       return
     }
 
-    const currentDictId = dictId
-
     setData((prev) => ({ ...prev, isLoading: true }))
 
-    async function fetchWords() {
-      try {
-        const startOfDay = dayjs(date).startOf('day').unix()
-        const endOfDay = dayjs(date).endOf('day').unix()
-
-        const allWordRecords = await db.wordRecords.where('dict').equals(currentDictId).toArray()
-
-        const wordFirstDateMap = new Map<string, string>()
-        const sortedAllRecords = [...allWordRecords].sort((a, b) => a.timeStamp - b.timeStamp)
-        for (const r of sortedAllRecords) {
-          if (!wordFirstDateMap.has(r.word)) {
-            wordFirstDateMap.set(r.word, dayjs(r.timeStamp * 1000).format('YYYY-MM-DD'))
-          }
-        }
-
-        const wordRecords = allWordRecords.filter((r) => r.timeStamp >= startOfDay && r.timeStamp <= endOfDay)
-
-        const wordDetails: WordDetail[] = wordRecords
-          .map((record) => {
-            const firstDateEver = wordFirstDateMap.get(record.word)
-            const currentDate = dayjs(record.timeStamp * 1000).format('YYYY-MM-DD')
-            // 识别掌握单词：空的timing数组和0错误次数
-            const isMastered = record.timing.length === 0 && record.wrongCount === 0
-            const type: 'new' | 'review' | 'mastered' = isMastered ? 'mastered' : (firstDateEver === currentDate ? 'new' : 'review')
-            return {
-              word: record.word,
-              timeStamp: record.timeStamp,
-              wrongCount: record.wrongCount,
-              type,
-            }
-          })
-          .sort((a, b) => a.word.localeCompare(b.word))
-
-        const uniqueWords = new Map<string, WordDetail>()
-        for (const w of wordDetails) {
-          if (!uniqueWords.has(w.word)) {
-            uniqueWords.set(w.word, w)
-          }
-        }
-
-        setData({
-          words: Array.from(uniqueWords.values()),
-          isLoading: false,
-          error: null,
-        })
-      } catch (e) {
+    try {
+      const dailyRecords = getDailyRecords(dictId)
+      const record = dailyRecords.find((r) => r.date === date)
+      
+      if (!record || !record.todayWords) {
         setData({
           words: [],
           isLoading: false,
-          error: e instanceof Error ? e : new Error('Failed to fetch word details'),
+          error: null,
         })
+        return
       }
-    }
 
-    fetchWords()
+      const allProgress = getAllProgress(dictId)
+      const progressMap = new Map(allProgress.map((p) => [p.word, p]))
+
+      const words: WordDetail[] = record.todayWords.map((word) => {
+        const progress = progressMap.get(word)
+        const type: 'new' | 'review' | 'mastered' = 
+          progress?.masteryLevel === 7 ? 'mastered' :
+          progress?.masteryLevel === 1 ? 'new' : 'review'
+        return { word, type }
+      })
+
+      setData({
+        words: words.sort((a, b) => a.word.localeCompare(b.word)),
+        isLoading: false,
+        error: null,
+      })
+    } catch (e) {
+      setData({
+        words: [],
+        isLoading: false,
+        error: e instanceof Error ? e : new Error('Failed to fetch word details'),
+      })
+    }
   }, [dictId, date])
 
   return data

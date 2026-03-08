@@ -1,4 +1,4 @@
-import type { IDailyRecord } from '@/utils/db/progress'
+import type { DailyRecord } from '@/utils/storage'
 import { atom } from 'jotai'
 
-export const dailyRecordAtom = atom<IDailyRecord | null>(null)
+export const dailyRecordAtom = atom<DailyRecord | null>(null)

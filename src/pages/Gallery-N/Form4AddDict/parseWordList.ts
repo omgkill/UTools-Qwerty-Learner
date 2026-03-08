@@ -1,4 +1,4 @@
-import type { Word } from '@/typings'
+﻿import type { Word } from '@/types'
 
 export type ParsedWordList = {
   words: Word[]

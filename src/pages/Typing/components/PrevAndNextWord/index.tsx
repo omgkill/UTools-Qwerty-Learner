@@ -1,32 +1,31 @@
-import { TypingContext, TypingStateActionType, initialState } from '../../store'
 import Tooltip from '@/components/Tooltip'
 import { wordDictationConfigAtom } from '@/store'
-import { useAtomValue } from 'jotai'
-import { useCallback, useContext, useMemo } from 'react'
+import { useAtomValue, useSetAtom } from 'jotai'
+import { useCallback, useMemo } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
+import { currentIndexAtom, wordsAtom, wordDisplayInfoMapAtom, isTransVisibleAtom, skipToIndexAtom } from '../../store'
 import IconPrev from '~icons/tabler/arrow-narrow-left'
 import IconNext from '~icons/tabler/arrow-narrow-right'
 
 export default function PrevAndNextWord({ type }: LastAndNextWordProps) {
-  const typingContext = useContext(TypingContext)
-  const state = typingContext?.state ?? initialState
-  const dispatch = typingContext?.dispatch
+  const currentIndex = useAtomValue(currentIndexAtom)
+  const words = useAtomValue(wordsAtom)
+  const wordDisplayInfoMap = useAtomValue(wordDisplayInfoMapAtom)
+  const isTransVisible = useAtomValue(isTransVisibleAtom)
+  const skipToIndex = useSetAtom(skipToIndexAtom)
 
   const wordDictationConfig = useAtomValue(wordDictationConfigAtom)
-  const newIndex = useMemo(() => state.wordListData.index + (type === 'prev' ? -1 : 1), [state.wordListData.index, type])
-  const word = state.wordListData.words[newIndex]
+  const newIndex = useMemo(() => currentIndex + (type === 'prev' ? -1 : 1), [currentIndex, type])
+  const word = words[newIndex]
   const shortCutKey = useMemo(() => (type === 'prev' ? 'Ctrl + Shift + ArrowLeft' : 'Ctrl + Shift + ArrowRight'), [type])
 
-  const wordInfo = word ? state.wordInfoMap[word.name] : undefined
-  const displayTrans = wordInfo?.trans || word?.trans || []
+  const wordDisplayInfo = word ? wordDisplayInfoMap[word.name] : undefined
+  const displayTrans = wordDisplayInfo?.trans || word?.trans || []
 
   const onClickWord = useCallback(() => {
     if (!word) return
-
-    if (!dispatch) return
-    if (type === 'prev') dispatch({ type: TypingStateActionType.SKIP_2_WORD_INDEX, newIndex })
-    if (type === 'next') dispatch({ type: TypingStateActionType.SKIP_2_WORD_INDEX, newIndex })
-  }, [type, dispatch, newIndex, word])
+    skipToIndex(newIndex)
+  }, [skipToIndex, newIndex, word])
 
   useHotkeys(
     shortCutKey,
@@ -65,7 +64,7 @@ export default function PrevAndNextWord({ type }: LastAndNextWordProps) {
               >
                 {headWord}
               </p>
-              {state.isTransVisible && displayTrans.length > 0 && (
+              {isTransVisible && displayTrans.length > 0 && (
                 <p className="line-clamp-1 max-w-full text-sm font-normal text-gray-600 dark:text-gray-500">{displayTrans.join('；')}</p>
               )}
             </div>
@@ -80,6 +79,5 @@ export default function PrevAndNextWord({ type }: LastAndNextWordProps) {
 }
 
 export type LastAndNextWordProps = {
-  /** 上一个单词还是下一个单词 */
   type: 'prev' | 'next'
 }

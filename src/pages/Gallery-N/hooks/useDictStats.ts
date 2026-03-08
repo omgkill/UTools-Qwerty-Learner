@@ -1,14 +1,12 @@
-import { db } from '@/utils/db'
-import { MASTERY_LEVELS } from '@/utils/db/progress'
-import { now } from '@/utils/timeService'
+import { getProgressStats } from '@/utils/storage'
 import { useEffect, useState } from 'react'
 
 export function useDictStats(dictID: string, isStartLoad: boolean) {
   const [dictStats, setDictStats] = useState<IDictStats | null>(null)
 
   useEffect(() => {
-    const fetchDictStats = async () => {
-      const stats = await getDictStats(dictID)
+    const fetchDictStats = () => {
+      const stats = getDictStats(dictID)
       setDictStats(stats)
     }
 
@@ -27,18 +25,14 @@ interface IDictStats {
   totalProgress: number
 }
 
-async function getDictStats(dict: string): Promise<IDictStats> {
-  const allProgress = await db.wordProgress.where('dict').equals(dict).toArray()
-  const learnedWords = allProgress.filter((p) => p.masteryLevel > MASTERY_LEVELS.NEW).length
-  const masteredWords = allProgress.filter((p) => p.masteryLevel >= MASTERY_LEVELS.MASTERED).length
-  const dueWords = allProgress.filter((p) => p.nextReviewTime <= now() && p.masteryLevel < MASTERY_LEVELS.MASTERED).length
-
-  const totalProgress = allProgress.length > 0 ? Math.round((masteredWords / allProgress.length) * 100) : 0
+function getDictStats(dict: string): IDictStats {
+  const stats = getProgressStats(dict)
+  const totalProgress = stats.learned > 0 ? Math.round((stats.mastered / stats.learned) * 100) : 0
 
   return {
-    learnedWords,
-    masteredWords,
-    dueWords,
+    learnedWords: stats.learned,
+    masteredWords: stats.mastered,
+    dueWords: stats.due,
     totalProgress,
   }
 }

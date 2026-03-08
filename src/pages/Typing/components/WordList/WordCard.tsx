@@ -1,16 +1,16 @@
-import { TypingContext, initialState } from '@/pages/Typing/store'
-import type { Word } from '@/typings'
-import { useContext, useMemo } from 'react'
+import type { Word } from '@/types'
+import { useAtomValue } from 'jotai'
+import { useMemo } from 'react'
+import { wordDisplayInfoMapAtom } from '../../store'
 
 export default function WordCard({ word, isActive }: { word: Word; isActive: boolean }) {
-  const typingContext = useContext(TypingContext)
-  const state = typingContext?.state ?? initialState
+  const wordDisplayInfoMap = useAtomValue(wordDisplayInfoMapAtom)
 
-  const wordInfo = state.wordInfoMap[word.name]
+  const wordDisplayInfo = wordDisplayInfoMap[word.name]
   const displayTrans = useMemo(() => {
-    const trans = wordInfo?.trans ?? word.trans ?? []
+    const trans = wordDisplayInfo?.trans ?? word.trans ?? []
     return trans.filter((item) => item && item.trim().length > 0)
-  }, [wordInfo?.trans, word.trans])
+  }, [wordDisplayInfo?.trans, word.trans])
 
   return (
     <div

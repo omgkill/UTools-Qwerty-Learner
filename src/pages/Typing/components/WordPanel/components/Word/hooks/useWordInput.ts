@@ -1,20 +1,24 @@
 import type { WordUpdateAction } from '../../InputHandler'
-import type { WordState } from './useWordState'
 import { EXPLICIT_SPACE } from '@/constants'
-import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
 import { isIgnoreCaseAtom } from '@/store'
-import { getLocalTimeString } from '@/utils/timeService'
-import { now } from '@/utils/timeService'
-import { useAtomValue } from 'jotai'
-import { useCallback, useContext, useEffect } from 'react'
+import { getLocalTimeString, now } from '@/utils/timeService'
+import { useAtomValue, useSetAtom } from 'jotai'
+import { useCallback, useEffect } from 'react'
+import {
+  increaseCorrectCountAtom,
+  increaseWrongCountAtom,
+  reportWrongWordAtom,
+  wordInputStateAtom,
+} from '../../../../../store'
 
-export function useWordInput(
-  wordState: WordState,
-  setWordState: (updater: (draft: WordState) => void) => void,
-) {
-  const typingContext = useContext(TypingContext)
-  const dispatch = typingContext?.dispatch
+export function useWordInput() {
   const isIgnoreCase = useAtomValue(isIgnoreCaseAtom)
+  const increaseCorrectCount = useSetAtom(increaseCorrectCountAtom)
+  const increaseWrongCount = useSetAtom(increaseWrongCountAtom)
+  const reportWrongWord = useSetAtom(reportWrongWordAtom)
+
+  const wordState = useAtomValue(wordInputStateAtom)
+  const setWordState = useSetAtom(wordInputStateAtom)
 
   const updateInput = useCallback(
     (updateAction: WordUpdateAction) => {
@@ -24,30 +28,30 @@ export function useWordInput(
 
           if (updateAction.value === ' ') {
             updateAction.event.preventDefault()
-            setWordState((state) => {
-              state.inputWord = state.inputWord + EXPLICIT_SPACE
+            setWordState((draft) => {
+              draft.inputWord = draft.inputWord + EXPLICIT_SPACE
             })
           } else {
-            setWordState((state) => {
-              state.inputWord = state.inputWord + updateAction.value
+            setWordState((draft) => {
+              draft.inputWord = draft.inputWord + updateAction.value
             })
           }
           break
 
         case 'delete':
-          setWordState((state) => {
-            if (state.inputWord.length > 0) {
-              state.inputWord = state.inputWord.slice(0, -1)
-              state.letterStates = state.letterStates.map((s, i) =>
-                i === state.inputWord.length ? 'normal' : s,
+          setWordState((draft) => {
+            if (draft.inputWord.length > 0) {
+              draft.inputWord = draft.inputWord.slice(0, -1)
+              draft.letterStates = draft.letterStates.map((s, i) =>
+                i === draft.inputWord.length ? 'normal' : s,
               )
             }
           })
           break
 
         case 'composition':
-          setWordState((state) => {
-            state.inputWord = updateAction.value
+          setWordState((draft) => {
+            draft.inputWord = updateAction.value
           })
           break
 
@@ -73,52 +77,50 @@ export function useWordInput(
     }
 
     if (isEqual) {
-      if (!dispatch) return
-      setWordState((state) => {
-        state.letterTimeArray.push(now())
-        state.correctCount += 1
+      setWordState((draft) => {
+        draft.letterTimeArray.push(now())
+        draft.correctCount += 1
       })
 
       if (inputLength >= wordState.displayWord.length) {
-        setWordState((state) => {
-          state.letterStates[inputLength - 1] = 'correct'
-          state.isFinished = true
-          state.endTime = getLocalTimeString()
+        setWordState((draft) => {
+          draft.letterStates[inputLength - 1] = 'correct'
+          draft.isFinished = true
+          draft.endTime = getLocalTimeString()
         })
       } else {
-        setWordState((state) => {
-          state.letterStates[inputLength - 1] = 'correct'
+        setWordState((draft) => {
+          draft.letterStates[inputLength - 1] = 'correct'
         })
       }
 
-      dispatch({ type: TypingStateActionType.INCREASE_CORRECT_COUNT })
+      increaseCorrectCount()
     } else {
-      if (!dispatch) return
-      setWordState((state) => {
-        state.letterStates[inputLength - 1] = 'wrong'
-        state.hasWrong = true
-        state.hasMadeInputWrong = true
-        state.wrongCount += 1
-        state.letterTimeArray = []
-        if (state.letterMistake[inputLength - 1]) {
-          state.letterMistake[inputLength - 1].push(inputChar)
+      setWordState((draft) => {
+        draft.letterStates[inputLength - 1] = 'wrong'
+        draft.hasWrong = true
+        draft.hasMadeInputWrong = true
+        draft.wrongCount += 1
+        draft.letterTimeArray = []
+        if (draft.letterMistake[inputLength - 1]) {
+          draft.letterMistake[inputLength - 1].push(inputChar)
         } else {
-          state.letterMistake[inputLength - 1] = [inputChar]
+          draft.letterMistake[inputLength - 1] = [inputChar]
         }
       })
 
-      dispatch({ type: TypingStateActionType.INCREASE_WRONG_COUNT })
-      dispatch({ type: TypingStateActionType.REPORT_WRONG_WORD })
+      increaseWrongCount()
+      reportWrongWord()
     }
-  }, [wordState.inputWord, wordState.hasWrong, wordState.displayWord, isIgnoreCase, setWordState, dispatch])
+  }, [wordState.inputWord, wordState.hasWrong, wordState.displayWord, isIgnoreCase, setWordState, increaseCorrectCount, increaseWrongCount, reportWrongWord])
 
   useEffect(() => {
     if (wordState.hasWrong) {
       const timer = setTimeout(() => {
-        setWordState((state) => {
-          state.inputWord = ''
-          state.letterStates = new Array(state.letterStates.length).fill('normal')
-          state.hasWrong = false
+        setWordState((draft) => {
+          draft.inputWord = ''
+          draft.letterStates = new Array(draft.letterStates.length).fill('normal')
+          draft.hasWrong = false
         })
       }, 300)
 

@@ -1,4 +1,4 @@
-import { languageType } from '../constants'
+﻿import { languageType } from '../constants'
 import { InnerContext } from '../index'
 import ConfirmDialog from './ConfirmationDialog'
 import { Dialog, Transition } from '@headlessui/react'
@@ -8,7 +8,7 @@ import { toast } from 'react-toastify'
 import IconDelete from '~icons/mdi/delete'
 import IconX from '~icons/tabler/x'
 import EditIcon from '~icons/uil/edit-alt'
-import type { LanguageType, WordBank } from '@/typings'
+import type { LanguageType, WordBank } from '@/types'
 
 type Form4EditDictProps = {
   wordBankId: string

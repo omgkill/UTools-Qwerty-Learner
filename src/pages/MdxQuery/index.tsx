@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { useAtomValue } from 'jotai'
 import { hotkeyConfigAtom } from '@/store'
+import type { DictItem } from '@/types'
 import './index.css'
 
 const log = (msg: string) => {
@@ -18,11 +19,6 @@ interface MdxResult {
   ok: boolean
   content?: string
   error?: string
-}
-
-interface DictItem {
-  path: string
-  name: string
 }
 
 export default function MdxQueryPage() {

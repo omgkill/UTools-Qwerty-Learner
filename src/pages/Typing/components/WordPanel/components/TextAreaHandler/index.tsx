@@ -1,22 +1,22 @@
 import type { WordUpdateAction } from '../InputHandler'
-import { TypingContext, initialState } from '@/pages/Typing/store'
 import type { FormEvent } from 'react'
-import { useCallback, useContext, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
+import { useAtomValue } from 'jotai'
+import { isTypingAtom } from '../../../../store'
 
 export default function TextAreaHandler({ updateInput }: { updateInput: (updateObj: WordUpdateAction) => void }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const typingContext = useContext(TypingContext)
-  const state = typingContext?.state ?? initialState
+  const isTyping = useAtomValue(isTypingAtom)
 
   useEffect(() => {
     if (!textareaRef.current) return
 
-    if (state.uiState.isTyping) {
+    if (isTyping) {
       textareaRef.current.focus()
     } else {
       textareaRef.current.blur()
     }
-  }, [state.uiState.isTyping])
+  }, [isTyping])
 
   const onInput = (e: FormEvent<HTMLTextAreaElement>) => {
     const nativeEvent = e.nativeEvent as InputEvent
@@ -32,10 +32,10 @@ export default function TextAreaHandler({ updateInput }: { updateInput: (updateO
   const onBlur = useCallback(() => {
     if (!textareaRef.current) return
 
-    if (state.uiState.isTyping) {
+    if (isTyping) {
       textareaRef.current.focus()
     }
-  }, [state.uiState.isTyping])
+  }, [isTyping])
 
   return (
     <textarea

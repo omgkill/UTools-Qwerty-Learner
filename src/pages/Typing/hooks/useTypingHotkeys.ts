@@ -1,19 +1,15 @@
-import { TypingContext, TypingStateActionType } from '../store'
-import { useContext } from 'react'
+import { useSetAtom } from 'jotai'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { toast } from 'react-toastify'
+import { toggleImmersiveModeAtom } from '../store'
 
-export function useTypingHotkeys(
-  isImmersiveMode: boolean,
-) {
-  const typingContext = useContext(TypingContext)
-  const dispatch = typingContext?.dispatch
+export function useTypingHotkeys(isImmersiveMode: boolean) {
+  const toggleImmersiveMode = useSetAtom(toggleImmersiveModeAtom)
 
   useHotkeys(
     'alt+i',
     () => {
-      if (!dispatch) return
-      dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE })
+      toggleImmersiveMode()
       if (!isImmersiveMode) {
         toast('再次按下 Alt + I 可退出沉浸模式🤞', {
           position: 'top-center',

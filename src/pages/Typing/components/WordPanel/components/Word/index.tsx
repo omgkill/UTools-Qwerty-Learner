@@ -11,16 +11,18 @@ import {
   pronunciationIsOpenAtom,
   wordDictationConfigAtom,
 } from '@/store'
-import type { Word } from '@/typings'
-import { useAtomValue } from 'jotai'
-import { useCallback, useState } from 'react'
-import { useWordCompletion, useWordInput, useWordState } from './hooks'
+import type { Word } from '@/types'
+import { useAtomValue, useSetAtom } from 'jotai'
+import { useCallback, useEffect, useState } from 'react'
+import { useWordCompletion, useWordInput } from './hooks'
+import { resetWordInputAtom, wordInputStateAtom, type WordInputState } from '../../../../store'
 
 export type { LetterState }
-export type { WordState } from './hooks'
+export type { WordInputState }
 
 export default function WordComponent({ word, onFinish, isExtraReview = false, isRepeatLearning = false }: { word: Word; onFinish: () => void; isExtraReview?: boolean; isRepeatLearning?: boolean }) {
-  const { wordState, setWordState } = useWordState(word.name)
+  const resetWordInput = useSetAtom(resetWordInputAtom)
+  const wordState = useAtomValue(wordInputStateAtom)
 
   const wordDictationConfig = useAtomValue(wordDictationConfigAtom)
   const isTextSelectable = useAtomValue(isTextSelectableAtom)
@@ -29,8 +31,12 @@ export default function WordComponent({ word, onFinish, isExtraReview = false, i
   const [isHoveringWord, setIsHoveringWord] = useState(false)
   const currentLanguage = useAtomValue(currentDictInfoAtom)?.language ?? 'en'
 
-  const { updateInput } = useWordInput(wordState, setWordState)
-  useWordCompletion(word, wordState, onFinish, isExtraReview, isRepeatLearning)
+  useEffect(() => {
+    resetWordInput(word.name)
+  }, [word.name, resetWordInput])
+
+  const { updateInput } = useWordInput()
+  useWordCompletion(word, onFinish, isExtraReview, isRepeatLearning)
 
   const handleHoverWord = useCallback((checked: boolean) => {
     setIsHoveringWord(checked)

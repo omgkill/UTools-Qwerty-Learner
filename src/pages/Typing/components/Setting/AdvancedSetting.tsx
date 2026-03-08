@@ -1,10 +1,9 @@
 import styles from './index.module.css'
 import { dailyLimitConfigAtom, hotkeyConfigAtom, isIgnoreCaseAtom, isShowAnswerOnHoverAtom, isShowPrevAndNextWordAtom, isTextSelectableAtom, randomConfigAtom } from '@/store'
-import { setDailyLimit } from '@/utils/db/progress'
 import { Switch } from '@headlessui/react'
 import * as ScrollArea from '@radix-ui/react-scroll-area'
 import { useAtom } from 'jotai'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { toast } from 'react-toastify'
 
 export default function AdvancedSetting() {
@@ -16,10 +15,6 @@ export default function AdvancedSetting() {
   const [dailyLimitConfig, setDailyLimitConfig] = useAtom(dailyLimitConfigAtom)
   const [hotkeyConfig, setHotkeyConfig] = useAtom(hotkeyConfigAtom)
   const [showConfirm, setShowConfirm] = useState(false)
-
-  useEffect(() => {
-    setDailyLimit(dailyLimitConfig.dailyLimit)
-  }, [dailyLimitConfig.dailyLimit])
 
   const onToggleRandom = useCallback(
     (checked: boolean) => {
@@ -142,7 +137,7 @@ export default function AdvancedSetting() {
           </div>
           <div className={styles.section}>
             <span className={styles.sectionLabel}>是否忽略大小写</span>
-            <span className={styles.sectionDescription}>开启后，输入时不区分大小写，如输入“hello”和“Hello”都会被认为是正确的</span>
+            <span className={styles.sectionDescription}>开启后，输入时不区分大小写，如输入"hello"和"Hello"都会被认为是正确的</span>
             <div className={styles.switchBlock}>
               <Switch checked={isIgnoreCase} onChange={onToggleIgnoreCase} className="switch-root">
                 <span aria-hidden="true" className="switch-thumb" />
