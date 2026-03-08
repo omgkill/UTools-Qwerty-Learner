@@ -23,7 +23,7 @@ export function WordCard({ word, isActive = false, translation, className = '', 
     >
       <p className="select-all font-mono text-xl font-normal leading-6 dark:text-gray-50">{word.name}</p>
       {filteredTrans.length > 0 && (
-        <div className="mt-2 font-sans text-sm text-gray-400">{filteredTrans.join('ï¼?)}</div>
+        <div className="mt-2 font-sans text-sm text-gray-400">{filteredTrans.join('ã€')}</div>
       )}
     </div>
   )

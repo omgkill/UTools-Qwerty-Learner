@@ -61,7 +61,7 @@ export function getErrorMessage(error: unknown): string {
   if (typeof error === 'string') {
     return error
   }
-  return '发生了未知错�?
+  return '发生了未知错误'
 }
 
 export function getErrorType(error: unknown): AppErrorType {

@@ -1,11 +1,12 @@
-﻿import { currentWordBankAtom, currentWordBankIdAtom, wordBanksAtom } from '@/store'
+import { currentWordBankAtom, currentWordBankIdAtom, wordBanksAtom } from '@/store'
 import type { WordBank } from '@/types'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { isAppInitializedAtom } from '../store'
 
 export function useTypingInitializer() {
-  const [isInitialized, setIsInitialized] = useState(false)
+  const [isInitialized, setIsInitialized] = useAtom(isAppInitializedAtom)
   const [currentWordBankId, setCurrentWordBankId] = useAtom(currentWordBankIdAtom)
   const currentWordBank = useAtomValue(currentWordBankAtom)
   const wordBanks = useAtomValue(wordBanksAtom)
@@ -13,6 +14,8 @@ export function useTypingInitializer() {
   const navigate = useNavigate()
 
   useEffect(() => {
+    if (isInitialized) return // 防止重复初始化
+
     const config = window.readLocalWordBankConfig()
     console.log('[useTypingInitializer] Loaded word bank config:', config)
     const customWordBanks = config.filter((wb: WordBank) => wb.id && wb.id.startsWith('x-dict-'))
@@ -25,7 +28,7 @@ export function useTypingInitializer() {
     console.log('[useTypingInitializer] Filtered custom word banks:', uniqueWordBanks)
     setWordBanks(uniqueWordBanks)
     setIsInitialized(true)
-  }, [setWordBanks])
+  }, [isInitialized, setWordBanks, setIsInitialized])
 
   useEffect(() => {
     if (!isInitialized) return
@@ -33,7 +36,7 @@ export function useTypingInitializer() {
     console.log('[useTypingInitializer] Checking word banks:', {
       wordBanksLength: wordBanks.length,
       currentWordBankId,
-      currentWordBank: currentWordBank ? currentWordBank.name : null
+      currentWordBank: currentWordBank ? currentWordBank.name : null,
     })
 
     if (wordBanks.length === 0) {

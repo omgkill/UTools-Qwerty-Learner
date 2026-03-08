@@ -39,9 +39,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return (
         <div className="flex min-h-[200px] flex-col items-center justify-center rounded-xl bg-red-50 p-6 dark:bg-red-900/20">
           <div className="mb-4 text-4xl">⚠️</div>
-          <h2 className="mb-2 text-lg font-semibold text-red-600 dark:text-red-400">出错�?/h2>
+          <h2 className="mb-2 text-lg font-semibold text-red-600 dark:text-red-400">出错了</h2>
           <p className="mb-4 text-sm text-red-500 dark:text-red-300">
-            {this.state.error?.message || '发生了未知错�?}
+            {this.state.error?.message || '发生了未知错误'}
           </p>
           <button
             onClick={this.handleRetry}

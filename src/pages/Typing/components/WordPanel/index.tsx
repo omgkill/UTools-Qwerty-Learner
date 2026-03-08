@@ -12,19 +12,19 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useHotkeys } from 'react-hotkeys-hook'
 import {
-  isImmersiveModeAtom,
-  isTypingAtom,
-  isTransVisibleAtom,
   currentWordAtom,
-  prevWordAtom,
-  nextWordDisplayAtom,
-  wordDisplayInfoMapAtom,
-  updateWordDisplayInfoAtom,
-  nextWordAtom,
   finishLearningAtom,
-  timerDataAtom,
   isExtraReviewAtom,
+  isImmersiveModeAtom,
   isRepeatLearningAtom,
+  isTransVisibleAtom,
+  isTypingAtom,
+  nextWordAtom,
+  nextWordDisplayAtom,
+  prevWordAtom,
+  timerDataAtom,
+  updateWordDisplayInfoAtom,
+  wordDisplayInfoMapAtom,
 } from '../../store'
 
 export default function WordPanel({ onMastered }: { onMastered?: () => void }) {

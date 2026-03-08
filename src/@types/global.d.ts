@@ -1,4 +1,4 @@
-import type { Word, WordBank, DictItem } from '@/types'
+import type { DictItem, Word, WordBank } from '@/types'
 import type * as fs from 'fs'
 import type * as path from 'path'
 import type * as process from 'process'

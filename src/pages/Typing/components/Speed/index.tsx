@@ -1,6 +1,6 @@
 import InfoBox from './InfoBox'
 import { useAtomValue } from 'jotai'
-import { timerDataAtom, correctCountAtom, wrongCountAtom } from '../../store'
+import { correctCountAtom, timerDataAtom, wrongCountAtom } from '../../store'
 
 export default function Speed() {
   const timerData = useAtomValue(timerDataAtom)

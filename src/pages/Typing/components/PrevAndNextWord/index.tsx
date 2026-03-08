@@ -3,7 +3,7 @@ import { wordDictationConfigAtom } from '@/store'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useCallback, useMemo } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { currentIndexAtom, wordsAtom, wordDisplayInfoMapAtom, isTransVisibleAtom, skipToIndexAtom } from '../../store'
+import { currentIndexAtom, isTransVisibleAtom, skipToIndexAtom, wordDisplayInfoMapAtom, wordsAtom } from '../../store'
 import IconPrev from '~icons/tabler/arrow-narrow-left'
 import IconNext from '~icons/tabler/arrow-narrow-right'
 

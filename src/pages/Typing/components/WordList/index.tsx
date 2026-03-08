@@ -5,7 +5,7 @@ import { Dialog } from '@headlessui/react'
 import * as ScrollArea from '@radix-ui/react-scroll-area'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useState } from 'react'
-import { currentIndexAtom, wordsAtom, setIsTypingAtom } from '../../store'
+import { currentIndexAtom, setIsTypingAtom, wordsAtom } from '../../store'
 import ListIcon from '~icons/tabler/list'
 import IconX from '~icons/tabler/x'
 

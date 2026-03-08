@@ -15,7 +15,7 @@ import type { Word } from '@/types'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useCallback, useEffect, useState } from 'react'
 import { useWordCompletion, useWordInput } from './hooks'
-import { resetWordInputAtom, wordInputStateAtom, type WordInputState } from '../../../../store'
+import { type WordInputState, resetWordInputAtom, wordInputStateAtom } from '../../../../store'
 
 export type { LetterState }
 export type { WordInputState }

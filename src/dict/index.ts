@@ -1,4 +1,4 @@
-import type { DictMeta, DictType, WordInfo } from '@/types'
+import type { DictMeta, WordInfo } from '@/types'
 import type { BaseDictAdapter } from './BaseDictAdapter'
 import { CustomDictAdapter } from './adapters/CustomDictAdapter'
 import { MdxDictAdapter } from './adapters/MdxDictAdapter'
