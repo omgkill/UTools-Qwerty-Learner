@@ -1,18 +1,23 @@
 import { useAtomValue } from 'jotai'
 import { currentIndexAtom, wordsAtom } from '../../store'
+import { memo, useMemo } from 'react'
 
-export default function Progress({ className }: { className?: string }) {
+const Progress = memo(({ className }: { className?: string }) => {
   const currentIndex = useAtomValue(currentIndexAtom)
   const words = useAtomValue(wordsAtom)
 
-  const progress = words.length > 0 ? Math.floor((currentIndex / words.length) * 100) : 0
-  const phase = Math.floor(progress / 33.4)
+  const progress = useMemo(() =>
+    words.length > 0 ? Math.floor((currentIndex / words.length) * 100) : 0,
+    [currentIndex, words.length]
+  )
 
-  const colorSwitcher: { [key: number]: string } = {
+  const phase = useMemo(() => Math.floor(progress / 33.4), [progress])
+
+  const colorSwitcher: { [key: number]: string } = useMemo(() => ({
     0: 'bg-indigo-200 dark:bg-indigo-300',
     1: 'bg-indigo-300 dark:bg-indigo-400',
     2: 'bg-indigo-400 dark:bg-indigo-500',
-  }
+  }), [])
 
   return (
     <div className={`relative w-1/4 pt-1 ${className}`}>
@@ -26,4 +31,8 @@ export default function Progress({ className }: { className?: string }) {
       </div>
     </div>
   )
-}
+})
+
+Progress.displayName = 'Progress'
+
+export default Progress
