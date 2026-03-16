@@ -58,6 +58,7 @@ onKeyDown = (e) => {
 | 1 | 打对一次即过 |
 | 3 | 打对三次才过 |
 | 5 | 打对五次才过 |
+| 8 | 打对八次才过 |
 | 无限 | 手动跳过 |
 
 配置位置：`store/index.ts` → `loopWordTimesConfigAtom`
