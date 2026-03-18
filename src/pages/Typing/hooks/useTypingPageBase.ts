@@ -1,56 +1,36 @@
 import { useTypingTimer } from './useTypingTimer'
 import { useKeyboardStartListener } from './useKeyboardStartListener'
 import { useTypingHotkeys } from './useTypingHotkeys'
-import { useAtomValue, useSetAtom } from 'jotai'
-import { useEffect } from 'react'
+import { useUtoolsMode } from './useUtoolsMode'
+import { useWindowBlur } from './useWindowBlur'
+import { useAtomValue } from 'jotai'
 import {
   isImmersiveModeAtom,
   isTypingAtom,
-  setIsTypingAtom,
-  toggleImmersiveModeAtom,
 } from '../store/atoms/index'
 
-export function useTypingPageBase() {
+export interface UseTypingPageBaseResult {
+  isTyping: boolean
+  isImmersiveMode: boolean
+}
+
+/**
+ * 学习页面的基础 hook
+ * 整合了所有页面共用的基础逻辑：计时、快捷键、模式切换等
+ */
+export function useTypingPageBase(): UseTypingPageBaseResult {
   const isTyping = useAtomValue(isTypingAtom)
   const isImmersiveMode = useAtomValue(isImmersiveModeAtom)
-  const toggleImmersiveMode = useSetAtom(toggleImmersiveModeAtom)
-  const setIsTyping = useSetAtom(setIsTypingAtom)
 
+  // 基础 hooks
+  useUtoolsMode()
+  useWindowBlur()
+  useTypingHotkeys()
   useTypingTimer(isTyping)
   useKeyboardStartListener(isTyping, false)
-  useTypingHotkeys()
-
-  useEffect(() => {
-    const handleModeChange = () => {
-      const windowMode = window.getMode()
-      if (windowMode === 'conceal' || windowMode === 'moyu') {
-        toggleImmersiveMode(true)
-      } else {
-        toggleImmersiveMode(false)
-      }
-    }
-
-    handleModeChange()
-    window.addEventListener('utools-mode-change', handleModeChange)
-    return () => {
-      window.removeEventListener('utools-mode-change', handleModeChange)
-    }
-  }, [toggleImmersiveMode])
-
-  useEffect(() => {
-    const onBlur = () => {
-      setIsTyping(false)
-    }
-    window.addEventListener('blur', onBlur)
-    return () => {
-      window.removeEventListener('blur', onBlur)
-    }
-  }, [setIsTyping])
 
   return {
     isTyping,
     isImmersiveMode,
-    toggleImmersiveMode,
-    setIsTyping,
   }
 }
