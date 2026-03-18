@@ -24,10 +24,8 @@ export const currentWordBankAtom = atom<WordBank | null>((get) => {
   return map[id] || null
 })
 
-export const dictionariesAtom = wordBanksAtom
-export const idDictionaryMapAtom = idWordBankMapAtom
-export const currentDictIdAtom = currentWordBankIdAtom
-export const currentDictInfoAtom = currentWordBankAtom
+// 别名已移除，统一使用 WordBank 命名
+// 如需使用 Dictionary 相关名称，请使用 WordBank 对应的 atom
 
 export const pronunciationConfigAtom = atomForConfig('pronunciation', {
   isOpen: true,

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useAtomValue, useSetAtom } from 'jotai'
 import useSWR from 'swr'
-import { currentDictIdAtom } from '@/store'
+import { currentWordBankIdAtom } from '@/store'
 import { addMasteredWord, loadSessionProgress, saveSessionProgress, updateProgress } from '@/utils/storage'
 import { getTodayDate } from '@/utils/timeService'
 import type { LearningMode, UseLearningSessionResult, Word, WordSourceStrategy, WordWithIndex } from '@/types'
@@ -59,7 +59,7 @@ async function localWordListFetcher(id: string): Promise<Word[]> {
 }
 
 export function useLearningSession({ mode, currentWordBank }: UseLearningSessionOptions): UseLearningSessionResult {
-  const dictId = useAtomValue(currentDictIdAtom)
+  const dictId = useAtomValue(currentWordBankIdAtom)
   const strategy = STRATEGIES[mode]
   const progressKey = PROGRESS_KEYS[mode]
 

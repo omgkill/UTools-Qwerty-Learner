@@ -1,11 +1,11 @@
 import Tooltip from '@/components/Tooltip'
-import { currentDictInfoAtom, phoneticConfigAtom, pronunciationConfigAtom } from '@/store'
+import { currentWordBankAtom, phoneticConfigAtom, pronunciationConfigAtom } from '@/store'
 import { Popover, Switch, Transition } from '@headlessui/react'
 import { useAtom, useAtomValue } from 'jotai'
 import { Fragment, useCallback, useEffect, useMemo } from 'react'
 
 const PronunciationSwitcher = () => {
-  const currentDictInfo = useAtomValue(currentDictInfoAtom)
+  const currentWordBank = useAtomValue(currentWordBankAtom)
   const [pronunciationConfig, setPronunciationConfig] = useAtom(pronunciationConfigAtom)
   const [phoneticConfig, setPhoneticConfig] = useAtom(phoneticConfigAtom)
 
@@ -17,7 +17,7 @@ const PronunciationSwitcher = () => {
         name: '英音',
       }))
     }
-  }, [currentDictInfo?.defaultPronIndex, currentDictInfo?.language, pronunciationConfig.name, pronunciationConfig.type, setPronunciationConfig])
+  }, [currentWordBank?.defaultPronIndex, currentWordBank?.language, pronunciationConfig.name, pronunciationConfig.type, setPronunciationConfig])
 
   useEffect(() => {
     if (phoneticConfig.type !== 'uk') {

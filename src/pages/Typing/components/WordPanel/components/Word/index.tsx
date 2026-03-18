@@ -5,7 +5,7 @@ import type { LetterState } from './Letter'
 import Notation from './Notation'
 import style from './index.module.css'
 import {
-  currentDictInfoAtom,
+  currentWordBankAtom,
   isShowAnswerOnHoverAtom,
   isTextSelectableAtom,
   pronunciationIsOpenAtom,
@@ -29,7 +29,7 @@ export default function WordComponent({ word, onFinish, isExtraReview = false, i
   const isShowAnswerOnHover = useAtomValue(isShowAnswerOnHoverAtom)
   const pronunciationIsOpen = useAtomValue(pronunciationIsOpenAtom)
   const [isHoveringWord, setIsHoveringWord] = useState(false)
-  const currentLanguage = useAtomValue(currentDictInfoAtom)?.language ?? 'en'
+  const currentLanguage = useAtomValue(currentWordBankAtom)?.language ?? 'en'
 
   useEffect(() => {
     resetWordInput(word.name)

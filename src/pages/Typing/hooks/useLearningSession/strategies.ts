@@ -2,6 +2,16 @@ import { getAllProgress, getDueWords, getNewWords, getProgressStats, getTodayWor
 import { getTodayRecord } from '@/utils/storage'
 import type { LearningStats, WordSourceStrategy } from '@/types'
 
+/** 空的学习统计数据 */
+export const EMPTY_STATS: LearningStats = {
+  todayLearned: 0,
+  todayReviewed: 0,
+  todayMastered: 0,
+  dueCount: 0,
+  newCount: 0,
+  masteredCount: 0,
+}
+
 export const normalStrategy: WordSourceStrategy = {
   getWordNames(dictId: string, wordList: string[]): string[] {
     const dueWords = getDueWords(dictId, wordList, 20)
@@ -33,14 +43,7 @@ export const repeatStrategy: WordSourceStrategy = {
   },
 
   getStats(): LearningStats {
-    return {
-      todayLearned: 0,
-      todayReviewed: 0,
-      todayMastered: 0,
-      dueCount: 0,
-      newCount: 0,
-      masteredCount: 0,
-    }
+    return EMPTY_STATS
   },
 
   needsSessionPersist: true,
@@ -55,14 +58,7 @@ export const consolidateStrategy: WordSourceStrategy = {
   },
 
   getStats(): LearningStats {
-    return {
-      todayLearned: 0,
-      todayReviewed: 0,
-      todayMastered: 0,
-      dueCount: 0,
-      newCount: 0,
-      masteredCount: 0,
-    }
+    return EMPTY_STATS
   },
 
   needsSessionPersist: true,

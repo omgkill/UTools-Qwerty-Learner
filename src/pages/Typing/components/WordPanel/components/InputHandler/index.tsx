@@ -1,13 +1,13 @@
 import KeyEventHandler from '../KeyEventHandler'
 import TextAreaHandler from '../TextAreaHandler'
-import { currentDictInfoAtom } from '@/store'
+import { currentWordBankAtom } from '@/store'
 import { useAtomValue } from 'jotai'
 import type { FormEvent } from 'react'
 
 export default function InputHandler({ updateInput }: { updateInput: (updateObj: WordUpdateAction) => void }) {
-  const dictInfo = useAtomValue(currentDictInfoAtom)
+  const wordBank = useAtomValue(currentWordBankAtom)
 
-  const useTextArea = dictInfo?.language === 'code'
+  const useTextArea = wordBank?.language === 'code'
   return useTextArea
     ? <TextAreaHandler updateInput={updateInput} />
     : <KeyEventHandler updateInput={updateInput} />

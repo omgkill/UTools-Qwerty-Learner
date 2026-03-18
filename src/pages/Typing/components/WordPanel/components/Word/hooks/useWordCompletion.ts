@@ -1,7 +1,7 @@
 ﻿import type { Word } from '@/types'
 import { addLearnedWord, updateProgress } from '@/utils/storage'
 import { useEffect } from 'react'
-import { currentDictIdAtom } from '@/store'
+import { currentWordBankIdAtom } from '@/store'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { reportCorrectWordAtom, wordInputStateAtom } from '../../../../../store'
 
@@ -13,7 +13,7 @@ export function useWordCompletion(
   isExtraReview: boolean,
   isRepeatLearning = false,
 ) {
-  const dictID = useAtomValue(currentDictIdAtom)
+  const dictID = useAtomValue(currentWordBankIdAtom)
   const reportCorrectWord = useSetAtom(reportCorrectWordAtom)
   const wordState = useAtomValue(wordInputStateAtom)
 
