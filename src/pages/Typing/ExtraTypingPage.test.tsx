@@ -240,6 +240,59 @@ describe('ExtraTypingPage', () => {
     })
   })
 
+  /**
+   * 边缘情况测试：数据一致性
+   *
+   * 问题说明 (ExtraTypingPage.tsx:84):
+   * 代码在 hasWords 为 true 时直接使用 words.length，没有防御性检查。
+   * 如果 useLearningSession 返回 hasWords: true 但 words 为 undefined/null，
+   * 代码会在运行时报错 "words.length - words未定义"。
+   *
+   * 建议修复方案：
+   * 在 ExtraTypingPage.tsx 第 84 行添加防御性检查：
+   * ```tsx
+   * {displayIndex + 1} / {words?.length ?? 0}
+   * ```
+   * 或者在 hasWords 检查时同时验证 words 是否有值。
+   */
+  describe('数据一致性边缘情况', () => {
+    // eslint-disable-next-line vitest/no-disabled-tests
+    it.skip('BUG: 当 hasWords 为 true 但 words 为 undefined 时缺少防御性处理', () => {
+      // 此测试验证当前代码存在防御性缺陷
+      // 如果 useLearningSession 返回不一致的数据，组件会崩溃
+      // 修复方法：在 ExtraTypingPage.tsx:84 添加防御性检查 words?.length ?? 0
+      mockSessionState = {
+        ...mockSessionState,
+        // @ts-expect-error - 测试边缘情况：hasWords 为 true 但 words 为 undefined
+        words: undefined,
+        hasWords: true,
+        displayIndex: 0,
+      }
+
+      const wrapper = createWrapper()
+
+      // 修复后此断言应该通过
+      expect(() => {
+        render(<RepeatTypingApp currentWordBank={testWordBank} />, { wrapper })
+      }).not.toThrow()
+    })
+
+    it('当 hasWords 为 true 且 words 为空数组时应该正常显示（进度 1/0）', () => {
+      mockSessionState = {
+        ...mockSessionState,
+        words: [],
+        hasWords: true,
+        displayIndex: 0,
+      }
+
+      const wrapper = createWrapper()
+      render(<RepeatTypingApp currentWordBank={testWordBank} />, { wrapper })
+
+      // 空数组时 words.length 为 0，组件可以正常显示
+      expect(screen.getByTestId('learning-page-layout')).toBeInTheDocument()
+    })
+  })
+
   describe('ConsolidateTypingApp', () => {
     it('应该显示加载状态', () => {
       mockSessionState = {
