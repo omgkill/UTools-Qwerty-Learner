@@ -33,12 +33,36 @@ window.getMode = () => currentMode;
 window.getAction = () => currentAction;
 
 if (typeof utools === 'undefined') {
-  console.log('uTools environment not detected. Using mock.');
-  
+  console.log('uTools environment not detected. Using localStorage mock.');
+
   currentMode = 'typing';
-  
-  let mockDb = {};
-  
+
+  // localStorage-backed mock database for web environment
+  const STORAGE_KEY = 'qwerty-learner-db';
+
+  function loadDb() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      return data ? JSON.parse(data) : {};
+    } catch (e) {
+      console.error('Failed to load db from localStorage:', e);
+      return {};
+    }
+  }
+
+  function saveDb(db) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    } catch (e) {
+      console.error('Failed to save db to localStorage:', e);
+    }
+  }
+
+  // Generate a simple revision ID
+  function generateRev() {
+    return Math.random().toString(36).substr(2, 9);
+  }
+
   window.utools = {
     isDev: () => true,
     getFeatures: () => [],
@@ -46,21 +70,69 @@ if (typeof utools === 'undefined') {
     removeFeature: () => {},
     fetchUserPayments: () => Promise.resolve([]),
     db: {
-      get: (id) => mockDb[id] || null,
+      get: (id) => {
+        const db = loadDb();
+        const doc = db[id];
+        if (!doc) return null;
+        // Return a copy to prevent direct mutations
+        return JSON.parse(JSON.stringify(doc));
+      },
       put: (doc) => {
-        mockDb[doc._id] = doc;
-        console.log('mockDb put:', doc._id, doc.data?.length || 'no length');
-        return { ok: true };
+        const db = loadDb();
+        const existing = db[doc._id];
+        const newDoc = {
+          _id: doc._id,
+          _rev: existing ? existing._rev : generateRev(),
+          data: doc.data
+        };
+        db[doc._id] = newDoc;
+        saveDb(db);
+        console.log('localStorage mockDb put:', doc._id);
+        return { ok: true, id: doc._id, rev: newDoc._rev };
       },
       remove: (id) => {
-        delete mockDb[id];
-        return { ok: true };
+        const db = loadDb();
+        if (db[id]) {
+          delete db[id];
+          saveDb(db);
+          return { ok: true, id };
+        }
+        return { ok: false, id };
       },
-      allDocs: () => Object.values(mockDb)
+      allDocs: () => {
+        const db = loadDb();
+        return Object.values(db).map(doc => JSON.parse(JSON.stringify(doc)));
+      },
+      // For bulk operations (used by clearAllData)
+      bulkDocs: (docs) => {
+        const db = loadDb();
+        docs.forEach(doc => {
+          if (doc._deleted) {
+            delete db[doc._id];
+          } else {
+            db[doc._id] = {
+              _id: doc._id,
+              _rev: generateRev(),
+              data: doc.data
+            };
+          }
+        });
+        saveDb(db);
+        return docs.map(d => ({ ok: true, id: d._id }));
+      }
     }
   };
-  
-  window.mockDb = mockDb;
+
+  // Expose for debugging
+  window.mockDb = {
+    getStorage: () => loadDb(),
+    clear: () => {
+      localStorage.removeItem(STORAGE_KEY);
+      console.log('Mock database cleared');
+    }
+  };
+
+  console.log('localStorage-backed uTools mock initialized');
 } else {
   window.utools.db.allDocs = function() {
     const docs = [];
