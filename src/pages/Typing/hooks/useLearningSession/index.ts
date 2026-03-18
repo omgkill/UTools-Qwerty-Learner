@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useAtomValue, useSetAtom } from 'jotai'
 import useSWR from 'swr'
 import { currentWordBankIdAtom } from '@/store'
-import { addMasteredWord, loadSessionProgress, saveSessionProgress, updateProgress } from '@/utils/storage'
+import { addMasteredWord, getProgress, loadSessionProgress, saveSessionProgress, updateProgress } from '@/utils/storage'
 import { getTodayDate } from '@/utils/timeService'
 import type { LearningMode, UseLearningSessionResult, Word, WordSourceStrategy, WordWithIndex } from '@/types'
 import {
@@ -172,10 +172,13 @@ export function useLearningSession({ mode, currentWordBank }: UseLearningSession
       }
 
       if (mode === 'normal') {
-        const dueWords = strategy.getWordNames(dictId, wordNames)
-        const dueSet = new Set(dueWords)
-        const hasReview = finalWords.some((w) => dueSet.has(w.name))
-        setLearningType(hasReview ? 'review' : 'new')
+        // 根据第一个单词的 masteryLevel 判断 learningType
+        // masteryLevel === 1 → 'new' (刚学完第一次)
+        // masteryLevel > 1 → 'review' (复习)
+        const firstWord = finalWords[0]
+        const progress = getProgress(dictId, firstWord.name)
+        const masteryLevel = progress?.masteryLevel ?? 0
+        setLearningType(masteryLevel === 1 ? 'new' : 'review')
       } else {
         setLearningType('review')
       }

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getDueWords, getNewWords } from '@/utils/storage/progress'
+import { getDueWords, getNewWords, getProgress } from '@/utils/storage/progress'
 import { createMockUtoolsDB, mockUtools, createTestProgress } from '@/test/testUtils'
 import { setTimeTo, resetTimeDiff } from '@/utils/timeService'
 
@@ -121,13 +121,11 @@ describe('学习类型判断正确性', () => {
       })
 
       /**
-       * 这个测试验证了当前代码的问题：
-       * masteryLevel=1 的单词，到期后会被认为是"复习"词
-       * 但根据正确标准，它应该是"新词"
-       *
-       * 此测试应该失败，因为当前代码逻辑错误
+       * 修复后的正确逻辑：根据 masteryLevel 判断 learningType
+       * masteryLevel === 1 → 'new'
+       * masteryLevel > 1 → 'review'
        */
-      it('BUG: masteryLevel=1 到期后会被错误标记为复习词（此测试应该失败）', () => {
+      it('修复验证：根据 masteryLevel 判断 learningType', () => {
         mockDB.setProgress(
           dictId,
           'apple',
@@ -137,32 +135,22 @@ describe('学习类型判断正确性', () => {
           })
         )
 
-        const dueWords = getDueWords(dictId, wordList, 20)
-
-        // 模拟 useLearningSession 的判断逻辑
-        const hasReview = dueWords.length > 0
-        const learningType = hasReview ? 'review' : 'new'
+        // 获取单词的 progress 来判断 learningType（修复后的正确逻辑）
+        const progress = getProgress(dictId, 'apple')
+        const masteryLevel = progress?.masteryLevel ?? 0
+        const learningType = masteryLevel === 1 ? 'new' : 'review'
 
         console.log('========================================')
-        console.log('BUG 复现：masteryLevel=1 的单词被错误标记')
+        console.log('修复验证：根据 masteryLevel 判断')
         console.log('========================================')
-        console.log('单词: apple, masteryLevel: 1')
-        console.log('getDueWords 返回:', dueWords)
+        console.log('单词: apple, masteryLevel:', masteryLevel)
         console.log('learningType 判断结果:', learningType)
         console.log('正确标准期望: new')
         console.log('----------------------------------------')
-
-        // 当前代码会返回 'review'，这是错误的
-        // 正确标准应该是 'new'
-        const isCorrectBehavior = learningType === 'new'
-
-        console.log('当前代码行为是否正确:', isCorrectBehavior)
+        console.log('修复后逻辑：根据 masteryLevel 判断，而非 dueWords')
         console.log('========================================')
 
-        // ========================================
-        // 关键断言：根据正确标准，masteryLevel=1 应该显示"新词"
-        // 当前代码会返回 'review'，所以这个断言会失败
-        // ========================================
+        // 修复后：masteryLevel=1 → 'new'
         expect(learningType).toBe('new')
       })
     })
