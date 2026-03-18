@@ -36,6 +36,7 @@ export function getOrCreateDailyRecord(dictId: string, date: string): DailyRecor
     reviewedCount: 0,
     masteredCount: 0,
     todayWords: [],
+    wordTypes: {},
   }
 }
 
@@ -45,17 +46,20 @@ export function getTodayRecord(dictId: string): DailyRecord {
 
 export function addLearnedWord(dictId: string, word: string, isNew: boolean): DailyRecord {
   const record = getTodayRecord(dictId)
-  
+
   if (!record.todayWords.includes(word)) {
     record.todayWords.push(word)
   }
-  
+
+  // 存储单词的学习类型
+  record.wordTypes[word] = isNew ? 'new' : 'review'
+
   if (isNew) {
     record.learnedCount++
   } else {
     record.reviewedCount++
   }
-  
+
   setDailyRecord(record)
   return record
 }

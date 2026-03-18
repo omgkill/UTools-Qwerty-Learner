@@ -22,6 +22,7 @@ export interface DayStats {
 export interface WordDetail {
   word: string
   type: 'new' | 'review' | 'mastered'
+  wrongCount: number
 }
 
 export interface StudyStatsData {
@@ -175,7 +176,7 @@ export function useWordDetails(dictId: string | null, date: string | null): Word
     try {
       const dailyRecords = getDailyRecords(dictId)
       const record = dailyRecords.find((r) => r.date === date)
-      
+
       if (!record || !record.todayWords) {
         setData({
           words: [],
@@ -190,10 +191,12 @@ export function useWordDetails(dictId: string | null, date: string | null): Word
 
       const words: WordDetail[] = record.todayWords.map((word) => {
         const progress = progressMap.get(word)
-        const type: 'new' | 'review' | 'mastered' = 
+        // 优先使用存储的学习类型，否则根据 masteryLevel 推断
+        const storedType = record.wordTypes?.[word]
+        const type: 'new' | 'review' | 'mastered' =
           progress?.masteryLevel === 7 ? 'mastered' :
-          progress?.masteryLevel === 1 ? 'new' : 'review'
-        return { word, type }
+          storedType ?? (progress?.masteryLevel === 1 ? 'new' : 'review')
+        return { word, type, wrongCount: 0 }
       })
 
       setData({

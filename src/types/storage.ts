@@ -7,6 +7,8 @@ export interface WordProgress {
   nextReviewTime: number
 }
 
+export type WordLearnType = 'new' | 'review'
+
 export interface DailyRecord {
   dict: string
   date: string
@@ -14,6 +16,7 @@ export interface DailyRecord {
   reviewedCount: number
   masteredCount: number
   todayWords: string[]
+  wordTypes: Record<string, WordLearnType>
 }
 
 export const MASTERY_LABELS = ['新词', '初学', '熟悉', '认识', '熟练', '精通', '专家', '已掌握'] as const
