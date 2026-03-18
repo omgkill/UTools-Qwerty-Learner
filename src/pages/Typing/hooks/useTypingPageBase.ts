@@ -25,7 +25,7 @@ export function useTypingPageBase(): UseTypingPageBaseResult {
   // 基础 hooks
   useUtoolsMode()
   useWindowBlur()
-  useTypingHotkeys()
+  useTypingHotkeys(isImmersiveMode)
   useTypingTimer(isTyping)
   useKeyboardStartListener(isTyping, false)
 

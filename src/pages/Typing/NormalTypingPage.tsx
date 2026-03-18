@@ -1,17 +1,11 @@
-﻿import WordPanel from './components/WordPanel'
+import WordPanel from './components/WordPanel'
 import { LearningPageLayout } from './components/LearningPageLayout'
 import { TypingPageEmptyState, TypingPageLoading } from './components/TypingPageStates'
 import { useConfetti } from './hooks/useConfetti'
-import { useKeyboardStartListener } from './hooks/useKeyboardStartListener'
 import { useLearningRecordSaver } from './hooks/useLearningRecordSaver'
 import { useLearningSession } from './hooks/useLearningSession'
-import { useTypingHotkeys } from './hooks/useTypingHotkeys'
 import { useTypingInitializer } from './hooks/useTypingInitializer'
-import { useTypingTimer } from './hooks/useTypingTimer'
-import { useUtoolsMode } from './hooks/useUtoolsMode'
-import { useWindowBlur } from './hooks/useWindowBlur'
-import { isImmersiveModeAtom, isTypingAtom } from './store'
-import { useAtomValue } from 'jotai'
+import { useTypingPageBase } from './hooks/useTypingPageBase'
 import type React from 'react'
 import { useCallback } from 'react'
 import type { WordBank } from '@/types'
@@ -27,20 +21,15 @@ interface NormalTypingAppInnerProps {
 }
 
 const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWordBank }) => {
-  const isImmersiveMode = useAtomValue(isImmersiveModeAtom)
-  const isTyping = useAtomValue(isTypingAtom)
+  const { isTyping, isImmersiveMode } = useTypingPageBase()
 
   const { isLoading, hasWords, isFinished, learningType, stats, handleMastered } = useLearningSession({
     mode: 'normal',
     currentWordBank,
   })
 
-  useUtoolsMode()
-  useWindowBlur()
-  useTypingHotkeys(isImmersiveMode)
+  // 仅 normal 模式需要的 hook
   useLearningRecordSaver({ uiState: { isTyping } } as Parameters<typeof useLearningRecordSaver>[0])
-  useTypingTimer(isTyping)
-  useKeyboardStartListener(isTyping, false)
   useConfetti(isFinished && !isImmersiveMode)
 
   const handleCompleteClick = useCallback(() => {
