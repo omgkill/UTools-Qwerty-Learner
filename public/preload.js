@@ -33,7 +33,11 @@ window.getMode = () => currentMode;
 window.getAction = () => currentAction;
 
 if (typeof utools === 'undefined') {
-  console.log('uTools environment not detected. Using localStorage mock.');
+  // 检查是否已有 E2E 测试 Mock 注入（通过 addInitScript）
+  if (window._e2eMockInjected) {
+    console.log('[preload.js] E2E Mock detected, skipping default mock injection');
+  } else {
+    console.log('uTools environment not detected. Using localStorage mock.');
 
   currentMode = 'typing';
 
@@ -133,6 +137,7 @@ if (typeof utools === 'undefined') {
   };
 
   console.log('localStorage-backed uTools mock initialized');
+  }
 } else {
   window.utools.db.allDocs = function() {
     const docs = [];

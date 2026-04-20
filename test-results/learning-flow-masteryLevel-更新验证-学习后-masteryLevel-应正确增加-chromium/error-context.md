@@ -1,0 +1,92 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - navigation [ref=e6]:
+        - generic [ref=e7]:
+          - link "mastery测试词库" [ref=e9] [cursor=pointer]:
+            - /url: "#/gallery"
+          - generic:
+            - generic: 切换词库
+        - generic [ref=e10]:
+          - generic [ref=e11]: 📚 新词
+          - generic [ref=e12]: 新词 1
+        - button "英音 发音及音标切换" [ref=e14] [cursor=pointer]:
+          - generic [ref=e15]:
+            - generic [ref=e16]: 英音
+            - generic:
+              - generic: 发音及音标切换
+        - generic [ref=e17]:
+          - generic [ref=e18]:
+            - button "开关默写模式" [ref=e20] [cursor=pointer]:
+              - img [ref=e21]
+            - generic:
+              - generic: 开关默写模式（Ctrl + V）
+          - generic [ref=e26]:
+            - button "开关释义显示（Ctrl + T）" [ref=e28] [cursor=pointer]:
+              - img [ref=e29]
+            - generic:
+              - generic: 开关释义显示（Ctrl + Shift + V）
+          - generic [ref=e33]:
+            - button "查看数据统计" [ref=e35] [cursor=pointer]:
+              - img [ref=e36]
+            - generic:
+              - generic: 查看数据统计
+          - generic [ref=e40]:
+            - button "打开设置对话框" [ref=e42] [cursor=pointer]:
+              - img [ref=e43]
+            - generic:
+              - generic: 设置
+        - generic [ref=e45]:
+          - button "暂停" [ref=e47] [cursor=pointer]:
+            - generic [ref=e48]: Pause
+          - generic:
+            - generic: 快捷键 Enter
+    - generic [ref=e50]:
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - generic [ref=e58]:
+            - generic [ref=e59]:
+              - generic [ref=e60]: m
+              - generic [ref=e61]: a
+              - generic [ref=e62]: s
+              - generic [ref=e63]: t
+              - generic [ref=e64]: e
+              - generic [ref=e65]: r
+              - generic [ref=e66]: "y"
+              - generic [ref=e67]: t
+              - generic [ref=e68]: e
+              - generic [ref=e69]: s
+              - generic [ref=e70]: t
+            - generic [ref=e71] [cursor=pointer]:
+              - button [ref=e73]:
+                - img [ref=e74]
+              - generic:
+                - generic: 朗读发音（Ctrl + J）
+          - generic [ref=e79]: 掌握测试
+          - generic [ref=e80] [cursor=pointer]: 点击查看详细释义（CTRL+1）
+        - generic [ref=e82]:
+          - generic [ref=e83]: 掌握
+          - generic:
+            - generic: 标记已掌握
+      - generic [ref=e84]:
+        - generic [ref=e85]:
+          - generic [ref=e86]: 00:02
+          - generic [ref=e87]: 时间
+        - generic [ref=e88]:
+          - generic [ref=e89]: "14"
+          - generic [ref=e90]: 输入数
+        - generic [ref=e91]:
+          - generic [ref=e92]: "0"
+          - generic [ref=e93]: WPM
+        - generic [ref=e94]:
+          - generic [ref=e95]: "11"
+          - generic [ref=e96]: 正确数
+        - generic [ref=e97]:
+          - generic [ref=e98]: "79"
+          - generic [ref=e99]: 正确率
+  - button [ref=e100] [cursor=pointer]:
+    - img [ref=e101]
+```

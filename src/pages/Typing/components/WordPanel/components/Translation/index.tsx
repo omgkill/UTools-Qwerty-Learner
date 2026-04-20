@@ -33,7 +33,7 @@ export default function Translation({ trans, tense }: TranslationProps) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center pb-4 pt-5">
+    <div className="flex flex-col items-center justify-center pb-4 pt-5" data-testid="translation">
       {displayTrans.length > 0 && (
         <div
           className={`flex flex-col items-center justify-center max-w-4xl space-y-1 ${

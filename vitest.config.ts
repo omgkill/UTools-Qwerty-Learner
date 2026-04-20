@@ -19,6 +19,8 @@ export default defineConfig({
       ['src/**/*.component.test.tsx', 'jsdom'],
       ['src/pages/**/*.test.tsx', 'jsdom'],
       ['src/components/**/*.test.tsx', 'jsdom'],
+      ['src/hooks/**/*.test.tsx', 'jsdom'],
+      ['src/pages/Typing/store/**/*.test.ts', 'jsdom'],
     ],
   },
 })

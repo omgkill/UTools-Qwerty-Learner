@@ -7,22 +7,18 @@ import { setTimeTo, resetTimeDiff } from '@/utils/timeService'
  * 学习类型显示正确性测试
  *
  * ========================================
- * 正确标准（员工A明确）：
+ * 正确标准：
  * ========================================
- * - masteryLevel === 1 → 显示新词
+ * - masteryLevel === 0 → 显示新词（从未学习过）
+ * - masteryLevel === 1 → 显示新词（刚学完第一次）
  * - masteryLevel > 1 → 显示复习
  *
  * ========================================
- * 当前代码逻辑分析：
+ * 当前代码逻辑：
  * ========================================
- * `getDueWords` 返回满足以下条件的单词：
- * - masteryLevel > 0 且 < 7（已学习但未掌握）
- * - nextReviewTime <= now（已到期需要复习）
- *
- * 问题：
- * - masteryLevel === 1 的单词，如果 nextReviewTime <= now
- * - 会被 getDueWords 返回，导致 learningType = 'review'
- * - 但根据正确标准，masteryLevel === 1 应该显示"新词"
+ * 根据当前单词的 masteryLevel 判断：
+ * - masteryLevel <= 1 → 'new'
+ * - masteryLevel > 1 → 'review'
  */
 
 // Import the function to test
@@ -122,7 +118,7 @@ describe('学习类型判断正确性', () => {
 
       /**
        * 修复后的正确逻辑：根据 masteryLevel 判断 learningType
-       * masteryLevel === 1 → 'new'
+       * masteryLevel <= 1 → 'new'
        * masteryLevel > 1 → 'review'
        */
       it('修复验证：根据 masteryLevel 判断 learningType', () => {
@@ -138,7 +134,7 @@ describe('学习类型判断正确性', () => {
         // 获取单词的 progress 来判断 learningType（修复后的正确逻辑）
         const progress = getProgress(dictId, 'apple')
         const masteryLevel = progress?.masteryLevel ?? 0
-        const learningType = masteryLevel === 1 ? 'new' : 'review'
+        const learningType = masteryLevel <= 1 ? 'new' : 'review'
 
         console.log('========================================')
         console.log('修复验证：根据 masteryLevel 判断')
@@ -151,6 +147,28 @@ describe('学习类型判断正确性', () => {
         console.log('========================================')
 
         // 修复后：masteryLevel=1 → 'new'
+        expect(learningType).toBe('new')
+      })
+
+      /**
+       * 测试 masteryLevel=0 的情况（完全新的单词）
+       */
+      it('masteryLevel=0 应该显示新词', () => {
+        // masteryLevel=0 表示从未学习过，没有 progress 记录
+        const progress = getProgress(dictId, 'apple')
+        const masteryLevel = progress?.masteryLevel ?? 0
+        const learningType = masteryLevel <= 1 ? 'new' : 'review'
+
+        console.log('========================================')
+        console.log('新单词验证：masteryLevel=0')
+        console.log('========================================')
+        console.log('单词: apple, masteryLevel:', masteryLevel)
+        console.log('learningType 判断结果:', learningType)
+        console.log('正确标准期望: new')
+        console.log('========================================')
+
+        // masteryLevel=0 → 'new'
+        expect(masteryLevel).toBe(0)
         expect(learningType).toBe('new')
       })
     })

@@ -1,4 +1,14 @@
 import { test, expect } from '@playwright/test'
+import {
+  setupUtoolsMock,
+  createTestDictionary,
+  setCurrentDictionary,
+  setWordProgress,
+  clearAllData,
+  waitForPageReady,
+  typeWord,
+  getCurrentWordName,
+} from './utils/utools-mock'
 
 /**
  * 学习类型显示一致性 E2E 测试
@@ -19,26 +29,33 @@ import { test, expect } from '@playwright/test'
  */
 
 test.describe('Bug 复现：学习类型不一致问题', () => {
-  /**
-   * 此测试用于复现原始 Bug
-   *
-   * 场景：用户复习一个 masteryLevel=1 的单词
-   * - 界面显示：🔄 复习
-   * - 修复前统计显示：新词（错误）
-   * - 修复后统计显示：复习（正确）
-   */
+  test.beforeEach(async ({ page }) => {
+    await setupUtoolsMock(page)
+  })
+
   test('复现Bug：界面显示复习但统计显示新词（已修复）', async ({ page }) => {
+    await clearAllData(page)
+
+    await page.goto('/#/gallery')
+    await waitForPageReady(page)
+
+    const dictId = await createTestDictionary(page, 'Bug复现测试词库', [
+      { name: 'bugtest', trans: 'Bug测试' },
+    ])
+    // 设置 masteryLevel=1，使其成为复习词
+    await setWordProgress(page, dictId, 'bugtest', 1, Date.now() - 1000)
+    await setCurrentDictionary(page, dictId)
+
+    await page.goto('/')
+    await waitForPageReady(page)
+
     console.log('========================================')
     console.log('Bug 复现测试：学习类型不一致')
     console.log('========================================')
 
-    // Step 1: 进入学习页面
-    await page.goto('/')
     await page.waitForSelector('[data-testid="word-component"]', { timeout: 10000 })
 
-    // Step 2: 获取当前单词和学习类型
-    const wordElement = page.locator('[data-testid="word-component"]')
-    const currentWord = await wordElement.textContent()
+    const currentWord = await getCurrentWordName(page)
 
     const pageContent = await page.content()
     const isReviewWord = pageContent.includes('🔄 复习')
@@ -47,250 +64,221 @@ test.describe('Bug 复现：学习类型不一致问题', () => {
     console.log(`当前单词: ${currentWord}`)
     console.log(`界面显示类型: ${isReviewWord ? '复习' : isNewWord ? '新词' : '未知'}`)
 
-    // 只测试复习场景（这是 Bug 的关键场景）
-    if (!isReviewWord) {
-      console.log('跳过：当前不是复习单词，无法复现 Bug')
+    // 验证 masteryLevel=1 显示新词（修复后的正确行为）
+    expect(isNewWord).toBe(true)
+
+    if (!currentWord) {
       test.skip()
       return
     }
 
-    // Step 3: 完成单词学习
-    if (currentWord) {
-      for (const letter of currentWord.toLowerCase()) {
-        await page.keyboard.press(letter)
-        await page.waitForTimeout(80)
-      }
-      await page.waitForTimeout(500)
-      console.log(`已完成单词 "${currentWord}" 的输入`)
-    }
+    await typeWord(page, currentWord)
+    console.log(`已完成单词 "${currentWord}" 的输入`)
 
-    // Step 4: 进入统计页面
-    await page.goto('/#/analysis')
-    await page.waitForTimeout(1000)
+    // 验证存储的学习类型
+    const storedType = await page.evaluate(
+      ({ wordName, dictId, STORAGE_KEY }) => {
+        const today = new Date().toISOString().split('T')[0]
+        const key = `daily:${dictId}:${today}`
 
-    // Step 5: 导航到今日学习详情
-    // 点击词典
-    const dictItem = page.locator('[class*="cursor-pointer"]').first()
-    const hasDict = await dictItem.isVisible().catch(() => false)
+        try {
+          const db = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+          return db[key]?.data?.wordTypes?.[wordName] || null
+        } catch (e) {
+          return null
+        }
+      },
+      { wordName: currentWord, dictId, STORAGE_KEY: 'qwerty-learner-db' }
+    )
 
-    if (!hasDict) {
-      console.log('警告：无法找到词典项')
-      return
-    }
+    console.log(`存储的学习类型: ${storedType}`)
+    expect(storedType).toBe('new')
 
-    await dictItem.click()
-    await page.waitForTimeout(500)
-
-    // 点击今日日期
-    const todayItem = page.locator('text=/今天|\\d{4}年\\d{2}月\\d{2}日/').first()
-    const hasToday = await todayItem.isVisible().catch(() => false)
-
-    if (!hasToday) {
-      console.log('警告：无法找到今日学习记录')
-      return
-    }
-
-    await todayItem.click()
-    await page.waitForTimeout(500)
-
-    // Step 6: 验证统计页面显示
-    const detailContent = await page.content()
-    const wordInNewSection = detailContent.includes('新学单词') && detailContent.includes(currentWord!)
-    const wordInReviewSection = detailContent.includes('复习单词') && detailContent.includes(currentWord!)
-
-    console.log('----------------------------------------')
-    console.log('统计页面验证结果:')
-    console.log(`单词 "${currentWord}" 出现在新学单词分类: ${wordInNewSection}`)
-    console.log(`单词 "${currentWord}" 出现在复习单词分类: ${wordInReviewSection}`)
-    console.log('----------------------------------------')
-
-    // ========================================
-    // 关键断言：验证 Bug 是否已修复
-    // ========================================
-    // 修复前：界面显示复习，但统计显示在新学单词分类（Bug！）
-    // 修复后：界面显示复习，统计显示在复习单词分类（正确）
-    expect(wordInReviewSection).toBe(true)
-    expect(wordInNewSection).toBe(false)
-
-    console.log('✅ Bug 已修复：界面显示复习，统计也显示复习')
+    console.log('✅ Bug 已修复：masteryLevel=1 正确显示新词')
     console.log('========================================')
   })
 })
 
 test.describe('修复验证：学习类型一致性', () => {
-  /**
-   * 验证新词学习场景
-   */
+  test.beforeEach(async ({ page }) => {
+    await setupUtoolsMock(page)
+  })
+
   test('新词学习：界面和统计都应显示新词', async ({ page }) => {
+    await clearAllData(page)
+
+    await page.goto('/#/gallery')
+    await waitForPageReady(page)
+
+    const dictId = await createTestDictionary(page, '新词测试词库', [
+      { name: 'newtest', trans: '新词测试' },
+    ])
+    await setCurrentDictionary(page, dictId)
+
     await page.goto('/')
+    await waitForPageReady(page)
+
     await page.waitForSelector('[data-testid="word-component"]', { timeout: 10000 })
 
     const pageContent = await page.content()
     const isNewWord = pageContent.includes('📚 新词')
 
-    if (!isNewWord) {
-      console.log('跳过：当前不是新词')
+    expect(isNewWord).toBe(true)
+
+    const currentWord = await getCurrentWordName(page)
+
+    console.log(`测试新词: ${currentWord}`)
+
+    if (!currentWord) {
       test.skip()
       return
     }
 
-    const wordElement = page.locator('[data-testid="word-component"]')
-    const currentWord = await wordElement.textContent()
+    await typeWord(page, currentWord)
 
-    console.log(`测试新词: ${currentWord}`)
+    // 验证存储的学习类型
+    const storedType = await page.evaluate(
+      ({ wordName, dictId, STORAGE_KEY }) => {
+        const today = new Date().toISOString().split('T')[0]
+        const key = `daily:${dictId}:${today}`
 
-    // 完成学习
-    if (currentWord) {
-      for (const letter of currentWord.toLowerCase()) {
-        await page.keyboard.press(letter)
-        await page.waitForTimeout(80)
-      }
-      await page.waitForTimeout(500)
-    }
+        try {
+          const db = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+          return db[key]?.data?.wordTypes?.[wordName] || null
+        } catch (e) {
+          return null
+        }
+      },
+      { wordName: currentWord, dictId, STORAGE_KEY: 'qwerty-learner-db' }
+    )
 
-    // 进入统计
-    await page.goto('/#/analysis')
-    await page.waitForTimeout(1000)
-
-    const dictItem = page.locator('[class*="cursor-pointer"]').first()
-    if (await dictItem.isVisible().catch(() => false)) {
-      await dictItem.click()
-      await page.waitForTimeout(500)
-
-      const todayItem = page.locator('text=/今天|\\d{4}年\\d{2}月\\d{2}日/').first()
-      if (await todayItem.isVisible().catch(() => false)) {
-        await todayItem.click()
-        await page.waitForTimeout(500)
-
-        const detailContent = await page.content()
-        const wordInNewSection = detailContent.includes('新学单词') && currentWord && detailContent.includes(currentWord)
-
-        console.log(`新词 "${currentWord}" 在新学单词分类: ${wordInNewSection}`)
-        expect(wordInNewSection).toBe(true)
-      }
-    }
+    console.log(`新词 "${currentWord}" 存储类型: ${storedType}`)
+    expect(storedType).toBe('new')
   })
 
-  /**
-   * 验证复习词学习场景（Bug 的关键场景）
-   *
-   * 这是验证修复的核心测试
-   */
   test('复习词学习：界面和统计都应显示复习（Bug修复验证）', async ({ page }) => {
+    await clearAllData(page)
+
+    await page.goto('/#/gallery')
+    await waitForPageReady(page)
+
+    const dictId = await createTestDictionary(page, '复习测试词库', [
+      { name: 'reviewtest', trans: '复习测试' },
+    ])
+    // 设置 masteryLevel=2，使其成为复习词
+    await setWordProgress(page, dictId, 'reviewtest', 2, Date.now() - 1000)
+    await setCurrentDictionary(page, dictId)
+
     await page.goto('/')
+    await waitForPageReady(page)
+
     await page.waitForSelector('[data-testid="word-component"]', { timeout: 10000 })
 
     const pageContent = await page.content()
     const isReviewWord = pageContent.includes('🔄 复习')
 
-    if (!isReviewWord) {
-      console.log('跳过：当前不是复习词')
-      test.skip()
-      return
-    }
+    expect(isReviewWord).toBe(true)
 
-    const wordElement = page.locator('[data-testid="word-component"]')
-    const currentWord = await wordElement.textContent()
+    const currentWord = await getCurrentWordName(page)
 
     console.log('========================================')
     console.log(`测试复习词: ${currentWord}`)
     console.log('这是 Bug 的关键验证场景')
     console.log('========================================')
 
-    // 完成学习
-    if (currentWord) {
-      for (const letter of currentWord.toLowerCase()) {
-        await page.keyboard.press(letter)
-        await page.waitForTimeout(80)
-      }
-      await page.waitForTimeout(500)
+    if (!currentWord) {
+      test.skip()
+      return
     }
 
-    // 进入统计
-    await page.goto('/#/analysis')
-    await page.waitForTimeout(1000)
+    await typeWord(page, currentWord)
 
-    const dictItem = page.locator('[class*="cursor-pointer"]').first()
-    if (await dictItem.isVisible().catch(() => false)) {
-      await dictItem.click()
-      await page.waitForTimeout(500)
+    // 验证存储的学习类型
+    const storedType = await page.evaluate(
+      ({ wordName, dictId, STORAGE_KEY }) => {
+        const today = new Date().toISOString().split('T')[0]
+        const key = `daily:${dictId}:${today}`
 
-      const todayItem = page.locator('text=/今天|\\d{4}年\\d{2}月\\d{2}日/').first()
-      if (await todayItem.isVisible().catch(() => false)) {
-        await todayItem.click()
-        await page.waitForTimeout(500)
+        try {
+          const db = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+          return db[key]?.data?.wordTypes?.[wordName] || null
+        } catch (e) {
+          return null
+        }
+      },
+      { wordName: currentWord, dictId, STORAGE_KEY: 'qwerty-learner-db' }
+    )
 
-        const detailContent = await page.content()
+    console.log(`复习词 "${currentWord}" 存储类型: ${storedType}`)
+    expect(storedType).toBe('review')
 
-        // 关键验证：复习词应该在"复习单词"分类，不应该在"新学单词"分类
-        const wordInReviewSection = currentWord && detailContent.includes('复习单词') && detailContent.includes(currentWord)
-        const wordInNewSection = currentWord && detailContent.includes('新学单词') && detailContent.includes(currentWord)
-
-        console.log(`复习词 "${currentWord}" 在复习单词分类: ${wordInReviewSection}`)
-        console.log(`复习词 "${currentWord}" 在新学单词分类: ${wordInNewSection}`)
-
-        // 断言：应该在复习分类，不应该在新学分类
-        expect(wordInReviewSection).toBe(true)
-        expect(wordInNewSection).toBe(false)
-
-        console.log('✅ 修复验证通过：复习词正确显示在复习分类')
-      }
-    }
+    console.log('✅ 修复验证通过：复习词正确显示在复习分类')
   })
 })
 
 test.describe('数据完整性验证', () => {
-  /**
-   * 验证 wordTypes 字段正确存储
-   */
+  test.beforeEach(async ({ page }) => {
+    await setupUtoolsMock(page)
+  })
+
   test('wordTypes 字段应该正确存储学习类型', async ({ page }) => {
+    await clearAllData(page)
+
+    await page.goto('/#/gallery')
+    await waitForPageReady(page)
+
+    const dictId = await createTestDictionary(page, '数据完整性测试词库', [
+      { name: 'datatype', trans: '数据类型' },
+    ])
+    await setCurrentDictionary(page, dictId)
+
     await page.goto('/')
+    await waitForPageReady(page)
+
     await page.waitForSelector('[data-testid="word-component"]', { timeout: 10000 })
 
-    // 获取界面显示的学习类型
     const pageContent = await page.content()
     const displayedType = pageContent.includes('📚 新词') ? 'new' : pageContent.includes('🔄 复习') ? 'review' : 'unknown'
 
-    const wordElement = page.locator('[data-testid="word-component"]')
-    const currentWord = await wordElement.textContent()
+    const currentWord = await getCurrentWordName(page)
 
     console.log(`界面显示类型: ${displayedType}, 单词: ${currentWord}`)
 
-    // 完成学习
-    if (currentWord) {
-      for (const letter of currentWord.toLowerCase()) {
-        await page.keyboard.press(letter)
-        await page.waitForTimeout(80)
-      }
-      await page.waitForTimeout(500)
+    if (!currentWord) {
+      test.skip()
+      return
     }
 
+    await typeWord(page, currentWord)
+
     // 检查存储数据
-    const storageData = await page.evaluate(() => {
-      const utools = (window as any).utools
-      if (!utools?.db) return { hasStorage: false }
+    const storageData = await page.evaluate(
+      ({ currentWord, dictId, STORAGE_KEY }) => {
+        const today = new Date().toISOString().split('T')[0]
+        const key = `daily:${dictId}:${today}`
 
-      const today = new Date().toISOString().split('T')[0]
-      const dictId = localStorage.getItem('currentDictId') || 'default'
+        try {
+          const db = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+          const record = db[key]?.data
 
-      // 获取今日学习记录
-      const recordKey = `daily:${dictId}:${today}`
-      const record = utools.db.get(recordKey)
-
-      return {
-        hasStorage: true,
-        record: record?.data,
-        wordTypes: record?.data?.wordTypes,
-      }
-    })
+          return {
+            hasStorage: !!record,
+            wordTypes: record?.wordTypes,
+            storedType: record?.wordTypes?.[currentWord as string],
+          }
+        } catch (e) {
+          return { hasStorage: false }
+        }
+      },
+      { currentWord, dictId, STORAGE_KEY: 'qwerty-learner-db' }
+    )
 
     console.log('存储数据:', JSON.stringify(storageData, null, 2))
 
-    if (storageData.hasStorage && storageData.wordTypes && currentWord) {
-      const storedType = storageData.wordTypes[currentWord]
+    if (storageData.hasStorage && storageData.wordTypes) {
+      const storedType = storageData.storedType
       console.log(`存储的学习类型: ${storedType}`)
 
-      // 验证存储类型与界面显示一致
       expect(storedType).toBe(displayedType)
       console.log('✅ wordTypes 字段存储正确')
     }

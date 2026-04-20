@@ -173,12 +173,12 @@ export function useLearningSession({ mode, currentWordBank }: UseLearningSession
 
       if (mode === 'normal') {
         // 根据第一个单词的 masteryLevel 判断 learningType
-        // masteryLevel === 1 → 'new' (刚学完第一次)
+        // masteryLevel <= 1 → 'new' (新词或刚学完第一次)
         // masteryLevel > 1 → 'review' (复习)
         const firstWord = finalWords[0]
         const progress = getProgress(dictId, firstWord.name)
         const masteryLevel = progress?.masteryLevel ?? 0
-        setLearningType(masteryLevel === 1 ? 'new' : 'review')
+        setLearningType(masteryLevel <= 1 ? 'new' : 'review')
       } else {
         setLearningType('review')
       }

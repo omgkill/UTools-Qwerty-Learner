@@ -57,7 +57,9 @@ export default function WordComponent({ word, onFinish, isExtraReview = false, i
   return (
     <>
       <InputHandler updateInput={updateInput} />
-      <div className="flex flex-col justify-center pb-1 pt-4">
+      <div className="flex flex-col justify-center pb-1 pt-4" data-testid="word-component">
+        {/* Hidden element for E2E testing - contains just the word name */}
+        <span data-testid="word-name" className="hidden">{word.name}</span>
         {currentLanguage === 'romaji' && word.notation && <Notation notation={word.notation} />}
         <div className="relative">
           <div

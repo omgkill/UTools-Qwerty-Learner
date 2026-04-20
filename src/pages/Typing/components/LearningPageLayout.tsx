@@ -37,6 +37,7 @@ export function LearningPageLayout({
               <NavLink
                 className="block rounded-lg px-3 py-1 text-lg transition-colors duration-300 ease-in-out hover:bg-indigo-400 hover:text-white focus:outline-none text-white text-opacity-60 hover:text-opacity-100"
                 to="/gallery"
+                data-testid="word-bank-link"
               >
                 {wordBankName}
               </NavLink>
@@ -49,13 +50,14 @@ export function LearningPageLayout({
               <button
                 onClick={onExit}
                 className="rounded-lg bg-gray-500 px-3 py-1 text-sm text-white transition-colors hover:bg-gray-600"
+                data-testid="exit-button"
               >
                 {exitButtonText || '退出'}
               </button>
             )}
           </Header>
         )}
-        <div className="container mx-auto flex h-full flex-1 flex-col items-center justify-center pb-4">
+        <div className="container mx-auto flex h-full flex-1 flex-col items-center justify-center pb-4" data-testid="learning-page-layout">
           <div className="container relative mx-auto flex h-full flex-col items-center">
             <div className="container flex flex-grow items-center justify-center">
               {children}
