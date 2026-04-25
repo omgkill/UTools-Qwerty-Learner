@@ -299,18 +299,20 @@ export async function typeWord(page: Page, word: string) {
  * 获取当前显示的单词名称
  */
 export async function getCurrentWordName(page: Page): Promise<string | null> {
+  // 直接获取隐藏的 word-name 元素内容（不管可见性）
   const wordNameElement = page.locator('[data-testid="word-name"]')
-  const isVisible = await wordNameElement.isVisible().catch(() => false)
-  if (isVisible) {
-    return await wordNameElement.textContent()
+  const count = await wordNameElement.count()
+
+  if (count > 0) {
+    const text = await wordNameElement.textContent()
+    if (text && text.length > 0) {
+      return text
+    }
   }
-  // 如果隐藏元素不可见，尝试从 word-component 获取第一个单词
-  const wordComponent = page.locator('[data-testid="word-component"]')
-  const text = await wordComponent.textContent().catch(() => null)
-  if (!text) return null
-  // 提取纯英文单词部分（去掉中文释义和按钮文本）
-  const match = text.match(/^[a-zA-Z]+/)
-  return match ? match[0] : null
+
+  // 如果没有 word-name 元素，尝试从其他来源获取
+  // 从页面标题区域的词库名称获取（这可能是词库名不是单词名）
+  return null
 }
 
 /**
