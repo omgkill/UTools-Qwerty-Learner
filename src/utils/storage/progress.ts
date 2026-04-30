@@ -47,12 +47,12 @@ function getNextReviewTime(masteryLevel: number): number {
 export function updateProgress(dictId: string, word: string): WordProgress & { wasNew: boolean } {
   const progress = getOrCreateProgress(dictId, word)
   const wasNew = progress.masteryLevel === 0
-  
+
   progress.masteryLevel = Math.min(progress.masteryLevel + 1, 7)
   progress.nextReviewTime = getNextReviewTime(progress.masteryLevel)
-  
+
   setProgress(progress)
-  
+
   return { ...progress, wasNew }
 }
 

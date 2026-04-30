@@ -14,6 +14,8 @@ npm run build        # 生产构建 (输出到 ./build 目录)
 npm test             # 运行单元测试 (vitest)
 npm run test:watch   # 测试监听模式
 npm run test:coverage # 测试覆盖率报告
+npm run test:e2e     # E2E 测试 (Playwright, 需先启动 dev server)
+npm run test:e2e:ui  # E2E 测试 UI 模式
 npm run lint         # ESLint 代码检查
 npm run prettier     # Prettier 格式化代码
 npm run utools       # 打包为 uTools 插件格式
@@ -133,7 +135,7 @@ useLearningSession (统一 hook)
 
 ## 重构方法论
 
-**重要：重构前必读 [docs/refactoring-retrospective.md](../docs/refactoring-retrospective.md)**
+**重要：重构前必读 [docs/refactoring-retrospective.md](./docs/refactoring-retrospective.md)**
 
 ### 重构前检查清单
 
@@ -197,7 +199,12 @@ function useLearningSession() {
 
 ## 测试说明
 
-使用 vitest + Testing Library。组件测试使用 `.component.test.tsx` 或页面/组件目录下的 `.test.tsx` 后缀，自动使用 jsdom 环境。测试配置文件: `src/test/setup.ts`。
+使用 vitest + Testing Library。测试环境根据文件路径自动匹配：
+- 默认使用 `node` 环境
+- 组件测试（`.component.test.tsx`、页面/组件目录下的 `.test.tsx`）自动使用 `jsdom` 环境
+- 测试配置文件: `vitest.config.ts`、`src/test/setup.ts`
+
+E2E 测试使用 Playwright，需先启动开发服务器 (`npm run dev`)。
 
 ## uTools 集成
 
@@ -207,5 +214,6 @@ function useLearningSession() {
 
 ## 相关文档
 
-- [重构反思](../docs/refactoring-retrospective.md): 为什么之前多次重构失败
-- [遗留问题重构方案](../docs/refactoring-plan-remaining-issues.md): 待完成的重构任务
+- [重构反思](./docs/refactoring-retrospective.md): 为什么之前多次重构失败
+- [业务逻辑](./docs/business.md): 核心业务流程和规则
+- [测试架构](./docs/testing-guide.md): 测试用例详细文档

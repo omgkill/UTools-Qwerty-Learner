@@ -404,3 +404,139 @@ export async function setCurrentDictionary(page: Page, dictId: string) {
     { dictId, STORAGE_KEY }
   )
 }
+
+/**
+ * 获取单词的 masteryLevel
+ */
+export async function getWordProgress(page: Page, dictId: string, word: string): Promise<number> {
+  return await page.evaluate(
+    ({ dictId, wordName, STORAGE_KEY }) => {
+      try {
+        const db = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+        const key = `progress:${dictId}:${wordName}`
+        return db[key]?.data?.masteryLevel ?? 0
+      } catch (e) {
+        return 0
+      }
+    },
+    { dictId, wordName: word, STORAGE_KEY }
+  )
+}
+
+/**
+ * 获取今日学习记录
+ */
+export async function getDailyRecord(page: Page, dictId: string): Promise<{
+  learnedCount: number
+  reviewedCount: number
+  masteredCount: number
+  todayWords: string[]
+  wordTypes: Record<string, string>
+}> {
+  return await page.evaluate(
+    ({ dictId, STORAGE_KEY }) => {
+      const today = new Date().toISOString().split('T')[0]
+      const key = `daily:${dictId}:${today}`
+
+      try {
+        const db = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+        const record = db[key]?.data
+
+        return {
+          learnedCount: record?.learnedCount ?? 0,
+          reviewedCount: record?.reviewedCount ?? 0,
+          masteredCount: record?.masteredCount ?? 0,
+          todayWords: record?.todayWords ?? [],
+          wordTypes: record?.wordTypes ?? {},
+        }
+      } catch (e) {
+        return {
+          learnedCount: 0,
+          reviewedCount: 0,
+          masteredCount: 0,
+          todayWords: [],
+          wordTypes: {},
+        }
+      }
+    },
+    { dictId, STORAGE_KEY }
+  )
+}
+
+/**
+ * 推进时间到下一天（模拟复习时间到期）
+ */
+export async function advanceToNextDay(page: Page, dictId: string) {
+  await page.evaluate(
+    ({ dictId, STORAGE_KEY }) => {
+      try {
+        const db = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+
+        // 将所有 progress 的 nextReviewTime 设置为过去时间
+        const prefix = `progress:${dictId}:`
+        for (const key of Object.keys(db)) {
+          if (key.startsWith(prefix)) {
+            // 设置 nextReviewTime 为 1 小时前
+            db[key].data.nextReviewTime = Date.now() - 3600000
+          }
+        }
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(db))
+        console.log('Advanced to next day, review times expired')
+      } catch (e) {
+        console.error('Failed to advance time:', e)
+      }
+    },
+    { dictId, STORAGE_KEY }
+  )
+}
+
+/**
+ * 获取词库列表
+ */
+export async function getDictionaryList(page: Page): Promise<Array<{ id: string; name: string; length: number }>> {
+  return await page.evaluate(() => {
+    try {
+      const config = (window as any).readLocalWordBankConfig?.() || []
+      return config.map((wb: any) => ({
+        id: wb.id,
+        name: wb.name,
+        length: wb.length,
+      }))
+    } catch (e) {
+      return []
+    }
+  })
+}
+
+/**
+ * 获取词库单词列表
+ */
+export async function getDictionaryWords(page: Page, dictId: string): Promise<Array<{ name: string; trans: string[] }>> {
+  return await page.evaluate(
+    ({ dictId }) => {
+      try {
+        const words = (window as any).readLocalWordBank?.(dictId) || []
+        return words.map((w: any) => ({
+          name: w.name,
+          trans: w.trans || [],
+        }))
+      } catch (e) {
+        return []
+      }
+    },
+    { dictId }
+  )
+}
+
+/**
+ * 验证学习类型显示
+ */
+export async function verifyLearningType(page: Page, expectedType: 'new' | 'review'): Promise<boolean> {
+  const content = await page.content()
+  if (expectedType === 'new') {
+    return content.includes('📚 新词') || content.includes('新词')
+  } else {
+    return content.includes('🔄 复习') || content.includes('复习')
+  }
+}
