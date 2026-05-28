@@ -32,10 +32,15 @@ npm test -- --run src/pages/Typing/hooks/learningLogic.test.ts
 
 应用有多个入口点，定义在 `public/plugin.json` 中，通过 `window.getMode()` 和 `utools-mode-change` 事件控制：
 
-- `typing` (默认): 正常学习模式 → `NormalTypingPage`
-- `repeat`: 重复学习模式 → `RepeatTypingPage`
-- `mdx-query`: 词典查询 → `MdxQueryPage`
-- `mdx-manage`: MDX 词典管理 → `MdxManagePage`
+| 模式代码 | 命令 | 页面 |
+|---------|------|------|
+| `typing` | "English" | NormalTypingPage (默认) |
+| `repeat` | "重复学习", "repeat" | RepeatTypingPage |
+| `consolidate` | "巩固学习", "consolidate" | ConsolidateTypingPage |
+| `conceal` | "moyu", "moyv" | 透明悬浮窗（摸鱼模式） |
+| `reader` | "reader", "阅读模式" | 大窗口透明练习 |
+| `mdx-query` | 文本匹配 | MdxQueryPage |
+| `mdx-manage` | "mdx管理" | MdxManagePage |
 
 ### 状态管理（重要）
 
@@ -75,6 +80,7 @@ npm test -- --run src/pages/Typing/hooks/learningLogic.test.ts
 | statsAtoms | `store/atoms/statsAtoms.ts` | 统计数据：correctCount, wrongCount, timerData |
 | uiAtoms | `store/atoms/uiAtoms.ts` | UI 状态：isTyping, isFinished, isImmersiveMode |
 | wordInputAtoms | `store/atoms/wordInputAtoms.ts` | 输入状态：inputWord, letterStates |
+| wordDisplayInfoAtoms | `store/atoms/wordDisplayInfoAtoms.ts` | 单词显示信息：音标、翻译、发音状态 |
 
 #### 数据加载架构
 
@@ -93,6 +99,14 @@ useLearningSession (统一 hook)
 
 ### 数据层
 
+**存储系统架构：**
+
+| 存储系统 | 用途 | 文件位置 |
+|---------|------|---------|
+| uTools DB | 学习进度、配置 | `src/utils/storage/` |
+| IndexedDB (Dexie) | 练习记录、错题数据 | `src/utils/db/` |
+| localStorage | 用户偏好、会话状态 | Jotai atomWithStorage |
+
 **uTools DB** (`src/utils/storage/`):
 
 数据模块:
@@ -105,6 +119,13 @@ useLearningSession (统一 hook)
 - `DailyRecord`: 每日记录数据结构
 - `MasteryLevel`: 掌握等级类型 (0-7)
 - `REVIEW_INTERVALS`: 复习间隔配置
+
+**Web 环境运行：**
+
+应用支持脱离 uTools 环境直接在浏览器运行（用于开发和测试）。`public/preload.js` 在非 uTools 环境下自动注入 mock：
+- `window.utools` mock 使用 localStorage 作为数据库后端
+- 默认模式设为 `typing`
+- 支持 E2E 测试 mock 注入检测 (`window._e2eMockInjected`)
 
 ### 学习算法
 
@@ -125,13 +146,28 @@ useLearningSession (统一 hook)
 
 ### 关键文件
 
-- `src/index.tsx`: 应用入口，模式路由，数据恢复逻辑
+**入口与路由：**
+- `src/index.tsx`: 应用入口，模式路由，uTools 模式检测
+- `public/plugin.json`: uTools 插件配置，定义所有功能入口
+- `public/preload.js`: uTools 预加载脚本，环境 mock
+
+**页面：**
 - `src/pages/Typing/NormalTypingPage.tsx`: 主学习页面
 - `src/pages/Typing/RepeatTypingPage.tsx`: 重复学习今日单词
 - `src/pages/Typing/ConsolidateTypingPage.tsx`: 巩固学习页面
-- `src/pages/Typing/hooks/useLearningSession/`: 统一的数据加载 hook
+
+**核心 Hooks：**
+- `src/pages/Typing/hooks/useLearningSession/`: 统一的数据加载 hook（策略模式）
+- `src/pages/Typing/hooks/learningLogic.ts`: 学习算法核心逻辑
+- `src/pages/Typing/hooks/useWordPanelState.ts`: 单词面板状态管理
+
+**状态管理：**
 - `src/pages/Typing/store/atoms/`: Jotai atoms 定义
-- `src/utils/storage/`: 数据存储层
+- `src/store/index.ts`: 全局 Jotai atoms（词库配置、用户偏好）
+
+**数据层：**
+- `src/utils/storage/`: 学习进度存储（uTools DB）
+- `src/utils/db/`: 练习记录存储（Dexie/IndexedDB）
 
 ## 重构方法论
 
@@ -199,10 +235,15 @@ function useLearningSession() {
 
 ## 测试说明
 
-使用 vitest + Testing Library。测试环境根据文件路径自动匹配：
-- 默认使用 `node` 环境
-- 组件测试（`.component.test.tsx`、页面/组件目录下的 `.test.tsx`）自动使用 `jsdom` 环境
-- 测试配置文件: `vitest.config.ts`、`src/test/setup.ts`
+使用 vitest + Testing Library。测试环境根据文件路径自动匹配（`vitest.config.ts`）：
+- 默认: `node` 环境
+- `.component.test.tsx`: `jsdom` 环境
+- `src/pages/**/*.test.tsx`: `jsdom` 环境
+- `src/components/**/*.test.tsx`: `jsdom` 环境
+- `src/hooks/**/*.test.tsx`: `jsdom` 环境
+- `src/pages/Typing/store/**/*.test.ts`: `jsdom` 环境
+
+测试配置文件: `vitest.config.ts`、`src/test/setup.ts`
 
 E2E 测试使用 Playwright，需先启动开发服务器 (`npm run dev`)。
 

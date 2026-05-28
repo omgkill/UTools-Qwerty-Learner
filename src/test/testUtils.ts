@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import type { WordProgress, DailyRecord } from '@/types'
+import type { WordProgress, DailyRecord, WordLearnType } from '@/types'
 
 /**
  * Mock uTools DB
@@ -48,10 +48,10 @@ export function createMockUtoolsDB() {
 export function mockUtools(mockDB: ReturnType<typeof createMockUtoolsDB>) {
   // 在 Node 环境中创建全局 window 对象
   if (typeof globalThis.window === 'undefined') {
-    ;(globalThis as Record<string, unknown>).window = {}
+    ;(globalThis as unknown as Record<string, unknown>).window = {}
   }
 
-  const originalUtools = (globalThis.window as Record<string, unknown>).utools
+  const originalUtools = (globalThis.window as unknown as Record<string, unknown>).utools
 
   Object.defineProperty(globalThis.window, 'utools', {
     value: {
@@ -68,7 +68,7 @@ export function mockUtools(mockDB: ReturnType<typeof createMockUtoolsDB>) {
     if (originalUtools) {
       Object.defineProperty(globalThis.window, 'utools', { value: originalUtools })
     } else {
-      delete (globalThis.window as Record<string, unknown>).utools
+      delete (globalThis.window as unknown as Record<string, unknown>).utools
     }
   }
 }
@@ -106,7 +106,7 @@ export function createTestProgress(
 ): WordProgress {
   return {
     word,
-    dict: dictId,
+    dictId,
     masteryLevel: 0,
     nextReviewTime: 0,
     ...overrides,
@@ -122,12 +122,13 @@ export function createTestDailyRecord(
   overrides: Partial<DailyRecord> = {}
 ): DailyRecord {
   return {
-    dict: dictId,
+    dictId,
     date,
     learnedCount: 0,
     reviewedCount: 0,
     masteredCount: 0,
     todayWords: [],
+    wordTypes: {},
     ...overrides,
   }
 }

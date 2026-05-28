@@ -68,6 +68,132 @@
       <div>你需要启用 JavaScript 来运行此应用。</div>
     </noscript>
     <div id="root"></div>
+    <!-- Browser mock for window methods -->
+    <script>
+      // 浏览器环境 mock（非 uTools 环境）
+      if (typeof window.utools === 'undefined') {
+        console.log('[browser-mock] Initializing browser mock');
+
+        const STORAGE_KEY = 'qwerty-learner-db';
+
+        function loadDb() {
+          try {
+            const data = localStorage.getItem(STORAGE_KEY);
+            return data ? JSON.parse(data) : {};
+          } catch (e) {
+            return {};
+          }
+        }
+
+        function saveDb(db) {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+          } catch (e) {}
+        }
+
+        function generateRev() {
+          return Math.random().toString(36).substr(2, 9);
+        }
+
+        window.utools = {
+          isDev: () => true,
+          db: {
+            get: (id) => {
+              const db = loadDb();
+              const doc = db[id];
+              if (!doc) return null;
+              return JSON.parse(JSON.stringify(doc));
+            },
+            put: (doc) => {
+              const db = loadDb();
+              const existing = db[doc._id];
+              const newDoc = {
+                _id: doc._id,
+                _rev: existing ? existing._rev : generateRev(),
+                data: doc.data
+              };
+              db[doc._id] = newDoc;
+              saveDb(db);
+              return { ok: true, id: doc._id, rev: newDoc._rev };
+            },
+            remove: (id) => {
+              const db = loadDb();
+              if (db[id]) {
+                delete db[id];
+                saveDb(db);
+                return { ok: true, id };
+              }
+              return { ok: false, id };
+            },
+            allDocs: () => {
+              const db = loadDb();
+              return Object.values(db).map(doc => JSON.parse(JSON.stringify(doc)));
+            }
+          }
+        };
+
+        window.getMode = () => 'typing';
+        window.getAction = () => null;
+
+        // 词库管理方法
+        const WORD_BANK_CONFIG_KEY = 'local-wordbank-config';
+
+        window.readLocalWordBankConfig = () => {
+          const doc = window.utools.db.get(WORD_BANK_CONFIG_KEY);
+          return doc ? doc.data : [];
+        };
+
+        window.writeLocalWordBankConfig = (config) => {
+          const doc = window.utools.db.get(WORD_BANK_CONFIG_KEY);
+          window.utools.db.put({
+            _id: WORD_BANK_CONFIG_KEY,
+            data: config,
+            _rev: doc ? doc._rev : undefined
+          });
+        };
+
+        window.newLocalWordBankFromJson = (jsonData, wordBankMeta) => {
+          const contentDoc = window.utools.db.get(wordBankMeta.id);
+          window.utools.db.put({
+            _id: wordBankMeta.id,
+            data: jsonData,
+            _rev: contentDoc ? contentDoc._rev : undefined
+          });
+
+          const config = window.readLocalWordBankConfig();
+          const existingIndex = config.findIndex(d => d.id === wordBankMeta.id);
+
+          if (existingIndex >= 0) {
+            config[existingIndex] = wordBankMeta;
+          } else {
+            config.push(wordBankMeta);
+          }
+
+          window.writeLocalWordBankConfig(config);
+        };
+
+        window.readLocalWordBank = (id) => {
+          const doc = window.utools.db.get(id);
+          return doc ? doc.data : [];
+        };
+
+        window.delLocalWordBank = (id) => {
+          const config = window.readLocalWordBankConfig();
+          const newConfig = config.filter(d => d.id !== id);
+          if (newConfig.length !== config.length) {
+            window.writeLocalWordBankConfig(newConfig);
+          }
+
+          const doc = window.utools.db.get(id);
+          if (doc) {
+            return window.utools.db.remove(id).ok;
+          }
+          return true;
+        };
+
+        console.log('[browser-mock] Mock initialized');
+      }
+    </script>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>

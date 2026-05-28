@@ -1,7 +1,8 @@
+// 从 learning.ts 导出所有学习相关类型
+export * from './learning'
+
 export * from './resource'
 export * from './dict'
-export * from './storage'
-export * from './learning'
 
 export type PronunciationType = 'us' | 'uk'
 export type PhoneticType = 'us' | 'uk'

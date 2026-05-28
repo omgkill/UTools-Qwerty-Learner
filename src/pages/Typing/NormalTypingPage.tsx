@@ -1,98 +1,157 @@
-import WordPanel from './components/WordPanel'
-import { LearningPageLayout } from './components/LearningPageLayout'
-import { TypingPageEmptyState, TypingPageLoading } from './components/TypingPageStates'
-import { useConfetti } from './hooks/useConfetti'
-import { useLearningRecordSaver } from './hooks/useLearningRecordSaver'
-import { useLearningSession } from './hooks/useLearningSession'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { TypingPageLayout, TypingPageLoading, TypingPageComplete } from './components/TypingPageLayout'
+import { WordDisplay } from './components/WordDisplay'
+import { LearningService } from '@/services/LearningService'
+import { LocalStorageProgressRepository } from '@/repositories/implementations/LocalStorageProgressRepository'
+import { LocalStorageDailyRecordRepository } from '@/repositories/implementations/LocalStorageDailyRecordRepository'
 import { useTypingInitializer } from './hooks/useTypingInitializer'
-import { useTypingPageBase } from './hooks/useTypingPageBase'
-import type React from 'react'
-import { useCallback } from 'react'
-import type { WordBank } from '@/types'
+import type { TodayWordsResult, LearningStats } from '@/types/learning'
 
-const LEARNING_TYPE_LABELS = {
-  review: { icon: '🔄', label: '复习' },
-  new: { icon: '📚', label: '新词' },
-  complete: { icon: '✅', label: '完成' },
-} as const
+const DAILY_LIMIT = 20
 
-interface NormalTypingAppInnerProps {
-  currentWordBank: WordBank
-}
+// 创建服务实例
+const progressRepo = new LocalStorageProgressRepository()
+const dailyRecordRepo = new LocalStorageDailyRecordRepository()
+const learningService = new LearningService(progressRepo, dailyRecordRepo)
 
-const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWordBank }) => {
-  const { isTyping, isImmersiveMode } = useTypingPageBase()
+export default function NormalTypingPage() {
+  const navigate = useNavigate()
+  const { isInitialized, currentWordBank, wordList, hasWordBanks } = useTypingInitializer()
 
-  const { isLoading, hasWords, isFinished, learningType, stats, handleMastered } = useLearningSession({
-    mode: 'normal',
-    currentWordBank,
-  })
+  const [isLoading, setIsLoading] = useState(true)
+  const [words, setWords] = useState<string[]>([])
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [stats, setStats] = useState<LearningStats | null>(null)
+  const [isComplete, setIsComplete] = useState(false)
 
-  // 仅 normal 模式需要的 hook
-  useLearningRecordSaver({ uiState: { isTyping } } as Parameters<typeof useLearningRecordSaver>[0])
-  useConfetti(isFinished && !isImmersiveMode)
+  // 初始化完成后，如果没有词库，跳转到 Gallery
+  useEffect(() => {
+    if (isInitialized && !hasWordBanks) {
+      navigate('/gallery')
+    }
+  }, [isInitialized, hasWordBanks, navigate])
 
-  const handleCompleteClick = useCallback(() => {
-    // 完成状态无需操作
-  }, [])
+  // 当词库加载完成后，加载今日单词
+  useEffect(() => {
+    if (!isInitialized || !currentWordBank || wordList.length === 0) {
+      return
+    }
 
+    const wordNames = wordList.map((w) => w.name)
+    const result: TodayWordsResult = learningService.getTodayWords(
+      currentWordBank.id,
+      wordNames,
+      DAILY_LIMIT
+    )
+
+    if (result.learningType === 'complete' || result.words.length === 0) {
+      setIsComplete(true)
+      setStats(result.stats)
+    } else {
+      setWords(result.words)
+      setStats(result.stats)
+    }
+
+    setIsLoading(false)
+  }, [isInitialized, currentWordBank, wordList])
+
+  // 处理单词完成
+  const handleWordComplete = useCallback(() => {
+    if (!currentWordBank) return
+
+    const currentWord = words[currentIndex]
+
+    // 更新进度
+    const result = learningService.completeWord(
+      currentWordBank.id,
+      currentWord,
+      words,
+      DAILY_LIMIT,
+      wordList.map((w) => w.name)
+    )
+
+    // 更新统计
+    setStats(learningService.getStats(currentWordBank.id, wordList.map((w) => w.name)))
+
+    // 检查是否完成
+    if (result.sessionComplete) {
+      setIsComplete(true)
+    } else if (result.nextWord && !words.includes(result.nextWord)) {
+      // 添加新词到列表
+      setWords((prev) => [...prev, result.nextWord!])
+      setCurrentIndex((prev) => prev + 1)
+    } else {
+      // 列表中还有下一个词
+      if (currentIndex < words.length - 1) {
+        setCurrentIndex((prev) => prev + 1)
+      } else {
+        setIsComplete(true)
+      }
+    }
+  }, [words, currentIndex, currentWordBank, wordList])
+
+  // 初始化加载中
+  if (!isInitialized) {
+    return <TypingPageLoading />
+  }
+
+  // 没有词库，正在跳转
+  if (!hasWordBanks) {
+    return <TypingPageLoading />
+  }
+
+  // 词库加载中
   if (isLoading) {
     return <TypingPageLoading />
   }
 
-  if (!hasWords || learningType === 'complete') {
+  // 显示完成状态
+  if (isComplete && stats) {
     return (
-      <TypingPageEmptyState
-        icon="🎉"
-        title="✓ 学习完成"
-        description={`今日学习 ${stats.todayLearned + stats.todayReviewed} 个单词（新词 ${stats.todayLearned} 个，复习 ${stats.todayReviewed} 个）`}
-        buttonText="明天继续加油！"
-        onButtonClick={handleCompleteClick}
+      <TypingPageComplete
+        learnedCount={stats.todayLearned}
+        reviewedCount={stats.todayReviewed}
       />
     )
   }
 
-  const typeInfo = LEARNING_TYPE_LABELS[learningType]
-
-  const headerExtra = (
+  // 显示学习界面
+  const currentWord = words[currentIndex]
+  const headerExtra = stats ? (
     <div className="flex items-center gap-2 text-sm text-white/80">
       <span className="rounded bg-white/20 px-2 py-0.5">
-        {typeInfo.icon} {typeInfo.label}
+        进度 {currentIndex + 1}/{words.length}
       </span>
-      {(stats.todayLearned > 0 || stats.todayReviewed > 0) && (
-        <span className="rounded bg-white/20 px-2 py-0.5">今日 {stats.todayLearned + stats.todayReviewed} 词</span>
-      )}
-      {stats.todayMastered > 0 && (
-        <span className="rounded bg-purple-500/30 px-2 py-0.5 text-purple-200">✓ 已掌握 {stats.todayMastered}</span>
-      )}
       {stats.dueCount > 0 && (
-        <span className="rounded bg-orange-500/30 px-2 py-0.5 text-orange-200">待复习 {stats.dueCount}</span>
+        <span className="rounded bg-orange-500/30 px-2 py-0.5 text-orange-200">
+          待复习 {stats.dueCount}
+        </span>
       )}
-      {stats.newCount > 0 && learningType === 'new' && (
-        <span className="rounded bg-green-500/30 px-2 py-0.5 text-green-200">新词 {stats.newCount}</span>
+      {stats.newCount > 0 && (
+        <span className="rounded bg-green-500/30 px-2 py-0.5 text-green-200">
+          新词 {stats.newCount}
+        </span>
       )}
     </div>
-  )
+  ) : null
 
   return (
-    <LearningPageLayout
-      wordBankName={currentWordBank.name}
-      isImmersiveMode={isImmersiveMode}
+    <TypingPageLayout
+      wordBankName={currentWordBank?.name || '未知词库'}
       headerExtra={headerExtra}
+      onSwitchBank={() => navigate('/gallery')}
     >
-      <WordPanel onMastered={handleMastered} />
-    </LearningPageLayout>
+      <div className="flex flex-col items-center justify-center">
+        {/* 开始提示 */}
+        <div className="mb-4 text-gray-400">按任意键开始输入</div>
+
+        {/* 单词显示 */}
+        <WordDisplay word={currentWord} onComplete={handleWordComplete} />
+
+        {/* 单词序号 */}
+        <div className="mt-4 text-gray-500">第 {currentIndex + 1} 个单词</div>
+      </div>
+    </TypingPageLayout>
   )
 }
-
-const NormalTypingPage: React.FC = () => {
-  const { isInitialized, currentWordBank } = useTypingInitializer()
-
-  if (!isInitialized || !currentWordBank) {
-    return <TypingPageLoading />
-  }
-
-  return <NormalTypingAppInner currentWordBank={currentWordBank} />
-}
-
-export default NormalTypingPage
