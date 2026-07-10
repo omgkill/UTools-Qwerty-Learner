@@ -23,7 +23,7 @@ const createWordList = (count: number): Word[] => {
 }
 
 const saveWordRecord = async (word: string, dictId: string, timing: number[], wrongCount: number, mistakes: Record<number, string[]>) => {
-  const wordRecord = new WordRecord(word, dictId, null, timing, wrongCount, mistakes)
+  const wordRecord = new WordRecord(word, dictId, timing, wrongCount, mistakes)
   const dbID = await db.wordRecords.add(wordRecord)
   return dbID
 }
@@ -121,15 +121,15 @@ describe('背单词集成测试 - 第一天学习新词', () => {
     }
 
     const today = getTodayDate()
-    const startOfDay = dayjs(today).startOf('day').unix()
-    const endOfDay = dayjs(today).endOf('day').unix()
+    const startOfDay = dayjs(today).startOf('day').valueOf()
+    const endOfDay = dayjs(today).endOf('day').valueOf()
     
     const allWordRecords = await db.wordRecords.where('dict').equals(dictId).toArray()
     const wordFirstDateMap = new Map<string, string>()
     const sortedAllRecords = [...allWordRecords].sort((a, b) => a.timeStamp - b.timeStamp)
     for (const r of sortedAllRecords) {
       if (!wordFirstDateMap.has(r.word)) {
-        wordFirstDateMap.set(r.word, dayjs(r.timeStamp * 1000).format('YYYY-MM-DD'))
+        wordFirstDateMap.set(r.word, dayjs(r.timeStamp).format('YYYY-MM-DD'))
       }
     }
 
@@ -137,7 +137,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
     
     const wordDetails = todayWordRecords.map((record) => {
       const firstDateEver = wordFirstDateMap.get(record.word)
-      const currentDate = dayjs(record.timeStamp * 1000).format('YYYY-MM-DD')
+      const currentDate = dayjs(record.timeStamp).format('YYYY-MM-DD')
       const isMastered = record.timing.length === 0 && record.wrongCount === 0
       const type: 'new' | 'review' | 'mastered' = isMastered ? 'mastered' : (firstDateEver === currentDate ? 'new' : 'review')
       return {
@@ -232,15 +232,15 @@ describe('背单词集成测试 - 第一天学习新词', () => {
     }
 
     const today = getTodayDate()
-    const startOfDay = dayjs(today).startOf('day').unix()
-    const endOfDay = dayjs(today).endOf('day').unix()
+    const startOfDay = dayjs(today).startOf('day').valueOf()
+    const endOfDay = dayjs(today).endOf('day').valueOf()
     
     const allWordRecords = await db.wordRecords.where('dict').equals(dictId).toArray()
     const wordFirstDateMap = new Map<string, string>()
     const sortedAllRecords = [...allWordRecords].sort((a, b) => a.timeStamp - b.timeStamp)
     for (const r of sortedAllRecords) {
       if (!wordFirstDateMap.has(r.word)) {
-        wordFirstDateMap.set(r.word, dayjs(r.timeStamp * 1000).format('YYYY-MM-DD'))
+        wordFirstDateMap.set(r.word, dayjs(r.timeStamp).format('YYYY-MM-DD'))
       }
     }
 
@@ -248,7 +248,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
     
     const wordDetails = todayWordRecords.map((record) => {
       const firstDateEver = wordFirstDateMap.get(record.word)
-      const currentDate = dayjs(record.timeStamp * 1000).format('YYYY-MM-DD')
+      const currentDate = dayjs(record.timeStamp).format('YYYY-MM-DD')
       const isMastered = record.timing.length === 0 && record.wrongCount === 0
       const type: 'new' | 'review' | 'mastered' = isMastered ? 'mastered' : (firstDateEver === currentDate ? 'new' : 'review')
       return {
@@ -334,15 +334,15 @@ describe('背单词集成测试 - 第一天学习新词', () => {
     }
 
     const today = getTodayDate()
-    const startOfDay = dayjs(today).startOf('day').unix()
-    const endOfDay = dayjs(today).endOf('day').unix()
+    const startOfDay = dayjs(today).startOf('day').valueOf()
+    const endOfDay = dayjs(today).endOf('day').valueOf()
     
     const allWordRecords = await db.wordRecords.where('dict').equals(dictId).toArray()
     const wordFirstDateMap = new Map<string, string>()
     const sortedAllRecords = [...allWordRecords].sort((a, b) => a.timeStamp - b.timeStamp)
     for (const r of sortedAllRecords) {
       if (!wordFirstDateMap.has(r.word)) {
-        wordFirstDateMap.set(r.word, dayjs(r.timeStamp * 1000).format('YYYY-MM-DD'))
+        wordFirstDateMap.set(r.word, dayjs(r.timeStamp).format('YYYY-MM-DD'))
       }
     }
 
@@ -350,7 +350,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
     
     const wordDetails = todayWordRecords.map((record) => {
       const firstDateEver = wordFirstDateMap.get(record.word)
-      const currentDate = dayjs(record.timeStamp * 1000).format('YYYY-MM-DD')
+      const currentDate = dayjs(record.timeStamp).format('YYYY-MM-DD')
       const isMastered = record.timing.length === 0 && record.wrongCount === 0
       const type: 'new' | 'review' | 'mastered' = isMastered ? 'mastered' : (firstDateEver === currentDate ? 'new' : 'review')
       return {
@@ -415,8 +415,8 @@ describe('背单词集成测试 - 第一天学习新词', () => {
 
     // 验证学习详情中显示该单词
     const today = getTodayDate()
-    const startOfDay = dayjs(today).startOf('day').unix()
-    const endOfDay = dayjs(today).endOf('day').unix()
+    const startOfDay = dayjs(today).startOf('day').valueOf()
+    const endOfDay = dayjs(today).endOf('day').valueOf()
     
     const allWordRecords = await db.wordRecords.where('dict').equals(dictId).toArray()
     const todayWordRecords = allWordRecords.filter((r) => r.timeStamp >= startOfDay && r.timeStamp <= endOfDay)
@@ -872,13 +872,13 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       const sortedAllRecords = [...allWordRecords].sort((a, b) => a.timeStamp - b.timeStamp)
       for (const r of sortedAllRecords) {
         if (!wordFirstDateMap.has(r.word)) {
-          wordFirstDateMap.set(r.word, dayjs(r.timeStamp * 1000).format('YYYY-MM-DD'))
+          wordFirstDateMap.set(r.word, dayjs(r.timeStamp).format('YYYY-MM-DD'))
         }
       }
 
       // 第一天的记录
       const firstDayWordRecords = allWordRecords.filter((r) => {
-        const recordDate = dayjs(r.timeStamp * 1000).format('YYYY-MM-DD')
+        const recordDate = dayjs(r.timeStamp).format('YYYY-MM-DD')
         return recordDate === firstDayDate
       })
       
@@ -897,13 +897,13 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       // 注意：第一天实际学习了 22 个词（20 个 + 2 个补充），其中 2 个掌握
       const firstDayNewWords = firstDayWordRecords.filter((r) => {
         const firstDate = wordFirstDateMap.get(r.word)
-        const currentDate = dayjs(r.timeStamp * 1000).format('YYYY-MM-DD')
+        const currentDate = dayjs(r.timeStamp).format('YYYY-MM-DD')
         return firstDate === currentDate && !masteredWordNames.has(r.word)
       })
 
       const firstDayReviewWords = firstDayWordRecords.filter((r) => {
         const firstDate = wordFirstDateMap.get(r.word)
-        const currentDate = dayjs(r.timeStamp * 1000).format('YYYY-MM-DD')
+        const currentDate = dayjs(r.timeStamp).format('YYYY-MM-DD')
         return firstDate !== currentDate && !masteredWordNames.has(r.word)
       })
 
@@ -915,7 +915,7 @@ describe('背单词集成测试 - 第一天学习新词', () => {
 
       // 第二天的记录
       const secondDayWordRecords = allWordRecords.filter((r) => {
-        const recordDate = dayjs(r.timeStamp * 1000).format('YYYY-MM-DD')
+        const recordDate = dayjs(r.timeStamp).format('YYYY-MM-DD')
         return recordDate === secondDayDate
       })
 
@@ -933,13 +933,13 @@ describe('背单词集成测试 - 第一天学习新词', () => {
       // 统计第二天的学习详情（排除掌握的单词）
       const secondDayNewWords = secondDayWordRecords.filter((r) => {
         const firstDate = wordFirstDateMap.get(r.word)
-        const currentDate = dayjs(r.timeStamp * 1000).format('YYYY-MM-DD')
+        const currentDate = dayjs(r.timeStamp).format('YYYY-MM-DD')
         return firstDate === currentDate && !secondDayMasteredWordNames.has(r.word)
       })
 
       const secondDayReviewWords = secondDayWordRecords.filter((r) => {
         const firstDate = wordFirstDateMap.get(r.word)
-        const currentDate = dayjs(r.timeStamp * 1000).format('YYYY-MM-DD')
+        const currentDate = dayjs(r.timeStamp).format('YYYY-MM-DD')
         return firstDate !== currentDate && !secondDayMasteredWordNames.has(r.word)
       })
 

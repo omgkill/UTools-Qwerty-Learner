@@ -66,13 +66,13 @@ async function getChapterStats(startTimeStamp: number, endTimeStamp: number): Pr
     }
   } = {}
 
-  const dates = getDatesBetween(startTimeStamp * 1000, endTimeStamp * 1000)
+  const dates = getDatesBetween(startTimeStamp, endTimeStamp)
   data = dates
     .map((date) => ({ [date]: { exerciseTime: 0, words: [], totalTime: 0, wrongCount: 0 } }))
     .reduce((acc, curr) => ({ ...acc, ...curr }), {})
 
   for (let i = 0; i < records.length; i++) {
-    const date = dayjs(records[i].timeStamp * 1000).format('YYYY-MM-DD')
+    const date = dayjs(records[i].timeStamp).format('YYYY-MM-DD')
 
     data[date].exerciseTime = data[date].exerciseTime + 1
     data[date].words = [...data[date].words, records[i].word]

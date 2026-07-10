@@ -40,12 +40,9 @@ export function useWordProgress() {
     async (word: string, isCorrect: boolean, wrongCount: number): Promise<IWordProgress> => {
       if (!resolvedDictId) throw new Error('No dict selected')
 
-      let progress = await getWordProgress(word)
-      const wasFirstAttempt = !progress || (progress.reps || 0) === 0
-
-      if (!progress) {
-        progress = new WordProgress(word, resolvedDictId)
-      }
+      const existingProgress = await getWordProgress(word)
+      const progress = existingProgress ?? new WordProgress(word, resolvedDictId)
+      const wasFirstAttempt = !existingProgress || (progress.reps || 0) === 0
 
       const { newLevel } = updateMasteryLevel(progress.masteryLevel, isCorrect, wrongCount)
 
@@ -106,11 +103,7 @@ export function useWordProgress() {
     async (word: string): Promise<IWordProgress> => {
       if (!resolvedDictId) throw new Error('No dict selected')
 
-      let progress = await getWordProgress(word)
-
-      if (!progress) {
-        progress = new WordProgress(word, resolvedDictId)
-      }
+      const progress = (await getWordProgress(word)) ?? new WordProgress(word, resolvedDictId)
 
       progress.masteryLevel = MASTERY_LEVELS.MASTERED
       progress.nextReviewTime = now() + 30 * 24 * 60 * 60 * 1000

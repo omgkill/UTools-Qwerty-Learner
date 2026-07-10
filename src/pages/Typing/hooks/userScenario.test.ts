@@ -80,7 +80,7 @@ describe('用户真实场景测试：100词 → 学习20词 → 重复学习5词
     })
     state = typingReducer(state, { type: TypingStateActionType.SET_IS_TYPING, payload: true })
 
-    const todayStart = Math.floor(getTodayStartTime() / 1000)
+    const todayStart = getTodayStartTime()
     const learnedWords: string[] = []
 
     for (let i = 0; i < 20; i++) {
@@ -92,8 +92,7 @@ describe('用户真实场景测试：100词 → 学习20词 → 重复学习5词
       await db.wordRecords.add({
         word: currentWord.name,
         dict: dictId,
-        learning: null,
-        timeStamp: todayStart + i * 60,
+        timeStamp: todayStart + i * 60 * 1000,
         timing: [100, 200, 300],
         wrongCount: 0,
         mistakes: {},

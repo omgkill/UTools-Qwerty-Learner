@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { db } from '@/utils/db'
-import { getTodayDate } from '@/utils/db/progress'
+import { getSavedRepeatLearningState } from './RepeatLearningManager'
 
 export type LearningMode = 'normal' | 'repeat'
 
@@ -19,11 +18,7 @@ export function useTypingMode(dictId: string | null, forceRepeatMode = false) {
     const checkMode = async () => {
       if (forceRepeatMode) {
         // 强制重复学习模式：检查是否有重复学习记录
-        const today = getTodayDate()
-        const saved = await db.typingStates
-          .where('[dict+date]')
-          .equals([dictId, today])
-          .first()
+        const saved = await getSavedRepeatLearningState(dictId)
 
         if (saved && saved.isRepeatLearning && saved.learningWords && (saved.learningWords as unknown[]).length > 0) {
           setMode('repeat')
@@ -32,11 +27,7 @@ export function useTypingMode(dictId: string | null, forceRepeatMode = false) {
         }
       } else {
         // 正常流程：检查是否有重复学习记录
-        const today = getTodayDate()
-        const saved = await db.typingStates
-          .where('[dict+date]')
-          .equals([dictId, today])
-          .first()
+        const saved = await getSavedRepeatLearningState(dictId)
 
         if (saved && saved.isRepeatLearning && saved.learningWords && (saved.learningWords as unknown[]).length > 0) {
           isRepeatLearningRef.current = true

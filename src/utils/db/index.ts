@@ -2,6 +2,8 @@ import type { IDailyRecord, IWordProgress } from './progress'
 import { DailyRecord, WordProgress } from './progress'
 import type { IWordRecord, LetterMistakes } from './record'
 import { WordRecord } from './record'
+import type { ITypingState } from './typingState'
+import { TypingState } from './typingState'
 import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
 import { currentDictIdAtom } from '@/store'
 import { getUtoolsValue, setUtoolsValue } from '@/utils/utools'
@@ -15,14 +17,16 @@ class RecordDB extends Dexie {
   wordRecords!: Table<IWordRecord, number>
   wordProgress!: Table<IWordProgress, number>
   dailyRecords!: Table<IDailyRecord, number>
+  typingStates!: Table<ITypingState, number>
 
   constructor() {
     super('RecordDB')
-    this.version(6)
+    this.version(7)
       .stores({
         wordRecords: '++id,word,timeStamp,dict,[dict+timeStamp]',
         wordProgress: '++id,word,dict,masteryLevel,nextReviewTime,lastReviewTime,[dict+word],[dict+masteryLevel]',
         dailyRecords: '++id,dict,date,[dict+date]',
+        typingStates: '++id,dict,date,[dict+date]',
       })
   }
 }
@@ -32,6 +36,7 @@ export const db = new RecordDB()
 db.wordRecords.mapToClass(WordRecord)
 db.wordProgress.mapToClass(WordProgress)
 db.dailyRecords.mapToClass(DailyRecord)
+db.typingStates.mapToClass(TypingState)
 
 export const resolveDictId = (dictId: string) => {
   if (dictId) return dictId
@@ -165,3 +170,5 @@ export function useSaveWordRecord() {
 export function useSaveLearningRecord() {
   return useCallback(() => Promise.resolve(), [])
 }
+
+export type { ITypingState }

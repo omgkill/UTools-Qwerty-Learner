@@ -67,7 +67,7 @@ export function useStudyStats(): StudyStatsData {
           }
           const dictData = dictMap.get(dictId)
           if (dictData) {
-            const date = dayjs(record.timeStamp * 1000).format('YYYY-MM-DD')
+            const date = dayjs(record.timeStamp).format('YYYY-MM-DD')
             dictData.dates.add(date)
             dictData.words.add(record.word)
             if (record.timeStamp > dictData.lastStudyTime) {
@@ -81,7 +81,7 @@ export function useStudyStats(): StudyStatsData {
           dictName: dictNameMap.get(dictId) || dictId,
           totalDays: data.dates.size,
           totalWords: data.words.size,
-          lastStudyDate: data.lastStudyTime > 0 ? dayjs(data.lastStudyTime * 1000).format('YYYY-MM-DD') : null,
+          lastStudyDate: data.lastStudyTime > 0 ? dayjs(data.lastStudyTime).format('YYYY-MM-DD') : null,
         }))
 
         dictStats.sort((a, b) => {
@@ -193,8 +193,8 @@ export function useWordDetails(dictId: string | null, date: string | null): Word
 
     async function fetchWords() {
       try {
-        const startOfDay = dayjs(date).startOf('day').unix()
-        const endOfDay = dayjs(date).endOf('day').unix()
+        const startOfDay = dayjs(date).startOf('day').valueOf()
+        const endOfDay = dayjs(date).endOf('day').valueOf()
 
         const allWordRecords = await db.wordRecords.where('dict').equals(currentDictId).toArray()
 
@@ -202,7 +202,7 @@ export function useWordDetails(dictId: string | null, date: string | null): Word
         const sortedAllRecords = [...allWordRecords].sort((a, b) => a.timeStamp - b.timeStamp)
         for (const r of sortedAllRecords) {
           if (!wordFirstDateMap.has(r.word)) {
-            wordFirstDateMap.set(r.word, dayjs(r.timeStamp * 1000).format('YYYY-MM-DD'))
+            wordFirstDateMap.set(r.word, dayjs(r.timeStamp).format('YYYY-MM-DD'))
           }
         }
 
@@ -211,7 +211,7 @@ export function useWordDetails(dictId: string | null, date: string | null): Word
         const wordDetails: WordDetail[] = wordRecords
           .map((record) => {
             const firstDateEver = wordFirstDateMap.get(record.word)
-            const currentDate = dayjs(record.timeStamp * 1000).format('YYYY-MM-DD')
+            const currentDate = dayjs(record.timeStamp).format('YYYY-MM-DD')
             // 识别掌握单词：空的timing数组和0错误次数
             const isMastered = record.timing.length === 0 && record.wrongCount === 0
             const type: 'new' | 'review' | 'mastered' = isMastered ? 'mastered' : (firstDateEver === currentDate ? 'new' : 'review')

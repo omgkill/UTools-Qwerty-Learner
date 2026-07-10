@@ -1,13 +1,14 @@
 import type { Word } from '@/typings'
 import type { WordState } from './useWordState'
 import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
-import { getTodayDate, useSaveWordRecord } from '@/utils/db'
-import { MASTERY_LEVELS, WordProgress, getNextReviewTime, updateMasteryLevel } from '@/utils/db/progress'
+import { useSaveWordRecord } from '@/utils/db'
+import { DailyRecord, WordProgress, getNextReviewTime, getTodayDate, updateMasteryLevel } from '@/utils/db/progress'
 import { db } from '@/utils/db'
 import { getTodayStartTime, now } from '@/utils/timeService'
 import { useCallback, useContext, useEffect } from 'react'
 import { currentDictIdAtom } from '@/store'
 import { useAtomValue } from 'jotai'
+import type { IWordProgress } from '@/utils/db/progress'
 
 const onFinishCalledRef = { current: false }
 
@@ -105,15 +106,15 @@ export function useWordCompletion(
   ])
 }
 
-async function updateWordProgress(dictID: string, word: string, isCorrect: boolean, wrongCount: number): Promise<WordProgress | undefined> {
+async function updateWordProgress(dictID: string, word: string, isCorrect: boolean, wrongCount: number): Promise<IWordProgress | undefined> {
   if (!dictID) return undefined
 
-  const progress = await db.wordProgress
+  const existingProgress = await db.wordProgress
     .where('[dict+word]')
     .equals([dictID, word])
     .first()
 
-  const currentProgress = progress || new WordProgress(word, dictID)
+  const currentProgress = existingProgress || new WordProgress(word, dictID)
   const { newLevel } = updateMasteryLevel(currentProgress.masteryLevel, isCorrect, wrongCount)
 
   currentProgress.masteryLevel = newLevel
@@ -133,11 +134,7 @@ async function updateWordProgress(dictID: string, word: string, isCorrect: boole
     currentProgress.streak = 0
   }
 
-  if (progress) {
-    await db.wordProgress.update(progress.id || 0, currentProgress)
-  } else {
-    currentProgress.id = await db.wordProgress.add(currentProgress)
-  }
+  currentProgress.id = await db.wordProgress.put(currentProgress)
 
   return currentProgress
 }
@@ -149,13 +146,12 @@ async function incrementLearned(dictID: string): Promise<void> {
   let record = await db.dailyRecords.where('[dict+date]').equals([dictID, today]).first()
 
   if (!record) {
-    record = { dict: dictID, date: today, reviewedCount: 0, learnedCount: 0, extraReviewedCount: 0, masteredCount: 0, lastUpdateTime: now() }
-    record.id = await db.dailyRecords.add(record)
-  } else {
-    record.learnedCount++
-    record.lastUpdateTime = now()
-    await db.dailyRecords.update(record.id, record)
+    record = new DailyRecord(dictID, today)
   }
+
+  record.learnedCount++
+  record.lastUpdateTime = now()
+  record.id = await db.dailyRecords.put(record)
 }
 
 async function incrementReviewed(dictID: string, isExtra = false): Promise<void> {
@@ -165,15 +161,14 @@ async function incrementReviewed(dictID: string, isExtra = false): Promise<void>
   let record = await db.dailyRecords.where('[dict+date]').equals([dictID, today]).first()
 
   if (!record) {
-    record = { dict: dictID, date: today, reviewedCount: 0, learnedCount: 0, extraReviewedCount: 0, masteredCount: 0, lastUpdateTime: now() }
-    record.id = await db.dailyRecords.add(record)
-  } else {
-    if (isExtra) {
-      record.extraReviewedCount++
-    } else {
-      record.reviewedCount++
-    }
-    record.lastUpdateTime = now()
-    await db.dailyRecords.update(record.id, record)
+    record = new DailyRecord(dictID, today)
   }
+
+  if (isExtra) {
+    record.extraReviewedCount++
+  } else {
+    record.reviewedCount++
+  }
+  record.lastUpdateTime = now()
+  record.id = await db.dailyRecords.put(record)
 }

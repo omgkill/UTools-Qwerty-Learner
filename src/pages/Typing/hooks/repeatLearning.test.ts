@@ -87,14 +87,13 @@ describe('重复学习功能测试', () => {
       await dailyRecordService.incrementReviewed(dictId)
     }
     
-    const todayStart = Math.floor(getTodayStartTime() / 1000)
+    const todayStart = getTodayStartTime()
     
     for (let i = 0; i < 20; i++) {
       await db.wordRecords.add({
         word: `word${i}`,
         dict: dictId,
-        learning: null,
-        timeStamp: todayStart + i * 60,
+        timeStamp: todayStart + i * 60 * 1000,
         timing: [100, 200, 300],
         wrongCount: 0,
         mistakes: {},
@@ -163,14 +162,13 @@ describe('重复学习功能测试', () => {
     const wordList = createWordList(15)
     await wordProgressService.initProgressBatch(dictId, wordList.map((word) => word.name))
     
-    const todayStart = Math.floor(getTodayStartTime() / 1000)
+    const todayStart = getTodayStartTime()
     
     for (let i = 0; i < 15; i++) {
       await db.wordRecords.add({
         word: `word${i}`,
         dict: dictId,
-        learning: null,
-        timeStamp: todayStart + i * 60,
+        timeStamp: todayStart + i * 60 * 1000,
         timing: [100, 200, 300],
         wrongCount: 0,
         mistakes: {},
@@ -221,14 +219,13 @@ describe('重复学习功能测试', () => {
     const wordList = createWordList(20)
     await wordProgressService.initProgressBatch(dictId, wordList.map((word) => word.name))
     
-    const todayStart = Math.floor(getTodayStartTime() / 1000)
+    const todayStart = getTodayStartTime()
     
     for (let i = 0; i < 20; i++) {
       await db.wordRecords.add({
         word: `word${i}`,
         dict: dictId,
-        learning: null,
-        timeStamp: todayStart + i * 60,
+        timeStamp: todayStart + i * 60 * 1000,
         timing: [100, 200, 300],
         wrongCount: 0,
         mistakes: {},

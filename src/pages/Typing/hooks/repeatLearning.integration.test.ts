@@ -47,13 +47,12 @@ describe('RepeatLearningManager 集成测试', () => {
     const wordList = createWordList(20)
     await wordProgressService.initProgressBatch(dictId, wordList.map((word) => word.name))
     
-    const todayStart = Math.floor(getTodayStartTime() / 1000)
+    const todayStart = getTodayStartTime()
     for (let i = 0; i < 20; i++) {
       await db.wordRecords.add({
         word: `word${i}`,
         dict: dictId,
-        learning: null,
-        timeStamp: todayStart + i * 60,
+        timeStamp: todayStart + i * 60 * 1000,
         timing: [100, 200, 300],
         wrongCount: 0,
         mistakes: {},
@@ -232,5 +231,40 @@ describe('RepeatLearningManager 集成测试', () => {
     
     expect(state2?.currentIndex).toBe(8)
     expect(state2?.learningWords.length).toBe(15)
+  })
+
+  it('兼容旧数据：存在多条当天状态时，应恢复最新进度并清理旧记录', async () => {
+    const today = getTodayDate()
+    const learningWords = createWordList(10).map((word, index) => ({ ...word, index }))
+
+    await db.typingStates.add({
+      dict: dictId,
+      date: today,
+      isRepeatLearning: true,
+      learningWords,
+      currentIndex: 0,
+    })
+
+    await db.typingStates.add({
+      dict: dictId,
+      date: today,
+      isRepeatLearning: true,
+      learningWords,
+      currentIndex: 6,
+    })
+
+    const manager = new RepeatLearningManager()
+    const restored = await manager.initialize(dictId)
+
+    expect(restored?.currentIndex).toBe(6)
+    expect(manager.getCurrentIndex()).toBe(6)
+
+    const savedStates = await db.typingStates
+      .where('[dict+date]')
+      .equals([dictId, today])
+      .toArray()
+
+    expect(savedStates).toHaveLength(1)
+    expect(savedStates[0]?.currentIndex).toBe(6)
   })
 })

@@ -106,7 +106,7 @@ const ConsolidateTypingAppInner: React.FC<ConsolidateTypingAppInnerProps> = ({ c
 
       // 获取已学习但未掌握的单词（masteryLevel > 0 && masteryLevel < 7）
       const allProgress = await db.wordProgress
-        .where('dictId')
+        .where('dict')
         .equals(currentDictId)
         .toArray()
 

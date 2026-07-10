@@ -24,7 +24,7 @@
     "immer": "^9.0.21",
     "jotai": "^2.0.3",
     "mdict": "^1.0.3",
-    "pako": "^2.1.0",
+    "pako": "^2.2.0",
     "react": "^18.2.0",
     "react-activity-calendar": "^2.0.2",
     "react-dom": "^18.2.0",

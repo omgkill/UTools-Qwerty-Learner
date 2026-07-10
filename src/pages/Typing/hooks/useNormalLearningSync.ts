@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react'
 import type { WordWithIndex } from '@/typings'
-import type { TypingAction } from '../store'
+import type { TypingStateAction } from '../store'
+import { TypingStateActionType } from '../store'
 
 interface UseNormalLearningSyncProps {
   isActive: boolean
   words: WordWithIndex[] | undefined
   isTyping: boolean
-  dispatch: React.Dispatch<TypingAction>
+  dispatch: React.Dispatch<TypingStateAction>
 }
 
 export function useNormalLearningSync({

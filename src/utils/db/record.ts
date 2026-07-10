@@ -1,3 +1,5 @@
+import { now } from '@/utils/timeService'
+
 export interface IWordRecord {
   word: string
   timeStamp: number
@@ -21,7 +23,7 @@ export class WordRecord implements IWordRecord {
 
   constructor(word: string, dict: string, timing: number[], wrongCount: number, mistakes: LetterMistakes) {
     this.word = word
-    this.timeStamp = Date.now()
+    this.timeStamp = now()
     this.dict = dict
     this.timing = timing
     this.wrongCount = wrongCount

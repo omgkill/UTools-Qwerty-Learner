@@ -15,67 +15,15 @@ import { useKeyboardStartListener } from './hooks/useKeyboardStartListener'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
 import type { Word, WordBank, WordWithIndex } from '@/typings'
+import { getRepeatLearningWords } from '@/services'
 import { currentDictIdAtom } from '@/store'
 import { db } from '@/utils/db'
-import { getTodayStartTime } from '@/utils/timeService'
+import { useRepeatLearningManager } from './hooks/useRepeatLearningManager'
 import { useAtomValue } from 'jotai'
 import type React from 'react'
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useImmerReducer } from 'use-immer'
-
-const REPEAT_PROGRESS_KEY = 'repeat-learning-progress'
-
-type SavedProgress = {
-  dictId: string
-  date: string
-  index: number
-  wordNames: string[]
-}
-
-function getTodayDate(): string {
-  return new Date(getTodayStartTime()).toISOString().split('T')[0]
-}
-
-function shuffleWithSeed<T>(array: T[], seed: string): T[] {
-  const result = [...array]
-  let hash = 0
-  for (let i = 0; i < seed.length; i++) {
-    hash = ((hash << 5) - hash) + seed.charCodeAt(i)
-    hash = hash & hash
-  }
-  
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.abs((hash = (hash * 1103515245 + 12345) & 0x7fffffff)) % (i + 1)
-    ;[result[i], result[j]] = [result[j], result[i]]
-  }
-  return result
-}
-
-function loadSavedProgress(dictId: string): { index: number; wordNames: string[] | null } {
-  try {
-    const saved = localStorage.getItem(REPEAT_PROGRESS_KEY)
-    if (!saved) return { index: 0, wordNames: null }
-    
-    const progress: SavedProgress = JSON.parse(saved)
-    if (progress.dictId === dictId && progress.date === getTodayDate()) {
-      return { index: progress.index, wordNames: progress.wordNames }
-    }
-    return { index: 0, wordNames: null }
-  } catch {
-    return { index: 0, wordNames: null }
-  }
-}
-
-function saveProgress(dictId: string, index: number, wordNames: string[]): void {
-  const progress: SavedProgress = {
-    dictId,
-    date: getTodayDate(),
-    index,
-    wordNames,
-  }
-  localStorage.setItem(REPEAT_PROGRESS_KEY, JSON.stringify(progress))
-}
 
 interface RepeatTypingAppInnerProps {
   currentWordBank: WordBank
@@ -85,6 +33,7 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
   const { state, dispatch } = useTypingContext()
   const currentDictId = useAtomValue(currentDictIdAtom)
   const navigate = useNavigate()
+  const repeatLearningManager = useRepeatLearningManager()
   const isInitializedRef = useRef(false)
 
   const [repeatWords, setRepeatWords] = useState<WordWithIndex[]>([])
@@ -98,73 +47,63 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
 
     setIsLoading(true)
     try {
+      const savedState = await repeatLearningManager.initialize(currentDictId)
+      if (savedState && savedState.learningWords.length > 0) {
+        wordNamesRef.current = savedState.learningWords.map((word) => word.name)
+        setRepeatWords(savedState.learningWords)
+        setCurrentIndex(savedState.currentIndex)
+        setHasWords(true)
+
+        dispatch({
+          type: TypingStateActionType.SET_WORDS,
+          payload: { words: savedState.learningWords },
+        })
+        dispatch({
+          type: TypingStateActionType.SET_CURRENT_INDEX,
+          payload: savedState.currentIndex,
+        })
+        dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: true })
+        isInitializedRef.current = true
+        return
+      }
+
       const wordList = await loadWordList(currentWordBank)
       if (!wordList || wordList.length === 0) {
         setHasWords(false)
         return
       }
 
-      const todayWordRecords = await db.wordRecords
-        .where('[dict+timeStamp]')
-        .between([currentDictId, Math.floor(getTodayStartTime() / 1000)], [currentDictId, Math.floor(getTodayStartTime() / 1000) + 24 * 60 * 60])
-        .toArray()
+      const words = await getRepeatLearningWords({
+        currentDictId,
+        wordList,
+        listWordRecordsInRange: async (dictId, start, end) => {
+          return db.wordRecords
+            .where('[dict+timeStamp]')
+            .between([dictId, start], [dictId, end])
+            .toArray()
+        },
+      })
 
-      const todayWordNames = [...new Set(todayWordRecords.map((r) => r.word))]
-      if (todayWordNames.length === 0) {
+      if (words.length === 0) {
         setHasWords(false)
         return
       }
 
-      const saved = loadSavedProgress(currentDictId)
-      let finalWords: WordWithIndex[] = []
-      let finalIndex = 0
-
-      if (saved.wordNames && saved.wordNames.length > 0) {
-        const savedSet = new Set(saved.wordNames)
-        finalWords = todayWordNames
-          .filter((name) => savedSet.has(name))
-          .map((name) => {
-            const idx = wordList.findIndex((w) => w.name === name)
-            return idx !== -1 ? { ...wordList[idx], index: idx } : null
-          })
-          .filter((w): w is WordWithIndex => w !== null)
-        
-        const orderedNames = saved.wordNames.filter((name) => finalWords.some((w) => w.name === name))
-        finalWords = orderedNames.map((name) => finalWords.find((w) => w.name === name)).filter((w): w is WordWithIndex => w !== undefined)
-        finalIndex = Math.min(saved.index, finalWords.length - 1)
-      } else {
-        const todayWords = todayWordNames
-          .map((name) => {
-            const idx = wordList.findIndex((w) => w.name === name)
-            return idx !== -1 ? { ...wordList[idx], index: idx } : null
-          })
-          .filter((w): w is WordWithIndex => w !== null)
-        
-        const date = getTodayDate()
-        finalWords = shuffleWithSeed(todayWords, `${currentDictId}-${date}`)
-        finalIndex = 0
-      }
-
-      if (finalWords.length === 0) {
-        setHasWords(false)
-        return
-      }
-
-      wordNamesRef.current = finalWords.map((w) => w.name)
-      setRepeatWords(finalWords)
-      setCurrentIndex(finalIndex)
+      wordNamesRef.current = words.map((word) => word.name)
+      setRepeatWords(words)
+      setCurrentIndex(0)
       
       dispatch({
         type: TypingStateActionType.SET_WORDS,
-        payload: { words: finalWords },
+        payload: { words },
       })
       dispatch({
         type: TypingStateActionType.SET_CURRENT_INDEX,
-        payload: finalIndex,
+        payload: 0,
       })
       dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: true })
-      
-      saveProgress(currentDictId, finalIndex, wordNamesRef.current)
+
+      await repeatLearningManager.start(currentDictId, words)
       isInitializedRef.current = true
     } catch (e) {
       console.error('Failed to load repeat words:', e)
@@ -172,7 +111,7 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
     } finally {
       setIsLoading(false)
     }
-  }, [currentDictId, currentWordBank, dispatch])
+  }, [currentDictId, currentWordBank, dispatch, repeatLearningManager])
 
   useEffect(() => {
     loadRepeatWords()
@@ -215,14 +154,17 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
     if (!isInitializedRef.current || !currentDictId) return
     if (state.wordListData.index !== currentIndex) {
       setCurrentIndex(state.wordListData.index)
-      saveProgress(currentDictId, state.wordListData.index, wordNamesRef.current)
+      void repeatLearningManager.updateIndex(currentDictId, state.wordListData.index)
     }
-  }, [state.wordListData.index, currentIndex, currentDictId])
+  }, [state.wordListData.index, currentIndex, currentDictId, repeatLearningManager])
 
   const handleExitRepeatLearning = useCallback(() => {
     dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: false })
+    if (currentDictId) {
+      void repeatLearningManager.clear(currentDictId)
+    }
     navigate('/')
-  }, [dispatch, navigate])
+  }, [currentDictId, dispatch, navigate, repeatLearningManager])
 
   useConfetti(false)
 

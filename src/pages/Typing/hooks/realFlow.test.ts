@@ -140,15 +140,14 @@ describe('模拟真实 React 流程测试', () => {
     dispatch({ type: TypingStateActionType.SET_IS_TYPING, payload: true })
 
     // 学习20个单词
-    const todayStart = Math.floor(getTodayStartTime() / 1000)
+    const todayStart = getTodayStartTime()
     for (let i = 0; i < 20; i++) {
       const currentWord = state.wordListData.words[state.wordListData.index]
       if (!currentWord) break
       await db.wordRecords.add({
         word: currentWord.name,
         dict: dictId,
-        learning: null,
-        timeStamp: todayStart + i * 60,
+        timeStamp: todayStart + i * 60 * 1000,
         timing: [100, 200, 300],
         wrongCount: 0,
         mistakes: {},

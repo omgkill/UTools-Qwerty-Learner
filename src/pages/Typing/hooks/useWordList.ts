@@ -9,6 +9,7 @@ import useSWR from 'swr'
 import type { LearningType } from './learningLogic'
 import type { LearningMode } from './useTypingMode'
 import { DailyRecord, getTodayDate } from '@/utils/db/progress'
+import { now } from '@/utils/timeService'
 
 export type { LearningType }
 
@@ -116,7 +117,7 @@ export function useWordList(mode: LearningMode | null): UseWordListResult {
             .toArray()
             .then((allProgress) => {
               const dueWords = allProgress.filter(
-                (p) => p.nextReviewTime <= Date.now() && p.reps > 0 && p.masteryLevel < 7,
+                (p) => p.nextReviewTime <= now() && p.reps > 0 && p.masteryLevel < 7,
               )
               const dueWordSet = new Set(dueWords.slice(0, limit).map((p) => p.word))
               return wordList

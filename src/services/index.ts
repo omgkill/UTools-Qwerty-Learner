@@ -5,7 +5,7 @@ import { determineLearningType } from '@/pages/Typing/hooks/learningLogic'
 import type { LearningType } from '@/pages/Typing/hooks/learningLogic'
 import type Dexie from 'dexie'
 import type { Table } from 'dexie'
-import { getTodayStartTime, getTomorrowDateString, now } from '@/utils/timeService'
+import { getTodayStartTime, now } from '@/utils/timeService'
 
 type WordProgressTables = {
   wordProgress: Table<IWordProgress, number>
@@ -47,7 +47,7 @@ export class WordProgressService {
     if (existing) return existing
 
     const progress = new WordProgress(word, dictID)
-    progress.id = await this.wordProgress.add(progress)
+    progress.id = await this.wordProgress.put(progress)
     return progress
   }
 
@@ -70,17 +70,12 @@ export class WordProgressService {
       progress = new WordProgress(word, dictID)
     }
 
-    progress.masteryLevel = MASTERY_LEVELS.MASTERED
+      progress.masteryLevel = MASTERY_LEVELS.MASTERED
     progress.nextReviewTime = now() + 30 * 24 * 60 * 60 * 1000
     progress.lastReviewTime = now()
     progress.correctCount++
     progress.streak++
-
-    if (progress.id) {
-      await this.wordProgress.update(progress.id, progress)
-    } else {
-      progress.id = await this.wordProgress.add(progress)
-    }
+    progress.id = await this.wordProgress.put(progress)
 
     return progress
   }
@@ -91,11 +86,7 @@ export class WordProgressService {
     isCorrect: boolean,
     wrongCount: number,
   ): Promise<IWordProgress> {
-    let progress = await this.getProgress(dictID, word)
-
-    if (!progress) {
-      progress = new WordProgress(word, dictID)
-    }
+    const progress = (await this.getProgress(dictID, word)) ?? new WordProgress(word, dictID)
 
     const wasFirstAttempt = (progress.reps || 0) === 0
     const { newLevel } = updateMasteryLevel(progress.masteryLevel, isCorrect, wrongCount)
@@ -117,11 +108,7 @@ export class WordProgressService {
       progress.streak = 0
     }
 
-    if (progress.id) {
-      await this.wordProgress.update(progress.id, progress)
-    } else {
-      progress.id = await this.wordProgress.add(progress)
-    }
+    progress.id = await this.wordProgress.put(progress)
 
     return progress
   }
@@ -195,7 +182,7 @@ export class DailyRecordService {
 
     if (!record) {
       record = new DailyRecord(dictID, today)
-      record.id = await this.dailyRecords.add(record)
+      record.id = await this.dailyRecords.put(record)
     }
 
     return record
@@ -211,11 +198,7 @@ export class DailyRecordService {
     }
     record.lastUpdateTime = now()
 
-    if (record.id) {
-      await this.dailyRecords.update(record.id, record)
-    } else {
-      record.id = await this.dailyRecords.add(record)
-    }
+    record.id = await this.dailyRecords.put(record)
 
     return record
   }
@@ -226,11 +209,7 @@ export class DailyRecordService {
     record.learnedCount++
     record.lastUpdateTime = now()
 
-    if (record.id) {
-      await this.dailyRecords.update(record.id, record)
-    } else {
-      record.id = await this.dailyRecords.add(record)
-    }
+    record.id = await this.dailyRecords.put(record)
 
     return record
   }
@@ -241,11 +220,7 @@ export class DailyRecordService {
     record.masteredCount++
     record.lastUpdateTime = now()
 
-    if (record.id) {
-      await this.dailyRecords.update(record.id, record)
-    } else {
-      record.id = await this.dailyRecords.add(record)
-    }
+    record.id = await this.dailyRecords.put(record)
 
     return record
   }
@@ -339,8 +314,8 @@ export async function getRepeatLearningWords(params: RepeatLearningParams): Prom
     return []
   }
 
-  const todayStart = Math.floor(getTodayStartTime() / 1000)
-  const todayEnd = todayStart + 24 * 60 * 60
+  const todayStart = getTodayStartTime()
+  const todayEnd = todayStart + 24 * 60 * 60 * 1000
 
   const todayRecords = await listWordRecordsInRange(currentDictId, todayStart, todayEnd)
   const todayWordNames = [...new Set(todayRecords.map((record) => record.word))]
@@ -360,7 +335,7 @@ export async function getRepeatLearningWords(params: RepeatLearningParams): Prom
     return []
   }
 
-  return [...repeatWords].sort(() => Math.random() - 0.5)
+  return repeatWords
 }
 
 export type MasteredFlowParams = {

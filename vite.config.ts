@@ -48,7 +48,6 @@ export default defineConfig(async () => {
               'react-toastify',
               'react-tooltip',
             ],
-            'vendor-echarts': ['echarts'],
             'vendor-dexie': ['dexie', 'dexie-react-hooks', 'dexie-export-import'],
             'vendor-misc': ['dayjs', 'immer', 'use-immer', 'classnames', 'swr'],
           },

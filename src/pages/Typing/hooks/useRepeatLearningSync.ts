@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { WordWithIndex } from '@/typings'
-import type { TypingAction } from '../store'
+import type { TypingStateAction } from '../store'
+import { TypingStateActionType } from '../store'
 
 interface UseRepeatLearningSyncProps {
   isActive: boolean
   dictId: string | null
-  dispatch: React.Dispatch<TypingAction>
+  dispatch: React.Dispatch<TypingStateAction>
   onStateRestored?: (words: WordWithIndex[], index: number) => void
 }
 

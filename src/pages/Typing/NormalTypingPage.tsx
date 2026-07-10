@@ -18,7 +18,7 @@ import { useNormalLearningSync } from './hooks/useNormalLearningSync'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
 import type { WordBank } from '@/typings'
-import { LearningService, handleMasteredFlow } from '@/services'
+import { DailyRecordService, WordProgressService, handleMasteredFlow } from '@/services'
 import { WordRecord } from '@/utils/db/record'
 import { db } from '@/utils/db'
 import { currentDictIdAtom } from '@/store'
@@ -42,8 +42,8 @@ interface NormalTypingAppInnerProps {
 const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWordBank }) => {
   const { state, dispatch } = useTypingContext()
 
-  // 使用懒加载的 LearningService 实例
-  const learningService = useMemo(() => new LearningService(db), [])
+  const wordProgressService = useMemo(() => new WordProgressService(db), [])
+  const dailyRecordService = useMemo(() => new DailyRecordService(db), [])
 
   const {
     words,
@@ -102,26 +102,16 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
 
   const handleMastered = useCallback(async () => {
     const currentWord = state.wordListData.words?.[state.wordListData.index]
-
-    // 标记单词为已掌握
-    if (currentWord && dictID) {
-      await learningService.markAsMastered(dictID, currentWord.name)
-    }
-
-    // 更新今日掌握计数
-    if (dictID) {
-      await learningService.incrementMastered(dictID)
-    }
+    if (!currentWord || !dictID) return
 
     const result = await handleMasteredFlow({
       currentWord,
-      markAsMastered: async (word: string) => {
-        if (dictID) return learningService.markAsMastered(dictID, word)
-        throw new Error('No dict ID')
-      },
+      markAsMastered: (word: string) => wordProgressService.markAsMastered(dictID, word),
       getNextNewWord,
       createWordRecord,
     })
+
+    await dailyRecordService.incrementMastered(dictID)
 
     if (result.replacementWord) {
       dispatch({ type: TypingStateActionType.ADD_REPLACEMENT_WORD, payload: result.replacementWord })
@@ -130,7 +120,7 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
     if (result.shouldSkip) {
       dispatch({ type: TypingStateActionType.SKIP_WORD })
     }
-  }, [state.wordListData.words, state.wordListData.index, dictID, learningService, dispatch, getNextNewWord, createWordRecord])
+  }, [state.wordListData.words, state.wordListData.index, dictID, wordProgressService, getNextNewWord, createWordRecord, dailyRecordService, dispatch])
 
   useTypingHotkeys(state.isImmersiveMode)
 
