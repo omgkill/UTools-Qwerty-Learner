@@ -1,5 +1,5 @@
+import type { DictStats } from '@/features/analysis/presentation/hooks/useStudyStats'
 import type { FC } from 'react'
-import type { DictStats } from '../hooks/useStudyStats'
 
 interface DictListProps {
   dicts: DictStats[]
@@ -33,9 +33,7 @@ const DictList: FC<DictListProps> = ({ dicts, selectedDictId, onSelectDict, isLo
           key={dict.dictId}
           onClick={() => onSelectDict(dict.dictId)}
           className={`w-full rounded-lg p-4 text-left transition-all ${
-            selectedDictId === dict.dictId
-              ? 'bg-indigo-600 text-white'
-              : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+            selectedDictId === dict.dictId ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -45,9 +43,7 @@ const DictList: FC<DictListProps> = ({ dicts, selectedDictId, onSelectDict, isLo
                 学习 {dict.totalDays} 天 · {dict.totalWords} 词
               </div>
             </div>
-            {dict.lastStudyDate && (
-              <div className="text-sm opacity-60">最近: {dict.lastStudyDate}</div>
-            )}
+            {dict.lastStudyDate && <div className="text-sm opacity-60">最近: {dict.lastStudyDate}</div>}
           </div>
         </button>
       ))}

@@ -1,6 +1,6 @@
-import type { FC } from 'react'
-import type { DayStats } from '../hooks/useStudyStats'
+import type { DayStats } from '@/features/analysis/presentation/hooks/useStudyStats'
 import dayjs from 'dayjs'
+import type { FC } from 'react'
 
 interface DayListProps {
   days: DayStats[]
@@ -44,25 +44,16 @@ const DayList: FC<DayListProps> = ({ days, selectedDate, onSelectDate, onBack, i
             key={day.date}
             onClick={() => onSelectDate(day.date)}
             className={`w-full rounded-lg p-4 text-left transition-all ${
-              selectedDate === day.date
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+              selectedDate === day.date ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
             }`}
           >
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium">{dayjs(day.date).format('YYYY年MM月DD日')}</div>
                 <div className="mt-1 text-sm opacity-80">
-                  共 {day.totalWords} 词
-                  {day.learnedCount > 0 && (
-                    <span className="ml-2 text-green-300">新学 {day.learnedCount}</span>
-                  )}
-                  {day.reviewedCount > 0 && (
-                    <span className="ml-2 text-blue-300">复习 {day.reviewedCount}</span>
-                  )}
-                  {day.masteredCount > 0 && (
-                    <span className="ml-2 text-purple-300">掌握 {day.masteredCount}</span>
-                  )}
+                  共 {day.totalWords} 词{day.learnedCount > 0 && <span className="ml-2 text-green-300">新学 {day.learnedCount}</span>}
+                  {day.reviewedCount > 0 && <span className="ml-2 text-blue-300">复习 {day.reviewedCount}</span>}
+                  {day.masteredCount > 0 && <span className="ml-2 text-purple-300">掌握 {day.masteredCount}</span>}
                 </div>
               </div>
               <div className="text-gray-400">→</div>

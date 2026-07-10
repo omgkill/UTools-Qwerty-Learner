@@ -1,8 +1,8 @@
 import DayList from './components/DayList'
 import DictList from './components/DictList'
 import WordDetailList from './components/WordDetailList'
-import { useDayStats, useStudyStats, useWordDetails } from './hooks/useStudyStats'
 import Layout from '@/components/Layout'
+import { useDayStats, useStudyStats, useWordDetails } from '@/features/analysis/presentation/hooks/useStudyStats'
 import * as ScrollArea from '@radix-ui/react-scroll-area'
 import { useCallback, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
@@ -55,14 +55,9 @@ const Analysis = () => {
         <IconX className="absolute right-20 top-10 mr-2 h-7 w-7 cursor-pointer text-gray-400" onClick={onBack} />
         <ScrollArea.Root className="flex-1 overflow-y-auto">
           <ScrollArea.Viewport className="h-full w-auto pb-[20rem] [&>div]:!block">
-            <div className="mx-4 my-8 h-auto w-auto overflow-hidden rounded-lg p-8 shadow-lg bg-gray-700 bg-opacity-50">
+            <div className="mx-4 my-8 h-auto w-auto overflow-hidden rounded-lg bg-gray-700 bg-opacity-50 p-8 shadow-lg">
               {viewState === 'dicts' && (
-                <DictList
-                  dicts={dictStats}
-                  selectedDictId={selectedDictId}
-                  onSelectDict={handleSelectDict}
-                  isLoading={isDictLoading}
-                />
+                <DictList dicts={dictStats} selectedDictId={selectedDictId} onSelectDict={handleSelectDict} isLoading={isDictLoading} />
               )}
               {viewState === 'days' && (
                 <DayList
@@ -74,12 +69,7 @@ const Analysis = () => {
                 />
               )}
               {viewState === 'words' && (
-                <WordDetailList
-                  words={words}
-                  date={selectedDate}
-                  onBack={handleBackToDays}
-                  isLoading={isWordLoading}
-                />
+                <WordDetailList words={words} date={selectedDate} onBack={handleBackToDays} isLoading={isWordLoading} />
               )}
             </div>
           </ScrollArea.Viewport>

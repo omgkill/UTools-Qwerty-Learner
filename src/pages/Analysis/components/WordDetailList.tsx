@@ -1,6 +1,6 @@
-import type { FC } from 'react'
-import type { WordDetail } from '../hooks/useStudyStats'
+import type { WordDetail } from '@/features/analysis/presentation/hooks/useStudyStats'
 import dayjs from 'dayjs'
+import type { FC } from 'react'
 
 interface WordDetailListProps {
   words: WordDetail[]
@@ -51,9 +51,7 @@ const WordDetailList: FC<WordDetailListProps> = ({ words, date, onBack, isLoadin
                 title={`错误次数: ${word.wrongCount}`}
               >
                 <span className="font-medium">{word.word}</span>
-                {word.wrongCount > 0 && (
-                  <span className="ml-1 text-xs text-red-300">({word.wrongCount}错)</span>
-                )}
+                {word.wrongCount > 0 && <span className="ml-1 text-xs text-red-300">({word.wrongCount}错)</span>}
               </div>
             ))}
           </div>
@@ -71,9 +69,7 @@ const WordDetailList: FC<WordDetailListProps> = ({ words, date, onBack, isLoadin
                 title={`错误次数: ${word.wrongCount}`}
               >
                 <span className="font-medium">{word.word}</span>
-                {word.wrongCount > 0 && (
-                  <span className="ml-1 text-xs text-red-300">({word.wrongCount}错)</span>
-                )}
+                {word.wrongCount > 0 && <span className="ml-1 text-xs text-red-300">({word.wrongCount}错)</span>}
               </div>
             ))}
           </div>
@@ -85,11 +81,7 @@ const WordDetailList: FC<WordDetailListProps> = ({ words, date, onBack, isLoadin
           <h4 className="mb-2 font-medium text-purple-300">已掌握单词</h4>
           <div className="flex flex-wrap gap-2">
             {masteredWords.map((word, index) => (
-              <div
-                key={`${word.word}-${index}`}
-                className="rounded-lg bg-purple-900/30 px-3 py-2 text-purple-200"
-                title="已掌握"
-              >
+              <div key={`${word.word}-${index}`} className="rounded-lg bg-purple-900/30 px-3 py-2 text-purple-200" title="已掌握">
                 <span className="font-medium">{word.word}</span>
                 <span className="ml-1 text-xs">✓</span>
               </div>
