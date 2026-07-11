@@ -49,15 +49,10 @@ export function useWordCompletion(
           word: word.name,
           isCorrect,
           wrongCount: wordState.wrongCount,
-          letterTimeArray: wordState.letterTimeArray,
-          letterMistake: wordState.letterMistake,
           isExtraReview,
         })
-          .then(({ wordRecordId }) => {
-            console.log(`[DB] completeWord done in ${performance.now() - startTime}ms, id=${wordRecordId}`)
-            if (wordRecordId > 0) {
-              dispatch({ type: TypingStateActionType.ADD_WORD_RECORD_ID, payload: wordRecordId })
-            }
+          .then(() => {
+            console.log(`[DB] completeWord done in ${performance.now() - startTime}ms`)
           })
           .catch((e) => console.error('Failed to save word records:', e))
       }
@@ -67,8 +62,6 @@ export function useWordCompletion(
   }, [
     wordState.isFinished,
     wordState.hasMadeInputWrong,
-    wordState.letterTimeArray,
-    wordState.letterMistake,
     wordState.wordName,
     wordState.wrongCount,
     word.name,

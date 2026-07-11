@@ -26,19 +26,6 @@ export type TypingDailyRecord = {
   lastUpdateTime: number
 }
 
-export type LetterMistakes = {
-  [index: number]: string[]
-}
-
-export type TypingWordRecord = {
-  word: string
-  timeStamp: number
-  dict: string
-  timing: number[]
-  wrongCount: number
-  mistakes: LetterMistakes
-}
-
 export type LearningState = {
   reviewedCount: number
   learnedCount: number

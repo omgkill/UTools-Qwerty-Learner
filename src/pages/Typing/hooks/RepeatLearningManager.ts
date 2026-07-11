@@ -3,7 +3,7 @@ import type { TypingStateRepository } from '@/features/typing/application/ports'
 import type { TypingStateSnapshot } from '@/features/typing/domain'
 import { dexieTypingStateRepository } from '@/infra/repositories/typing-state.repository.dexie'
 import type { WordWithIndex } from '@/typings'
-import { getTodayDate } from '@/features/typing/domain/learning-config'
+import { getTodayDate } from '@/utils/db/progress'
 
 export type SavedRepeatLearningState = TypingStateSnapshot
 

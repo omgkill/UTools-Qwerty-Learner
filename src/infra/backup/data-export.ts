@@ -29,7 +29,6 @@ export async function exportDatabase(callback: (exportProgress: ExportProgress) 
       return callback({ totalRows, completedRows, done })
     },
   })
-  await db.wordRecords.count()
 
   const json = await blob.text()
   const compressed = pako.gzip(json)

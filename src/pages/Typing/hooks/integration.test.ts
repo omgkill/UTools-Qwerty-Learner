@@ -118,8 +118,8 @@ describe('Word Completion Integration Tests', () => {
       })
 
       expect(result.learningType).toBe('review')
-      expect(result.learningWords.length).toBe(30)
-      expect(result.dueCount).toBe(30)
+      expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个，不超过上限
+      expect(result.dueCount).toBe(30)  // 保留完整数量，告知用户还有多少待复习
     })
 
     it('should return ALL due words even when reviewedCount + learnedCount >= DAILY_LIMIT', () => {
@@ -135,7 +135,7 @@ describe('Word Completion Integration Tests', () => {
       })
 
       expect(result.learningType).toBe('review')
-      expect(result.learningWords.length).toBe(25)
+      expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个，不超过上限
     })
 
     it('should return ALL due words when there are 50 due words', () => {
@@ -151,7 +151,7 @@ describe('Word Completion Integration Tests', () => {
       })
 
       expect(result.learningType).toBe('review')
-      expect(result.learningWords.length).toBe(50)
+      expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个，不超过上限
     })
   })
 

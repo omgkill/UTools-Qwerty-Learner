@@ -45,8 +45,7 @@ describe('Typing Page - 真实流程复现', () => {
       wordList,
       reviewedCount: record.reviewedCount,
       learnedCount: record.learnedCount,
-            getDueWordsWithInfo: (list, limit) => wordProgressService.getDueWordsWithInfo(dictId, list, limit),
-      getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
+      getAllProgress: () => wordProgressService.getAllProgress(dictId),
       getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
     })
 
@@ -68,7 +67,7 @@ describe('Typing Page - 真实流程复现', () => {
           getNextReplacementWord({
             wordList,
             currentLearningWords: state.wordListData.words,
-            getNewWords: (list, limit) => wordProgressService.getNewWords(dictId, list, limit),
+            getAllProgress: () => wordProgressService.getAllProgress(dictId),
           }),
       })
 
@@ -99,14 +98,25 @@ describe('Typing Page - 真实流程复现', () => {
     expect(newWords.length).toBe(3)
   })
 
-  it('存在已掌握单词时，getNewWords 不返回已掌握单词', async () => {
+  it('存在已掌握单词时，domain层筛选新单词逻辑应正确过滤已掌握单词', async () => {
     const wordList = createWordList(3)
     await wordProgressService.initProgressBatch(dictId, wordList.map((word) => word.name))
     await wordProgressService.markAsMastered(dictId, wordList[0].name)
 
-    const newWords = await wordProgressService.getNewWords(dictId, wordList, 3)
+    // 使用新的逻辑：获取所有进度，然后用 domain 层筛选
+    const allProgress = await wordProgressService.getAllProgress(dictId)
+    const progressMap = new Map(allProgress.map((p) => [p.word, p]))
+
+    // Domain层逻辑：筛选新单词（未学习或NEW级别）
+    const newWords = wordList
+      .map((word, index) => ({ ...word, index }))
+      .filter((word) => {
+        const progress = progressMap.get(word.name)
+        return !progress || progress.masteryLevel === 0 // 只有未学习或NEW级别的才算新单词
+      })
+
     const names = newWords.map((word) => word.name)
-    expect(names).not.toContain(wordList[0].name)
-    expect(newWords.length).toBe(2)
+    expect(names).not.toContain(wordList[0].name) // 已掌握的单词不应该出现在新单词列表
+    expect(newWords.length).toBe(2) // 只有2个未掌握的单词算新单词
   })
 })

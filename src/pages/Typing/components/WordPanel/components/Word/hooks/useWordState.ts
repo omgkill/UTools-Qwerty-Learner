@@ -1,10 +1,14 @@
 import { EXPLICIT_SPACE } from '@/constants'
 import { getLocalTimeString } from '@/utils/timeService'
-import type { LetterMistakes } from '@/utils/db/record'
 import { useImmer } from 'use-immer'
 import { useEffect, useRef } from 'react'
 
 export type LetterState = 'normal' | 'correct' | 'wrong'
+
+// 本地类型，仅用于 UI 显示，不持久化
+export type LetterMistakes = {
+  [index: number]: string[]
+}
 
 export type WordState = {
   wordName: string

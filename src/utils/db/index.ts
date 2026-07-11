@@ -1,22 +1,19 @@
 import type { IDailyRecord, IWordProgress } from './progress'
 import { DailyRecord, WordProgress } from './progress'
-import type { IWordRecord, LetterMistakes } from './record'
-import { WordRecord } from './record'
 import type { ITypingState } from './typingState'
 import { TypingState } from './typingState'
 import type { Table } from 'dexie'
 import Dexie from 'dexie'
 
 class RecordDB extends Dexie {
-  wordRecords!: Table<IWordRecord, number>
   wordProgress!: Table<IWordProgress, number>
   dailyRecords!: Table<IDailyRecord, number>
   typingStates!: Table<ITypingState, number>
 
   constructor() {
     super('RecordDB')
-    this.version(7).stores({
-      wordRecords: '++id,word,timeStamp,dict,[dict+timeStamp]',
+    // 版本 8：删除 wordRecords 表，只保留 wordProgress, dailyRecords, typingStates
+    this.version(8).stores({
       wordProgress: '++id,word,dict,masteryLevel,nextReviewTime,lastReviewTime,[dict+word],[dict+masteryLevel]',
       dailyRecords: '++id,dict,date,[dict+date]',
       typingStates: '++id,dict,date,[dict+date]',
@@ -26,7 +23,6 @@ class RecordDB extends Dexie {
 
 export const db = new RecordDB()
 
-db.wordRecords.mapToClass(WordRecord)
 db.wordProgress.mapToClass(WordProgress)
 db.dailyRecords.mapToClass(DailyRecord)
 db.typingStates.mapToClass(TypingState)
@@ -38,11 +34,6 @@ export const resolveDictId = (dictId: string) => {
   if (!utoolsDb) return dictId
   const doc = utoolsDb.get('currentWordBank')
   return typeof doc?.data === 'string' && doc.data ? doc.data : dictId
-}
-
-export type WordKeyLogger = {
-  letterTimeArray: number[]
-  letterMistake: LetterMistakes
 }
 
 /**

@@ -1,9 +1,6 @@
-import type { AnalysisDailyRecord, AnalysisWordProgress, AnalysisWordRecord } from '../domain/types'
+import type { AnalysisDailyRecord, AnalysisWordProgress } from '../domain/types'
 
 export interface AnalysisRepository {
-  getAllWordRecords(): Promise<AnalysisWordRecord[]>
   getDailyRecordsByDict(dictId: string): Promise<AnalysisDailyRecord[]>
-  getWordRecordsByDict(dictId: string): Promise<AnalysisWordRecord[]>
   getWordProgressByDict(dictId: string): Promise<AnalysisWordProgress[]>
-  getWordRecordsByTimeRange(startTime: number, endTime: number): Promise<AnalysisWordRecord[]>
 }

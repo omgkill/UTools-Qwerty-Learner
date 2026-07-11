@@ -2,7 +2,6 @@ import { getNextReplacementWord, getRepeatLearningWords, getTypingSession } from
 import type { LearningType } from '@/features/typing/domain'
 import { dexieDailyRecordRepository } from '@/infra/repositories/daily-record.repository.dexie'
 import { dexieWordProgressRepository } from '@/infra/repositories/word-progress.repository.dexie'
-import { dexieWordRecordRepository } from '@/infra/repositories/word-record.repository.dexie'
 import { utoolsLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository.utools'
 import type { LearningMode } from '@/pages/Typing/hooks/useTypingMode'
 import { dailyRecordAtom } from '@/pages/Typing/store/atoms'
@@ -115,7 +114,8 @@ export function useWordList(mode: LearningMode | null): UseWordListResult {
     } finally {
       setIsLoadingLearningWords(false)
     }
-  }, [wordList, currentWordBank, todayReviewed, todayLearned, isLoadingLearningWords, mode, currentDictId])
+    // 注意：不依赖 todayReviewed/todayLearned，避免学习过程中频繁重新加载
+  }, [wordList, currentWordBank, isLoadingLearningWords, mode, currentDictId])
 
   const reloadWords = useCallback(() => {
     if (mode !== 'normal') {
@@ -133,7 +133,7 @@ export function useWordList(mode: LearningMode | null): UseWordListResult {
     return getRepeatLearningWords({
       currentDictId,
       wordList,
-      wordRecordRepository: dexieWordRecordRepository,
+      wordProgressRepository: dexieWordProgressRepository,
     })
   }, [wordList, currentDictId])
 

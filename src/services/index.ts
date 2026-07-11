@@ -4,7 +4,7 @@ import type { LearningType } from '@/features/typing/domain'
 import { DexieDailyRecordRepository } from '@/infra/repositories/daily-record.repository.dexie'
 import { DexieWordProgressRepository } from '@/infra/repositories/word-progress.repository.dexie'
 import type { Word, WordWithIndex } from '@/typings'
-import { getTodayStartTime } from '@/utils/timeService'
+import { getTodayStartTime, now } from '@/utils/timeService'
 
 export class WordProgressService extends DexieWordProgressRepository {}
 
@@ -14,8 +14,7 @@ export type TypingSessionParams = {
   wordList: Word[]
   reviewedCount: number
   learnedCount: number
-  getDueWordsWithInfo: (wordList: Word[], limit: number) => Promise<WordWithIndex[]>
-  getNewWords: (wordList: Word[], limit: number) => Promise<WordWithIndex[]>
+  getAllProgress: () => Promise<TypingWordProgress[]>
   getWordProgress: (word: string) => Promise<TypingWordProgress | undefined>
 }
 
@@ -30,27 +29,53 @@ export type TypingSessionResult = {
 export type ReplacementWordParams = {
   wordList: Word[]
   currentLearningWords: WordWithIndex[]
-  getNewWords: (wordList: Word[], limit: number) => Promise<WordWithIndex[]>
+  getAllProgress: () => Promise<TypingWordProgress[]>
 }
 
 export async function getNextReplacementWord(params: ReplacementWordParams): Promise<WordWithIndex | null> {
-  const { wordList, currentLearningWords, getNewWords } = params
+  const { wordList, currentLearningWords, getAllProgress } = params
   if (wordList.length === 0) return null
 
   const existing = new Set(currentLearningWords.map((word) => word.name))
-  const candidates = await getNewWords(wordList, 100)
-  const next = candidates.find((word) => !existing.has(word.name))
+  const allProgress = await getAllProgress()
+  const progressMap = new Map(allProgress.map((p) => [p.word, p]))
 
+  // 使用 domain 层逻辑筛选新单词
+  const candidates = wordList
+    .map((word, index) => ({ ...word, index }))
+    .filter((word) => {
+      const progress = progressMap.get(word.name)
+      return !progress || progress.masteryLevel < 7 // 未掌握的单词
+    })
+
+  const next = candidates.find((word) => !existing.has(word.name))
   return next ?? null
 }
 
 export async function loadTypingSession(params: TypingSessionParams): Promise<TypingSessionResult> {
-  const { wordList, reviewedCount, learnedCount, getDueWordsWithInfo, getNewWords, getWordProgress } = params
-  const [dueWords, newWords] = await Promise.all([getDueWordsWithInfo(wordList, 1000), getNewWords(wordList, 1000)])
+  const { wordList, reviewedCount, learnedCount, getAllProgress } = params
 
-  const allProgress = await Promise.all(wordList.slice(0, 500).map(async (word) => getWordProgress(word.name)))
+  // 使用新的 domain 层逻辑
+  const allProgress = await getAllProgress()
+  const currentTime = now()  // ✅ 使用 timeService.now()，支持测试时间调整
 
-  const mastered = allProgress.filter((progress) => progress && progress.masteryLevel >= 7).length
+  // 使用 domain 函数筛选到期单词
+  const dueProgress = allProgress.filter(
+    (progress) => progress.nextReviewTime <= currentTime && progress.reps > 0 && progress.masteryLevel < 7,
+  )
+  const dueWordSet = new Set(dueProgress.map((p) => p.word))
+  const dueWords = wordList.map((word, index) => ({ ...word, index })).filter((word) => dueWordSet.has(word.name))
+
+  // 使用 domain 函数筛选新单词
+  const progressMap = new Map(allProgress.map((p) => [p.word, p]))
+  const newWords = wordList
+    .map((word, index) => ({ ...word, index }))
+    .filter((word) => {
+      const progress = progressMap.get(word.name)
+      return !progress || progress.masteryLevel === 0
+    })
+
+  const mastered = allProgress.filter((progress) => progress.masteryLevel >= 7).length
 
   const result = determineLearningType({
     dueWords,

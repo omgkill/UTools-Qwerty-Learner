@@ -39,7 +39,7 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
   const { state, dispatch } = useTypingContext()
   const markWordAsMastered = useMarkWordMastered()
 
-  const { words, learningType, dueCount, newCount, todayLearned, todayReviewed, todayMastered, getNextNewWord } = useWordList('normal')
+  const { words, learningType, dueCount, newCount, todayLearned, todayReviewed, todayMastered, getNextNewWord, reloadWords } = useWordList('normal')
 
   useNormalLearningSync({
     isActive: true,
@@ -52,6 +52,16 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
 
   useTypingTimer(state.uiState.isTyping)
   useKeyboardStartListener(state.uiState.isTyping, false)
+
+  // 当学完一批单词后，自动重新加载获取下一批
+  useEffect(() => {
+    if (state.uiState.isFinished && learningType !== 'complete' && todayLearned + todayReviewed < 20) {
+      // 学完一批但未达上限，重新加载获取下一批
+      reloadWords()
+      // 重置 isFinished 状态，继续学习
+      dispatch({ type: TypingStateActionType.SET_IS_TYPING, payload: true })
+    }
+  }, [state.uiState.isFinished, learningType, todayLearned, todayReviewed, reloadWords, dispatch])
 
   useEffect(() => {
     const handleModeChange = (mode: string) => {

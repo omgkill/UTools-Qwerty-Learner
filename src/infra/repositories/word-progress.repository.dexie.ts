@@ -107,32 +107,9 @@ export class DexieWordProgressRepository implements WordProgressRepository {
   async getNewWords(dictId: string, allWords: Word[], limit = 20): Promise<WordWithIndex[]> {
     if (!dictId || allWords.length === 0) return []
 
-    const existingProgress = await this.wordProgress.where('dict').equals(dictId).toArray()
-    const progressMap = new Map(existingProgress.map((progress) => [progress.word, progress]))
-
-    return allWords
-      .map((word, index) => ({ ...word, index }))
-      .filter((word) => {
-        const progress = progressMap.get(word.name)
-        return !progress || progress.masteryLevel === MASTERY_LEVELS.NEW
-      })
-      .slice(0, limit)
-  }
-
-  async getDueWords(dictId: string, limit = 20): Promise<TypingWordProgress[]> {
-    const allDictProgress = await this.wordProgress.where('dict').equals(dictId).toArray()
-    const dueWords = allDictProgress.filter(
-      (progress) => progress.nextReviewTime <= now() && progress.reps > 0 && progress.masteryLevel < MASTERY_LEVELS.MASTERED,
-    )
-    return dueWords.slice(0, limit)
-  }
-
-  async getDueWordsWithInfo(dictId: string, allWords: Word[], limit = 20): Promise<WordWithIndex[]> {
-    const dueProgress = await this.getDueWords(dictId, limit)
-    if (dueProgress.length === 0) return []
-
-    const dueWordSet = new Set(dueProgress.map((progress) => progress.word))
-    return allWords.map((word, index) => ({ ...word, index })).filter((word) => dueWordSet.has(word.name))
+    // 只返回单词列表，不在这里判断是否为新词
+    // Application层会用 isWordNew() 来筛选
+    return allWords.map((word, index) => ({ ...word, index })).slice(0, limit)
   }
 
   async getAllProgress(dictId: string): Promise<TypingWordProgress[]> {

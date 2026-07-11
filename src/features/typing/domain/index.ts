@@ -3,11 +3,18 @@ export type {
   DetermineLearningTypeResult,
   LearningState,
   LearningType,
-  LetterMistakes,
   TypingDailyRecord,
   TypingWordProgress,
-  TypingWordRecord,
+  TypingStateSnapshot,
   WordProgressInfo,
 } from './types'
-export { calculateNewWordQuota, calculateRemainingForTarget, determineLearningType, hasReachedDailyTarget } from './learning-rules'
+export {
+  calculateNewWordQuota,
+  calculateRemainingForTarget,
+  determineLearningType,
+  hasReachedDailyTarget,
+  isWordDue,
+  filterDueWords,
+  isWordNew,
+} from './learning-rules'
 export { DEFAULT_DAILY_LIMIT, LEARNING_CONFIG, MASTERY_LEVELS, REVIEW_INTERVALS, getDailyLimit, setDailyLimit } from './learning-config'

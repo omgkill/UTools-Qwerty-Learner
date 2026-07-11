@@ -48,7 +48,8 @@ export class UtoolsDictionaryConfigRepository implements DictionaryConfigReposit
     if (!db) return []
 
     const doc = db.get(id)
-    return Array.isArray(doc?.data) ? (doc.data as CustomDictEntry[]) : []
+    if (!doc) return []
+    return Array.isArray(doc.data) ? (doc.data as CustomDictEntry[]) : []
   }
 
   saveCustomDictEntries(id: string, entries: CustomDictEntry[]): void {

@@ -6,22 +6,20 @@ import { useEffect, useState } from 'react'
 /**
  * 获取指定时间范围内的单词统计
  */
-export function useWordStats(startTimeStamp: number, endTimeStamp: number): WordStats {
+export function useWordStats(dictId: string, startTimeStamp: number, endTimeStamp: number): WordStats {
   const [wordStats, setWordStats] = useState<WordStats>({
     exerciseRecord: [],
     wordRecord: [],
-    wpmRecord: [],
-    accuracyRecord: [],
   })
 
   useEffect(() => {
     const fetchWordStats = async () => {
-      const stats = await getWordStats(dexieAnalysisRepository, startTimeStamp, endTimeStamp)
+      const stats = await getWordStats(dexieAnalysisRepository, dictId, startTimeStamp, endTimeStamp)
       setWordStats(stats)
     }
 
     fetchWordStats()
-  }, [startTimeStamp, endTimeStamp])
+  }, [dictId, startTimeStamp, endTimeStamp])
 
   return wordStats
 }

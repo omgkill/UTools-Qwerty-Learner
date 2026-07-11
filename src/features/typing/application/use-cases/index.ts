@@ -4,4 +4,3 @@ export { getNextReplacementWord, type GetNextReplacementWordParams } from './get
 export { getRepeatLearningWords, type GetRepeatLearningWordsParams } from './get-repeat-learning-words'
 export { getTypingSession, type GetTypingSessionParams, type TypingSessionResult } from './get-typing-session'
 export { markWordMastered, type MarkWordMasteredParams, type MarkWordMasteredResult } from './mark-word-mastered'
-export { saveWordRecord, type SaveWordRecordParams } from './save-word-record'

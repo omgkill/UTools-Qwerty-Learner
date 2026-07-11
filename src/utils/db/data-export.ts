@@ -21,7 +21,6 @@ export async function exportDatabase(callback: (exportProgress: ExportProgress) 
       return callback({ totalRows, completedRows, done })
     },
   })
-  await db.wordRecords.count()
 
   const json = await blob.text()
   const compressed = pako.gzip(json)
@@ -115,13 +114,11 @@ export async function importDatabase2UTools() {
     clearTablesBeforeImport: true,
   })
 
-  const [wordCount, wordProgressCount, dailyRecordCount] = await Promise.all([
-    db.wordRecords.count(),
+  const [wordProgressCount, dailyRecordCount] = await Promise.all([
     db.wordProgress.count(),
     db.dailyRecords.count(),
   ])
   console.log(`[importDatabase2UTools] Data restored successfully:
-    - wordRecords: ${wordCount}
     - wordProgress: ${wordProgressCount}
     - dailyRecords: ${dailyRecordCount}`)
   return true

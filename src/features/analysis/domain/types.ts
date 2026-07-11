@@ -1,5 +1,4 @@
 import type { IDailyRecord, IWordProgress } from '@/utils/db/progress'
-import type { IWordRecord } from '@/utils/db/record'
 
 export interface DictStats {
   dictId: string
@@ -29,6 +28,5 @@ export interface WordBankSummary {
   name: string
 }
 
-export type AnalysisWordRecord = IWordRecord
 export type AnalysisDailyRecord = IDailyRecord
 export type AnalysisWordProgress = IWordProgress

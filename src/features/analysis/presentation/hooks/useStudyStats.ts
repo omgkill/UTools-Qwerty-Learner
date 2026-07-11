@@ -1,7 +1,7 @@
 import { getDayStats, getDictStats, getWordDetails } from '@/features/analysis/application/use-cases'
 import type { DayStats, DictStats, WordDetail } from '@/features/analysis/domain'
 import { dexieAnalysisRepository } from '@/infra/repositories/analysis.repository.dexie'
-import { wordBanksAtom } from '@/store'
+import { currentDictIdAtom, wordBanksAtom } from '@/store'
 import { useAtomValue } from 'jotai'
 import { useEffect, useState } from 'react'
 
@@ -32,13 +32,18 @@ export function useStudyStats(): StudyStatsData {
     error: null,
   })
   const wordBanks = useAtomValue(wordBanksAtom)
+  const dictId = useAtomValue(currentDictIdAtom)
 
   useEffect(() => {
     let cancelled = false
 
     async function fetchStats() {
+      if (!dictId) {
+        setData({ dictStats: [], isLoading: false, error: null })
+        return
+      }
       try {
-        const dictStats = await getDictStats(dexieAnalysisRepository, wordBanks)
+        const dictStats = await getDictStats(dexieAnalysisRepository, dictId, wordBanks)
         if (cancelled) return
         setData({ dictStats, isLoading: false, error: null })
       } catch (e) {
@@ -57,7 +62,7 @@ export function useStudyStats(): StudyStatsData {
     return () => {
       cancelled = true
     }
-  }, [wordBanks])
+  }, [wordBanks, dictId])
 
   return data
 }
@@ -79,7 +84,7 @@ export function useDayStats(dictId: string | null): DayStatsData {
 
     async function fetchDays() {
       try {
-        const days = await getDayStats(dexieAnalysisRepository, dictId)
+        const days = await getDayStats(dexieAnalysisRepository, dictId!)
         if (cancelled) return
         setData({ days, isLoading: false, error: null })
       } catch (e) {
@@ -120,7 +125,7 @@ export function useWordDetails(dictId: string | null, date: string | null): Word
 
     async function fetchWords() {
       try {
-        const words = await getWordDetails(dexieAnalysisRepository, dictId, date)
+        const words = await getWordDetails(dexieAnalysisRepository, dictId!, date!)
         if (cancelled) return
         setData({ words, isLoading: false, error: null })
       } catch (e) {

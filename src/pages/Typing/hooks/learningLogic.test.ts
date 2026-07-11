@@ -61,8 +61,8 @@ describe('determineLearningType', () => {
       })
 
       expect(result.learningType).toBe('review')
-      expect(result.learningWords.length).toBe(30)
-      expect(result.dueCount).toBe(30)
+      expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个，不超过上限
+      expect(result.dueCount).toBe(30)  // 保留完整数量
     })
 
     it('should return ALL due words even when reviewedCount + learnedCount >= DAILY_LIMIT', () => {
@@ -77,7 +77,7 @@ describe('determineLearningType', () => {
       })
 
       expect(result.learningType).toBe('review')
-      expect(result.learningWords.length).toBe(25)
+      expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个
     })
 
     it('should prioritize review over new words', () => {
@@ -115,7 +115,8 @@ describe('determineLearningType', () => {
 
     it('should not add new words when due words > DAILY_LIMIT', () => {
       const dueWords = Array.from({ length: 25 }, (_, i) => createWordWithIndex(`word${i}`, i))
-      const newWords = [createWordWithIndex('extra1', 100), createWordWithIndex('extra2', 101)]
+      const newWords = Array.from({ length: 10 }, (_, i) => createWordWithIndex(`new${i}`, i + 25))
+
       const result = determineLearningType({
         dueWords,
         newWords,
@@ -126,7 +127,7 @@ describe('determineLearningType', () => {
       })
 
       expect(result.learningType).toBe('review')
-      expect(result.learningWords.length).toBe(25)
+      expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个，不包含新词
       expect(result.learningWords.every(w => w.name.startsWith('word'))).toBe(true)
     })
   })
@@ -344,7 +345,7 @@ describe('规则不变式', () => {
     })
 
     expect(result.learningType).toBe('review')
-    expect(result.learningWords.length).toBe(25)
+    expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个
   })
 
   it('should return complete with empty list when no due words and target reached', () => {
@@ -434,8 +435,8 @@ describe('Due Words > DAILY_LIMIT scenarios', () => {
     })
 
     expect(result.learningType).toBe('review')
-    expect(result.learningWords.length).toBe(30)
-    expect(result.dueCount).toBe(30)
+    expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个
+    expect(result.dueCount).toBe(30)  // 保留完整数量
   })
 
   it('should return all 50 due words even when already learned 20 today', () => {
@@ -450,7 +451,7 @@ describe('Due Words > DAILY_LIMIT scenarios', () => {
     })
 
     expect(result.learningType).toBe('review')
-    expect(result.learningWords.length).toBe(50)
+    expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个
   })
 
   it('should return all 100 due words', () => {
@@ -465,6 +466,6 @@ describe('Due Words > DAILY_LIMIT scenarios', () => {
     })
 
     expect(result.learningType).toBe('review')
-    expect(result.learningWords.length).toBe(100)
+    expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个
   })
 })

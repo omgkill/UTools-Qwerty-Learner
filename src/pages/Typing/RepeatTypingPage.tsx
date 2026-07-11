@@ -17,8 +17,8 @@ import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
 import { getRepeatLearningWords } from '@/features/typing/application/use-cases'
 import { loadWordList as loadWordListUseCase } from '@/features/word-bank/application'
+import { dexieWordProgressRepository } from '@/infra/repositories/word-progress.repository.dexie'
 import { utoolsLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository.utools'
-import { dexieWordRecordRepository } from '@/infra/repositories/word-record.repository.dexie'
 import { getMode, onModeChange } from '@/platform/utools'
 import { currentDictIdAtom } from '@/store'
 import type { Word, WordBank, WordWithIndex } from '@/typings'
@@ -79,7 +79,7 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
       const words = await getRepeatLearningWords({
         currentDictId,
         wordList,
-        wordRecordRepository: dexieWordRecordRepository,
+        wordProgressRepository: dexieWordProgressRepository,
       })
 
       if (words.length === 0) {

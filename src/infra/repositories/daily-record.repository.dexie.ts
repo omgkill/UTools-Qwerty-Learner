@@ -27,7 +27,7 @@ export class DexieDailyRecordRepository implements DailyRecordRepository {
       record.id = await this.dailyRecords.put(record)
     }
 
-    return record
+    return this.toTypingDailyRecord(record)
   }
 
   async ensureTodayRecord(dictId: string): Promise<TypingDailyRecord> {
@@ -35,7 +35,12 @@ export class DexieDailyRecordRepository implements DailyRecordRepository {
   }
 
   async incrementReviewed(dictId: string, isExtra = false): Promise<TypingDailyRecord> {
-    const record = await this.getTodayRecord(dictId)
+    const today = getTodayDate()
+    let record = await this.dailyRecords.where('[dict+date]').equals([dictId, today]).first()
+
+    if (!record) {
+      record = new DailyRecord(dictId, today)
+    }
 
     if (isExtra) {
       record.extraReviewedCount++
@@ -45,35 +50,60 @@ export class DexieDailyRecordRepository implements DailyRecordRepository {
     record.lastUpdateTime = now()
     record.id = await this.dailyRecords.put(record)
 
-    return record
+    return this.toTypingDailyRecord(record)
   }
 
   async incrementLearned(dictId: string): Promise<TypingDailyRecord> {
-    const record = await this.getTodayRecord(dictId)
+    const today = getTodayDate()
+    let record = await this.dailyRecords.where('[dict+date]').equals([dictId, today]).first()
+
+    if (!record) {
+      record = new DailyRecord(dictId, today)
+    }
 
     record.learnedCount++
     record.lastUpdateTime = now()
     record.id = await this.dailyRecords.put(record)
 
-    return record
+    return this.toTypingDailyRecord(record)
   }
 
   async incrementMastered(dictId: string): Promise<TypingDailyRecord> {
-    const record = await this.getTodayRecord(dictId)
+    const today = getTodayDate()
+    let record = await this.dailyRecords.where('[dict+date]').equals([dictId, today]).first()
+
+    if (!record) {
+      record = new DailyRecord(dictId, today)
+    }
 
     record.masteredCount++
     record.lastUpdateTime = now()
     record.id = await this.dailyRecords.put(record)
 
-    return record
+    return this.toTypingDailyRecord(record)
   }
 
   async getRecord(dictId: string, date: string): Promise<TypingDailyRecord | undefined> {
-    return this.dailyRecords.where('[dict+date]').equals([dictId, date]).first()
+    const record = await this.dailyRecords.where('[dict+date]').equals([dictId, date]).first()
+    return record ? this.toTypingDailyRecord(record) : undefined
   }
 
   async getRecordsInRange(dictId: string, startDate: string, endDate: string): Promise<TypingDailyRecord[]> {
-    return this.dailyRecords.where('[dict+date]').between([dictId, startDate], [dictId, endDate]).toArray()
+    const records = await this.dailyRecords.where('[dict+date]').between([dictId, startDate], [dictId, endDate]).toArray()
+    return records.map((r) => this.toTypingDailyRecord(r))
+  }
+
+  private toTypingDailyRecord(record: IDailyRecord): TypingDailyRecord {
+    return {
+      id: record.id,
+      dict: record.dict,
+      date: record.date,
+      reviewedCount: record.reviewedCount,
+      learnedCount: record.learnedCount,
+      extraReviewedCount: record.extraReviewedCount,
+      masteredCount: record.masteredCount,
+      lastUpdateTime: record.lastUpdateTime,
+    }
   }
 }
 

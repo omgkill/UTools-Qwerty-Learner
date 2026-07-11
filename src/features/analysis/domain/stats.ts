@@ -1,27 +1,25 @@
-import type {
-  AnalysisDailyRecord,
-  AnalysisWordProgress,
-  AnalysisWordRecord,
-  DayStats,
-  DictStats,
-  WordBankSummary,
-  WordDetail,
-} from './types'
+import type { AnalysisDailyRecord, AnalysisWordProgress, DayStats, DictStats, WordBankSummary, WordDetail } from './types'
 import { MASTERY_LEVELS } from '@/utils/db/progress'
 import dayjs from 'dayjs'
 
-export function buildDictStats(wordRecords: AnalysisWordRecord[], wordBanks: WordBankSummary[]): DictStats[] {
+export function buildDictStats(wordProgressList: AnalysisWordProgress[], dailyRecords: AnalysisDailyRecord[], wordBanks: WordBankSummary[]): DictStats[] {
   const dictNameMap = new Map(wordBanks.map((wordBank) => [wordBank.id, wordBank.name]))
   const dictMap = new Map<string, { dates: Set<string>; words: Set<string>; lastStudyTime: number }>()
 
-  for (const record of wordRecords) {
+  // 从 DailyRecord 获取学习日期
+  for (const record of dailyRecords) {
     const dictId = record.dict
     const dictData = dictMap.get(dictId) ?? { dates: new Set<string>(), words: new Set<string>(), lastStudyTime: 0 }
-    const date = dayjs(record.timeStamp).format('YYYY-MM-DD')
+    dictData.dates.add(record.date)
+    dictData.lastStudyTime = Math.max(dictData.lastStudyTime, record.lastUpdateTime)
+    dictMap.set(dictId, dictData)
+  }
 
-    dictData.dates.add(date)
-    dictData.words.add(record.word)
-    dictData.lastStudyTime = Math.max(dictData.lastStudyTime, record.timeStamp)
+  // 从 WordProgress 获取学过的单词
+  for (const progress of wordProgressList) {
+    const dictId = progress.dict
+    const dictData = dictMap.get(dictId) ?? { dates: new Set<string>(), words: new Set<string>(), lastStudyTime: 0 }
+    dictData.words.add(progress.word)
     dictMap.set(dictId, dictData)
   }
 
@@ -59,37 +57,23 @@ export function buildDayStats(dailyRecords: AnalysisDailyRecord[]): DayStats[] {
     .sort((a, b) => b.date.localeCompare(a.date))
 }
 
-export function buildWordDetails(wordRecords: AnalysisWordRecord[], wordProgressList: AnalysisWordProgress[], date: string): WordDetail[] {
+export function buildWordDetails(wordProgressList: AnalysisWordProgress[], date: string): WordDetail[] {
   const startOfDay = dayjs(date).startOf('day').valueOf()
   const endOfDay = dayjs(date).endOf('day').valueOf()
-  const wordFirstDateMap = buildWordFirstDateMap(wordRecords)
   const detailsByWord = new Map<string, WordDetail>()
 
-  const recordsOnDate = wordRecords.filter((record) => record.timeStamp >= startOfDay && record.timeStamp <= endOfDay)
-
-  for (const record of recordsOnDate) {
-    const currentDate = dayjs(record.timeStamp).format('YYYY-MM-DD')
-    const firstDateEver = wordFirstDateMap.get(record.word)
-    const isMasteredRecord = record.timing.length === 0 && record.wrongCount === 0
-
-    detailsByWord.set(record.word, {
-      word: record.word,
-      timeStamp: record.timeStamp,
-      wrongCount: record.wrongCount,
-      type: isMasteredRecord ? 'mastered' : firstDateEver === currentDate ? 'new' : 'review',
-    })
-  }
-
   for (const progress of wordProgressList) {
-    if (progress.masteryLevel !== MASTERY_LEVELS.MASTERED) continue
+    // 跳过今天没有学习的单词
     if (progress.lastReviewTime < startOfDay || progress.lastReviewTime > endOfDay) continue
-    if (detailsByWord.has(progress.word)) continue
+
+    const isNew = progress.reps === 1
+    const isMastered = progress.masteryLevel >= MASTERY_LEVELS.MASTERED
 
     detailsByWord.set(progress.word, {
       word: progress.word,
       timeStamp: progress.lastReviewTime,
-      wrongCount: 0,
-      type: 'mastered',
+      wrongCount: progress.wrongCount,
+      type: isMastered ? 'mastered' : isNew ? 'new' : 'review',
     })
   }
 
@@ -98,17 +82,4 @@ export function buildWordDetails(wordRecords: AnalysisWordRecord[], wordProgress
 
 function hasActivity(record: AnalysisDailyRecord): boolean {
   return (record.learnedCount || 0) > 0 || (record.reviewedCount || 0) > 0 || (record.masteredCount || 0) > 0
-}
-
-function buildWordFirstDateMap(wordRecords: AnalysisWordRecord[]): Map<string, string> {
-  const wordFirstDateMap = new Map<string, string>()
-  const sortedRecords = [...wordRecords].sort((a, b) => a.timeStamp - b.timeStamp)
-
-  for (const record of sortedRecords) {
-    if (!wordFirstDateMap.has(record.word)) {
-      wordFirstDateMap.set(record.word, dayjs(record.timeStamp).format('YYYY-MM-DD'))
-    }
-  }
-
-  return wordFirstDateMap
 }

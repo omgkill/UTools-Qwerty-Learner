@@ -1,4 +1,4 @@
-import type { LetterMistakes, TypingDailyRecord, TypingStateSnapshot, TypingWordProgress, TypingWordRecord } from '../domain'
+import type { TypingDailyRecord, TypingStateSnapshot, TypingWordProgress } from '../domain'
 import type { Word, WordWithIndex } from '@/typings'
 
 export interface WordProgressRepository {
@@ -9,8 +9,6 @@ export interface WordProgressRepository {
   markAsMastered(dictId: string, word: string): Promise<TypingWordProgress>
   updateProgress(dictId: string, word: string, isCorrect: boolean, wrongCount: number): Promise<TypingWordProgress>
   getNewWords(dictId: string, allWords: Word[], limit?: number): Promise<WordWithIndex[]>
-  getDueWords(dictId: string, limit?: number): Promise<TypingWordProgress[]>
-  getDueWordsWithInfo(dictId: string, allWords: Word[], limit?: number): Promise<WordWithIndex[]>
   getAllProgress(dictId: string): Promise<TypingWordProgress[]>
   getStats(dictId: string): Promise<{
     total: number
@@ -29,11 +27,6 @@ export interface DailyRecordRepository {
   incrementMastered(dictId: string): Promise<TypingDailyRecord>
   getRecord(dictId: string, date: string): Promise<TypingDailyRecord | undefined>
   getRecordsInRange(dictId: string, startDate: string, endDate: string): Promise<TypingDailyRecord[]>
-}
-
-export interface WordRecordRepository {
-  addWordRecord(params: { word: string; dictId: string; timing: number[]; wrongCount: number; mistakes: LetterMistakes }): Promise<number>
-  listWordRecordsInRange(dictId: string, start: number, end: number): Promise<Pick<TypingWordRecord, 'word'>[]>
 }
 
 export interface TypingStateRepository {
