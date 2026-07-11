@@ -1,4 +1,4 @@
-import type { TypingDailyRecord, TypingStateSnapshot, TypingWordProgress } from '../domain'
+import type { TypingDailyRecord, TypingStateSessionType, TypingStateSnapshot, TypingWordProgress } from '../domain'
 import type { Word, WordWithIndex } from '@/typings'
 
 export interface WordProgressRepository {
@@ -30,7 +30,7 @@ export interface DailyRecordRepository {
 }
 
 export interface TypingStateRepository {
-  getStates(dictId: string, date: string): Promise<TypingStateSnapshot[]>
+  getStates(dictId: string, date: string, sessionType?: TypingStateSessionType): Promise<TypingStateSnapshot[]>
   deleteStates(ids: number[]): Promise<void>
   saveState(state: TypingStateSnapshot): Promise<number>
 }

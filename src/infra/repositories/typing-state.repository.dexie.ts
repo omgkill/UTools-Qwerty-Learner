@@ -1,5 +1,5 @@
 import type { TypingStateRepository } from '@/features/typing/application/ports'
-import type { TypingStateSnapshot } from '@/features/typing/domain'
+import type { TypingStateSessionType, TypingStateSnapshot } from '@/features/typing/domain'
 import { db as defaultDb } from '@/utils/db'
 import type { ITypingState } from '@/utils/db/typingState'
 import type Dexie from 'dexie'
@@ -16,8 +16,12 @@ export class DexieTypingStateRepository implements TypingStateRepository {
     return (this.db as Dexie & TypingStateTables).typingStates
   }
 
-  getStates(dictId: string, date: string): Promise<TypingStateSnapshot[]> {
-    return this.typingStates.where('[dict+date]').equals([dictId, date]).toArray()
+  async getStates(dictId: string, date: string, sessionType?: TypingStateSessionType): Promise<TypingStateSnapshot[]> {
+    const states = await this.typingStates.where('[dict+date]').equals([dictId, date]).toArray()
+    if (!sessionType) {
+      return states
+    }
+    return states.filter((state) => (state.sessionType ?? 'repeat') === sessionType)
   }
 
   async deleteStates(ids: number[]): Promise<void> {

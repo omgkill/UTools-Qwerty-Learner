@@ -5,21 +5,21 @@ import { TypingStateActionType } from './actions'
 
 export function typingReducer(state: TypingState, action: TypingStateAction): TypingState {
   switch (action.type) {
-    case TypingStateActionType.SET_WORDS: {
-      const newWords = action.payload.words
-      const currentWordName = state.wordListData.words[state.wordListData.index]?.name
-      const newIndex = currentWordName 
-        ? newWords.findIndex(w => w.name === currentWordName)
-        : 0
-      
+    case TypingStateActionType.SYNC_SESSION:
       return {
         ...state,
         wordListData: {
-          words: newWords,
-          index: newIndex >= 0 ? newIndex : 0,
+          words: action.payload.words,
+          index: action.payload.index,
+        },
+        uiState: {
+          ...state.uiState,
+          isFinished: action.payload.isFinished,
+          isCurrentWordMastered: false,
+          isShowSkip: false,
+          isTyping: action.payload.isFinished ? false : action.payload.autoStart ? true : state.uiState.isTyping,
         },
       }
-    }
 
     case TypingStateActionType.RESET_PROGRESS: {
       return {
@@ -92,53 +92,6 @@ export function typingReducer(state: TypingState, action: TypingStateAction): Ty
       }
     }
 
-    case TypingStateActionType.NEXT_WORD: {
-      const newIndex = state.wordListData.index + 1
-      const isEnd = newIndex >= state.wordListData.words.length
-      return {
-        ...state,
-        wordListData: {
-          ...state.wordListData,
-          index: isEnd ? state.wordListData.index : newIndex,
-        },
-        statsData: { ...state.statsData, wordCount: state.statsData.wordCount + 1 },
-        uiState: {
-          ...state.uiState,
-          isShowSkip: false,
-          isCurrentWordMastered: false,
-          isTyping: isEnd ? false : state.uiState.isTyping,
-          isFinished: isEnd ? true : state.uiState.isFinished,
-        },
-      }
-    }
-
-    case TypingStateActionType.FINISH_WORDS: {
-      // 重复学习模式下循环学习，不结束
-      if (state.uiState.isRepeatLearning) {
-        return {
-          ...state,
-          wordListData: { ...state.wordListData, index: 0 },
-          statsData: { ...state.statsData, wordCount: state.statsData.wordCount + 1 },
-          uiState: {
-            ...state.uiState,
-            isShowSkip: false,
-            isCurrentWordMastered: false,
-          },
-        }
-      }
-      return {
-        ...state,
-        statsData: { ...state.statsData, wordCount: state.statsData.wordCount + 1 },
-        uiState: {
-          ...state.uiState,
-          isTyping: false,
-          isFinished: true,
-          isShowSkip: false,
-          isCurrentWordMastered: false,
-        },
-      }
-    }
-
     case TypingStateActionType.INCREASE_CORRECT_COUNT:
       return {
         ...state,
@@ -150,24 +103,6 @@ export function typingReducer(state: TypingState, action: TypingStateAction): Ty
         ...state,
         statsData: { ...state.statsData, wrongCount: state.statsData.wrongCount + 1 },
       }
-
-    case TypingStateActionType.SKIP_WORD: {
-      const newIndex = state.wordListData.index + 1
-      const isEnd = newIndex >= state.wordListData.words.length
-      return {
-        ...state,
-        wordListData: {
-          ...state.wordListData,
-          index: isEnd ? state.wordListData.index : newIndex,
-        },
-        uiState: {
-          ...state.uiState,
-          isShowSkip: false,
-          isTyping: isEnd ? false : state.uiState.isTyping,
-          isFinished: isEnd ? true : state.uiState.isFinished,
-        },
-      }
-    }
 
     case TypingStateActionType.SKIP_2_WORD_INDEX: {
       const newIndex = action.newIndex
@@ -250,15 +185,6 @@ export function typingReducer(state: TypingState, action: TypingStateAction): Ty
         uiState: { ...state.uiState, isCurrentWordMastered: action.payload },
       }
 
-    case TypingStateActionType.ADD_REPLACEMENT_WORD:
-      return {
-        ...state,
-        wordListData: {
-          ...state.wordListData,
-          words: [...state.wordListData.words, action.payload],
-        },
-      }
-
     case TypingStateActionType.CLEAR_WORD_INFO_MAP:
       return {
         ...state,
@@ -275,15 +201,6 @@ export function typingReducer(state: TypingState, action: TypingStateAction): Ty
       return {
         ...state,
         uiState: { ...state.uiState, isRepeatLearning: action.payload },
-      }
-
-    case TypingStateActionType.SET_CURRENT_INDEX:
-      return {
-        ...state,
-        wordListData: {
-          ...state.wordListData,
-          index: action.payload,
-        },
       }
 
     default:

@@ -15,7 +15,12 @@ import { useCallback, useContext, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useHotkeys } from 'react-hotkeys-hook'
 
-export default function WordPanel({ onMastered }: { onMastered?: () => void }) {
+type WordPanelProps = {
+  onMastered?: () => void
+  onWordFinished: (params: { isCorrect: boolean; wrongCount: number }) => Promise<void> | void
+}
+
+export default function WordPanel({ onMastered, onWordFinished }: WordPanelProps) {
   const handleMastered = onMastered ?? (() => undefined)
   const typingContext = useContext(TypingContext)
   const state = typingContext?.state ?? initialState
@@ -33,14 +38,12 @@ export default function WordPanel({ onMastered }: { onMastered?: () => void }) {
   usePrefetchPronunciationSound(nextWord?.name)
   const queriedWordsRef = useRef(new Set<string>())
 
-  const onFinish = useCallback(() => {
-    if (!dispatch) return
-    if (state.wordListData.index < state.wordListData.words.length - 1) {
-      dispatch({ type: TypingStateActionType.NEXT_WORD })
-    } else {
-      dispatch({ type: TypingStateActionType.FINISH_WORDS })
-    }
-  }, [state.wordListData.index, state.wordListData.words.length, dispatch])
+  const handleWordFinished = useCallback(
+    async (params: { isCorrect: boolean; wrongCount: number }) => {
+      await onWordFinished(params)
+    },
+    [onWordFinished],
+  )
 
   // 用 ref 持有最新的 wordInfoMap，避免将整个对象放入 useCallback 依赖
   // 从而防止每次任意词更新都重建函数并触发 effect
@@ -142,7 +145,11 @@ export default function WordPanel({ onMastered }: { onMastered?: () => void }) {
               </div>
             )}
             <div className="relative">
-              <WordComponent word={currentWord} onFinish={onFinish} isExtraReview={state.uiState.isExtraReview} isRepeatLearning={state.uiState.isRepeatLearning} />
+              <WordComponent
+                word={currentWord}
+                onFinish={handleWordFinished}
+                isRepeatLearning={state.uiState.isRepeatLearning}
+              />
               {phoneticConfig.isOpen && <Phonetic word={wordWithInfo || currentWord} />}
               {state.isTransVisible && <Translation trans={displayTrans} tense={displayTense} />}
               {!state.isImmersiveMode && state.uiState.isTyping && (
@@ -154,7 +161,7 @@ export default function WordPanel({ onMastered }: { onMastered?: () => void }) {
                 </div>
               )}
             </div>
-            {!state.isImmersiveMode && (
+            {!state.isImmersiveMode && onMastered && (
               <div className="absolute bottom-4 right-4 opacity-60 transition-opacity duration-200 ease-in-out hover:opacity-100">
                 <Tooltip content="标记已掌握">
                   <span className="cursor-pointer font-mono text-2xl font-normal text-gray-700 dark:text-gray-400" onClick={handleMastered}>

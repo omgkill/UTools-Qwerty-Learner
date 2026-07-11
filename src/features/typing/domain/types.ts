@@ -1,6 +1,37 @@
 import type { Word, WordWithIndex } from '@/typings'
 
 export type LearningType = 'review' | 'new' | 'complete'
+export type TypingStateSessionType = 'normal' | 'repeat' | 'consolidate'
+export type QueuedLearningSessionType = 'repeat' | 'consolidate'
+
+export type TypingWordKind = 'new' | 'review' | 'extra_review' | 'replacement'
+
+export type TypingSessionQueueItem = {
+  word: WordWithIndex
+  kind: TypingWordKind
+}
+
+export type TypingSessionTodayCounts = {
+  learned: number
+  reviewed: number
+  extraReviewed: number
+  mastered: number
+}
+
+export type TypingSession = {
+  dictId: string
+  mode: 'normal'
+  learningType: LearningType
+  queueWords: TypingSessionQueueItem[]
+  currentIndex: number
+  currentWord?: WordWithIndex
+  currentWordKind?: TypingWordKind
+  todayCounts: TypingSessionTodayCounts
+  dueCount: number
+  newCount: number
+  masteredCount: number
+  isFinished: boolean
+}
 
 export type TypingWordProgress = {
   id?: number
@@ -57,7 +88,16 @@ export interface TypingStateSnapshot {
   id?: number
   dict: string
   date: string
+  sessionType?: TypingStateSessionType
   isRepeatLearning: boolean
   learningWords: WordWithIndex[]
   currentIndex: number
+  queueWords?: TypingSessionQueueItem[]
+  currentWordKind?: TypingWordKind
+  learningType?: LearningType
+  todayCounts?: TypingSessionTodayCounts
+  dueCount?: number
+  newCount?: number
+  masteredCount?: number
+  isFinished?: boolean
 }

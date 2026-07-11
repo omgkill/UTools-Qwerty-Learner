@@ -4,6 +4,8 @@ import { MASTERY_LEVELS, REVIEW_INTERVALS } from './learning-config'
 import type { TypingWordProgress } from './types'
 import type { Word, WordWithIndex } from '@/typings'
 
+type LevelName = 'NEW' | 'LEARNED' | 'FAMILIAR' | 'KNOWN' | 'PROFICIENT' | 'ADVANCED' | 'EXPERT' | 'MASTERED'
+
 function createWord(name: string): Word {
   return { name, trans: [], usphone: '', ukphone: '' }
 }
@@ -170,7 +172,7 @@ describe('100个单词30天随机学习模拟', () => {
     // 统计单词级别分布
     log('\n========== 最终单词级别分布 ==========\n')
     const finalProgressArray = Array.from(allProgress.values())
-    const levelDistribution = {
+    const levelDistribution: Record<LevelName, number> = {
       NEW: 0,
       LEARNED: 0,
       FAMILIAR: 0,
@@ -182,7 +184,8 @@ describe('100个单词30天随机学习模拟', () => {
     }
 
     finalProgressArray.forEach((p) => {
-      const levelName = Object.keys(levelDistribution)[p.masteryLevel]
+      const levelNames = Object.keys(levelDistribution) as LevelName[]
+      const levelName = levelNames[p.masteryLevel] || 'NEW'
       levelDistribution[levelName]++
     })
 
@@ -192,7 +195,7 @@ describe('100个单词30天随机学习模拟', () => {
     log('| 级别 | 单词数 | 说明 |')
     log('|------|--------|------|')
     Object.entries(levelDistribution).forEach(([level, count]) => {
-      const levelDescriptions = {
+      const levelDescriptions: Record<LevelName, string> = {
         NEW: '未学习',
         LEARNED: '学习1次（下次1天后）',
         FAMILIAR: '学习2次（下次2天后）',
@@ -202,7 +205,7 @@ describe('100个单词30天随机学习模拟', () => {
         EXPERT: '学习6次（下次21天后）',
         MASTERED: '已掌握（下次30天后）',
       }
-      log(`| ${level} | ${count}个 | ${levelDescriptions[level]} |`)
+      log(`| ${level} | ${count}个 | ${levelDescriptions[level as LevelName]} |`)
     })
 
     log(`\n总学习单词数: ${finalProgressArray.length}个`)

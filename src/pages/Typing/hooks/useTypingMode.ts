@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getSavedRepeatLearningState } from './RepeatLearningManager'
+import { getSavedQueuedLearningState } from '@/features/typing/application/use-cases'
 
 export type LearningMode = 'normal' | 'repeat'
 
@@ -18,7 +18,10 @@ export function useTypingMode(dictId: string | null, forceRepeatMode = false) {
     const checkMode = async () => {
       if (forceRepeatMode) {
         // 强制重复学习模式：检查是否有重复学习记录
-        const saved = await getSavedRepeatLearningState(dictId)
+        const saved = await getSavedQueuedLearningState({
+          dictId,
+          sessionType: 'repeat',
+        })
 
         if (saved && saved.isRepeatLearning && saved.learningWords && (saved.learningWords as unknown[]).length > 0) {
           setMode('repeat')
@@ -27,7 +30,10 @@ export function useTypingMode(dictId: string | null, forceRepeatMode = false) {
         }
       } else {
         // 正常流程：检查是否有重复学习记录
-        const saved = await getSavedRepeatLearningState(dictId)
+        const saved = await getSavedQueuedLearningState({
+          dictId,
+          sessionType: 'repeat',
+        })
 
         if (saved && saved.isRepeatLearning && saved.learningWords && (saved.learningWords as unknown[]).length > 0) {
           isRepeatLearningRef.current = true

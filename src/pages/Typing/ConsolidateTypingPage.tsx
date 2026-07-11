@@ -8,15 +8,20 @@ import WordPanel from './components/WordPanel'
 import { useConfetti } from './hooks/useConfetti'
 import { useKeyboardStartListener } from './hooks/useKeyboardStartListener'
 import { useLearningRecordSaver } from './hooks/useLearningRecordSaver'
+import { useQueuedTypingSession } from './hooks/useQueuedTypingSession'
 import { useTypingHotkeys } from './hooks/useTypingHotkeys'
 import { useTypingInitializer } from './hooks/useTypingInitializer'
 import { useTypingTimer } from './hooks/useTypingTimer'
 import { TypingContext, TypingStateActionType, initialState, typingReducer } from './store'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
-import { getConsolidateWords } from '@/features/typing/application/use-cases'
+import {
+  getConsolidateWords,
+  getSavedQueuedLearningState,
+  saveQueuedLearningState,
+} from '@/features/typing/application/use-cases'
 import { loadWordList as loadWordListUseCase } from '@/features/word-bank/application'
-import { utoolsLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository.utools'
+import { appLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository'
 import { dexieWordProgressRepository } from '@/infra/repositories/word-progress.repository.dexie'
 import { getMode, onModeChange } from '@/platform/utools'
 import { currentDictIdAtom } from '@/store'
@@ -24,13 +29,13 @@ import type { Word, WordBank, WordWithIndex } from '@/typings'
 import { getTodayStartTime } from '@/utils/timeService'
 import { useAtomValue } from 'jotai'
 import type React from 'react'
-import { useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useImmerReducer } from 'use-immer'
 
-const CONSOLIDATE_PROGRESS_KEY = 'consolidate-learning-progress'
+const LEGACY_CONSOLIDATE_PROGRESS_KEY = 'consolidate-learning-progress'
 
-type SavedProgress = {
+type LegacyConsolidateProgress = {
   dictId: string
   date: string
   index: number
@@ -56,29 +61,36 @@ function shuffleWithSeed<T>(array: T[], seed: string): T[] {
   return result
 }
 
-function loadSavedProgress(dictId: string): { index: number; wordNames: string[] | null } {
-  try {
-    const saved = localStorage.getItem(CONSOLIDATE_PROGRESS_KEY)
-    if (!saved) return { index: 0, wordNames: null }
+function loadLegacyConsolidateProgress(dictId: string): LegacyConsolidateProgress | null {
+  if (typeof window === 'undefined') {
+    return null
+  }
 
-    const progress: SavedProgress = JSON.parse(saved)
-    if (progress.dictId === dictId && progress.date === getTodayDate()) {
-      return { index: progress.index, wordNames: progress.wordNames }
+  try {
+    const saved = localStorage.getItem(LEGACY_CONSOLIDATE_PROGRESS_KEY)
+    if (!saved) {
+      return null
     }
-    return { index: 0, wordNames: null }
+
+    const progress = JSON.parse(saved) as LegacyConsolidateProgress
+    if (progress.dictId !== dictId || progress.date !== getTodayDate()) {
+      return null
+    }
+
+    return progress
   } catch {
-    return { index: 0, wordNames: null }
+    return null
   }
 }
 
-function saveProgress(dictId: string, index: number, wordNames: string[]): void {
-  const progress: SavedProgress = {
-    dictId,
-    date: getTodayDate(),
-    index,
-    wordNames,
+function clearLegacyConsolidateProgress() {
+  if (typeof window === 'undefined') {
+    return
   }
-  localStorage.setItem(CONSOLIDATE_PROGRESS_KEY, JSON.stringify(progress))
+
+  try {
+    localStorage.removeItem(LEGACY_CONSOLIDATE_PROGRESS_KEY)
+  } catch {}
 }
 
 interface ConsolidateTypingAppInnerProps {
@@ -89,85 +101,101 @@ const ConsolidateTypingAppInner: React.FC<ConsolidateTypingAppInnerProps> = ({ c
   const { state, dispatch } = useTypingContext()
   const currentDictId = useAtomValue(currentDictIdAtom)
   const navigate = useNavigate()
-  const isInitializedRef = useRef(false)
-
-  const [consolidateWords, setConsolidateWords] = useState<WordWithIndex[]>([])
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
-  const [hasWords, setHasWords] = useState(true)
-  const wordNamesRef = useRef<string[]>([])
+  const stateIndex = state.wordListData.index
 
   const loadConsolidateWords = useCallback(async () => {
-    if (!currentDictId) return
-
-    setIsLoading(true)
-    try {
-      const wordList = await loadWordList(currentWordBank)
-      if (!wordList || wordList.length === 0) {
-        setHasWords(false)
-        return
-      }
-
-      const learnedWords = await getConsolidateWords({
-        dictId: currentDictId,
-        wordList,
-        wordProgressRepository: dexieWordProgressRepository,
-      })
-
-      if (learnedWords.length === 0) {
-        setHasWords(false)
-        return
-      }
-
-      const saved = loadSavedProgress(currentDictId)
-      let finalWords: WordWithIndex[] = []
-      let finalIndex = 0
-
-      if (saved.wordNames && saved.wordNames.length > 0) {
-        const savedSet = new Set(saved.wordNames)
-        finalWords = learnedWords.filter((word) => savedSet.has(word.name))
-
-        const orderedNames = saved.wordNames.filter((name) => finalWords.some((w) => w.name === name))
-        finalWords = orderedNames.map((name) => finalWords.find((w) => w.name === name)).filter((w): w is WordWithIndex => w !== undefined)
-        finalIndex = Math.min(saved.index, finalWords.length - 1)
-      } else {
-        const date = getTodayDate()
-        finalWords = shuffleWithSeed(learnedWords, `${currentDictId}-${date}`)
-        finalIndex = 0
-      }
-
-      if (finalWords.length === 0) {
-        setHasWords(false)
-        return
-      }
-
-      wordNamesRef.current = finalWords.map((w) => w.name)
-      setConsolidateWords(finalWords)
-      setCurrentIndex(finalIndex)
-
-      dispatch({
-        type: TypingStateActionType.SET_WORDS,
-        payload: { words: finalWords },
-      })
-      dispatch({
-        type: TypingStateActionType.SET_CURRENT_INDEX,
-        payload: finalIndex,
-      })
-      dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: true })
-
-      saveProgress(currentDictId, finalIndex, wordNamesRef.current)
-      isInitializedRef.current = true
-    } catch (e) {
-      console.error('Failed to load consolidate words:', e)
-      setHasWords(false)
-    } finally {
-      setIsLoading(false)
+    if (!currentDictId) {
+      return null
     }
-  }, [currentDictId, currentWordBank, dispatch])
 
-  useEffect(() => {
-    loadConsolidateWords()
-  }, [loadConsolidateWords])
+    const wordList = await loadWordList(currentWordBank)
+    if (!wordList || wordList.length === 0) {
+      return null
+    }
+
+    const learnedWords = await getConsolidateWords({
+      dictId: currentDictId,
+      wordList,
+      wordProgressRepository: dexieWordProgressRepository,
+    })
+
+    if (learnedWords.length === 0) {
+      return null
+    }
+
+    const saved = await getSavedQueuedLearningState({
+      dictId: currentDictId,
+      sessionType: 'consolidate',
+      date: getTodayDate(),
+    })
+    const legacySaved = saved ? null : loadLegacyConsolidateProgress(currentDictId)
+    let finalWords: WordWithIndex[] = []
+    let finalIndex = 0
+
+    if (saved && saved.learningWords.length > 0) {
+      const savedNames = saved.learningWords.map((word) => word.name)
+      const savedSet = new Set(savedNames)
+      finalWords = learnedWords.filter((word) => savedSet.has(word.name))
+
+      const orderedNames = savedNames.filter((name) => finalWords.some((word) => word.name === name))
+      finalWords = orderedNames
+        .map((name) => finalWords.find((word) => word.name === name))
+        .filter((word): word is WordWithIndex => word !== undefined)
+      finalIndex = Math.min(saved.currentIndex, finalWords.length - 1)
+    } else if (legacySaved && legacySaved.wordNames.length > 0) {
+      const savedSet = new Set(legacySaved.wordNames)
+      finalWords = learnedWords.filter((word) => savedSet.has(word.name))
+
+      const orderedNames = legacySaved.wordNames.filter((name) => finalWords.some((word) => word.name === name))
+      finalWords = orderedNames
+        .map((name) => finalWords.find((word) => word.name === name))
+        .filter((word): word is WordWithIndex => word !== undefined)
+      finalIndex = Math.min(legacySaved.index, finalWords.length - 1)
+    } else {
+      const date = getTodayDate()
+      finalWords = shuffleWithSeed(learnedWords, `${currentDictId}-${date}`)
+    }
+
+    if (finalWords.length === 0) {
+      return null
+    }
+
+    await saveQueuedLearningState({
+      dictId: currentDictId,
+      sessionType: 'consolidate',
+      learningWords: finalWords,
+      currentIndex: finalIndex,
+      date: getTodayDate(),
+    })
+    if (legacySaved) {
+      clearLegacyConsolidateProgress()
+    }
+
+    return {
+      words: finalWords,
+      initialIndex: finalIndex,
+    }
+  }, [currentDictId, currentWordBank])
+
+  const { words: consolidateWords, currentIndex, isLoading, hasWords, advanceCurrentWord } = useQueuedTypingSession({
+    stateIndex,
+    dispatch,
+    loadSession: loadConsolidateWords,
+    persistIndex: currentDictId
+      ? (index) =>
+          saveQueuedLearningState({
+            dictId: currentDictId,
+            sessionType: 'consolidate',
+            learningWords: state.wordListData.words,
+            currentIndex: index,
+            date: getTodayDate(),
+          })
+      : undefined,
+  })
+
+  const handleWordFinished = useCallback((_params: { isCorrect: boolean; wrongCount: number }) => {
+    advanceCurrentWord()
+  }, [advanceCurrentWord])
 
   useLearningRecordSaver(state)
   useTypingTimer(state.uiState.isTyping)
@@ -200,14 +228,6 @@ const ConsolidateTypingAppInner: React.FC<ConsolidateTypingAppInnerProps> = ({ c
       window.removeEventListener('blur', onBlur)
     }
   }, [dispatch])
-
-  useEffect(() => {
-    if (!isInitializedRef.current || !currentDictId) return
-    if (state.wordListData.index !== currentIndex) {
-      setCurrentIndex(state.wordListData.index)
-      saveProgress(currentDictId, state.wordListData.index, wordNamesRef.current)
-    }
-  }, [state.wordListData.index, currentIndex, currentDictId])
 
   const handleExitConsolidateLearning = useCallback(() => {
     dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: false })
@@ -280,7 +300,7 @@ const ConsolidateTypingAppInner: React.FC<ConsolidateTypingAppInnerProps> = ({ c
         <div className="container mx-auto flex h-full flex-1 flex-col items-center justify-center pb-4">
           <div className="container relative mx-auto flex h-full flex-col items-center">
             <div className="container flex flex-grow items-center justify-center">
-              <WordPanel />
+              <WordPanel onWordFinished={handleWordFinished} />
             </div>
             {!state.isImmersiveMode && <Speed />}
           </div>
@@ -325,7 +345,7 @@ function useTypingContext() {
 }
 
 async function loadWordList(currentWordBank: WordBank): Promise<WordWithIndex[] | null> {
-  return loadWordListUseCase(utoolsLocalWordBankRepository, currentWordBank)
+  return loadWordListUseCase(appLocalWordBankRepository, currentWordBank)
 }
 
 export default ConsolidateTypingPage

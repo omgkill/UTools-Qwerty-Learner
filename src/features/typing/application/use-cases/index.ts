@@ -1,6 +1,28 @@
-export { completeWord, type CompleteWordParams, type CompleteWordResult } from './complete-word'
+export {
+  completeCurrentWord,
+  type CompleteCurrentWordParams,
+  type CompleteCurrentWordResult,
+} from './complete-current-word'
 export { getConsolidateWords, type GetConsolidateWordsParams } from './get-consolidate-words'
 export { getNextReplacementWord, type GetNextReplacementWordParams } from './get-next-replacement-word'
+export {
+  clearNormalTypingSession,
+  getSavedNormalTypingSession,
+  loadNormalTypingSession,
+  saveNormalTypingSession,
+  type LoadNormalTypingSessionParams,
+  type SavedNormalTypingSession,
+} from './normal-typing-state'
+export {
+  clearQueuedLearningState,
+  getSavedQueuedLearningState,
+  saveQueuedLearningState,
+  type SavedQueuedLearningState,
+} from './queued-learning-state'
 export { getRepeatLearningWords, type GetRepeatLearningWordsParams } from './get-repeat-learning-words'
-export { getTypingSession, type GetTypingSessionParams, type TypingSessionResult } from './get-typing-session'
-export { markWordMastered, type MarkWordMasteredParams, type MarkWordMasteredResult } from './mark-word-mastered'
+export {
+  markCurrentWordMastered,
+  type MarkCurrentWordMasteredParams,
+  type MarkCurrentWordMasteredResult,
+} from './mark-current-word-mastered'
+export { startTypingSession, type StartTypingSessionParams } from './start-typing-session'

@@ -13,22 +13,14 @@ export function useTypingInitializer() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const customWordBanks = loadCustomWordBanks()
-    console.log('[useTypingInitializer] Filtered custom word banks:', customWordBanks)
+    loadCustomWordBanks()
     setIsInitialized(true)
   }, [loadCustomWordBanks])
 
   useEffect(() => {
     if (!isInitialized) return
 
-    console.log('[useTypingInitializer] Checking word banks:', {
-      wordBanksLength: wordBanks.length,
-      currentWordBankId,
-      currentWordBank: currentWordBank ? currentWordBank.name : null
-    })
-
     if (wordBanks.length === 0) {
-      console.log('[useTypingInitializer] No word banks available, navigating to gallery')
       navigate('/gallery')
       return
     }
@@ -36,12 +28,11 @@ export function useTypingInitializer() {
     if (!currentWordBankId || !currentWordBank) {
       const firstWordBank = wordBanks[0]
       if (firstWordBank) {
-        console.log('[useTypingInitializer] Setting first word bank:', firstWordBank.name)
         setCurrentWordBankId(firstWordBank.id)
-      } else {
-        console.log('[useTypingInitializer] No first word bank available, navigating to gallery')
-        navigate('/gallery')
+        return
       }
+
+      navigate('/gallery')
     }
   }, [isInitialized, currentWordBankId, currentWordBank, wordBanks, navigate, setCurrentWordBankId])
 

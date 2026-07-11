@@ -1,4 +1,4 @@
-import atomForConfig, { createUtoolsJSONStorage } from './atomForConfig'
+import atomForConfig, { createAppJSONStorage } from './atomForConfig'
 import { DISMISS_START_CARD_DATE_KEY } from '@/constants'
 import type {
   InfoPanelState,
@@ -16,7 +16,7 @@ export const idWordBankMapAtom = atom<Record<string, WordBank>>((get) => {
   return Object.fromEntries(wordBanks.map((wb) => [wb.id, wb]))
 })
 
-export const currentWordBankIdAtom = atomWithStorage('currentWordBank', '', createUtoolsJSONStorage<string>())
+export const currentWordBankIdAtom = atomWithStorage('currentWordBank', '', createAppJSONStorage<string>())
 export const currentWordBankAtom = atom<WordBank | null>((get) => {
   const id = get(currentWordBankIdAtom)
   if (!id) return null
@@ -49,18 +49,18 @@ export const randomConfigAtom = atomForConfig('randomConfig', {
 export const isShowPrevAndNextWordAtom = atomWithStorage(
   'isShowPrevAndNextWord',
   true,
-  createUtoolsJSONStorage<boolean>(),
+  createAppJSONStorage<boolean>(),
 )
 
-export const isIgnoreCaseAtom = atomWithStorage('isIgnoreCase', true, createUtoolsJSONStorage<boolean>())
+export const isIgnoreCaseAtom = atomWithStorage('isIgnoreCase', true, createAppJSONStorage<boolean>())
 
 export const isShowAnswerOnHoverAtom = atomWithStorage(
   'isShowAnswerOnHover',
   true,
-  createUtoolsJSONStorage<boolean>(),
+  createAppJSONStorage<boolean>(),
 )
 
-export const isTextSelectableAtom = atomWithStorage('isTextSelectable', false, createUtoolsJSONStorage<boolean>())
+export const isTextSelectableAtom = atomWithStorage('isTextSelectable', false, createAppJSONStorage<boolean>())
 
 export const phoneticConfigAtom = atomForConfig('phoneticConfig', {
   isOpen: true,
@@ -87,13 +87,13 @@ export const dailyLimitConfigAtom = atomForConfig('dailyLimitConfig', {
 export const dismissStartCardDateAtom = atomWithStorage<Date | null>(
   DISMISS_START_CARD_DATE_KEY,
   null,
-  createUtoolsJSONStorage<Date | null>(),
+  createAppJSONStorage<Date | null>(),
 )
 
 export const shouldShowProgressAtom = atomWithStorage(
   'shouldShowProgress',
   true,
-  createUtoolsJSONStorage<boolean>(),
+  createAppJSONStorage<boolean>(),
 )
 
 export const hotkeyConfigAtom = atomForConfig('hotkeyConfig', {

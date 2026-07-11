@@ -5,7 +5,7 @@ import bookCover from '@/assets/book-cover.png'
 import Tooltip from '@/components/Tooltip'
 import { deleteLocalWordBank } from '@/features/word-bank/application'
 import useIntersectionObserver from '@/hooks/useIntersectionObserver'
-import { utoolsLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository.utools'
+import { appLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository'
 import { currentWordBankIdAtom } from '@/store'
 import type { WordBank } from '@/typings'
 import * as Progress from '@radix-ui/react-progress'
@@ -39,7 +39,7 @@ export default function DictionaryComponent({ wordBank, onClick }: Props) {
   }
 
   const handleConfirmDelete = async () => {
-    const result = deleteLocalWordBank(utoolsLocalWordBankRepository, wordBank.id)
+    const result = deleteLocalWordBank(appLocalWordBankRepository, wordBank.id)
     if (result) {
       toast.success('删除成功')
     } else {

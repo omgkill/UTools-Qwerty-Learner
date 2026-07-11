@@ -1,16 +1,12 @@
 import type { WordState } from './useWordState'
-import { useCompleteWord } from '@/features/typing/presentation/hooks/useCompleteWord'
 import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
 import type { Word } from '@/typings'
-import { useCallback, useContext, useEffect } from 'react'
-
-const onFinishCalledRef = { current: false }
+import { useCallback, useContext, useEffect, useRef } from 'react'
 
 export function useWordCompletion(
   word: Word,
   wordState: WordState,
-  onFinish: () => void,
-  isExtraReview: boolean,
+  onFinish: (params: { isCorrect: boolean; wrongCount: number }) => Promise<void> | void,
   isRepeatLearning = false,
 ) {
   const typingContext = useContext(TypingContext)
@@ -23,7 +19,7 @@ export function useWordCompletion(
     },
     [rawDispatch],
   )
-  const completeWord = useCompleteWord()
+  const onFinishCalledRef = useRef(false)
 
   useEffect(() => {
     onFinishCalledRef.current = false
@@ -42,22 +38,10 @@ export function useWordCompletion(
       }
 
       const isCorrect = !wordState.hasMadeInputWrong
-      const startTime = performance.now()
-
-      if (!isRepeatLearning) {
-        completeWord({
-          word: word.name,
-          isCorrect,
-          wrongCount: wordState.wrongCount,
-          isExtraReview,
-        })
-          .then(() => {
-            console.log(`[DB] completeWord done in ${performance.now() - startTime}ms`)
-          })
-          .catch((e) => console.error('Failed to save word records:', e))
-      }
-
-      onFinish()
+      void onFinish({
+        isCorrect: isRepeatLearning ? true : isCorrect,
+        wrongCount: wordState.wrongCount,
+      })
     }
   }, [
     wordState.isFinished,
@@ -66,9 +50,7 @@ export function useWordCompletion(
     wordState.wrongCount,
     word.name,
     dispatch,
-    completeWord,
     onFinish,
-    isExtraReview,
     isRepeatLearning,
   ])
 }

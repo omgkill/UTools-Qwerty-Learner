@@ -7,8 +7,8 @@ import LoadingIndicator from '@/components/LoadingIndicator'
 import Tooltip from '@/components/Tooltip'
 import { listMdxDicts, queryFirstMdxWord } from '@/features/dictionary/application/use-cases'
 import { saveLocalWordBank } from '@/features/word-bank/application'
+import { appLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository'
 import { utoolsMdxDictionaryRepository } from '@/infra/repositories/dictionary.repository.utools'
-import { utoolsLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository.utools'
 import type { LanguageCategoryType, LanguageType, Word, WordBank } from '@/typings'
 import { Dialog, Transition } from '@headlessui/react'
 import type { ChangeEvent, FC, FormEvent } from 'react'
@@ -53,7 +53,7 @@ const Form4AddDict: FC<Props> = ({ onSaveDictSuccess }) => {
     setSkippedWords([])
     setImportResult('')
 
-    const config = utoolsLocalWordBankRepository.readConfig()
+    const config = appLocalWordBankRepository.readConfig()
     const limitCount = (() => {
       if (state.vipState === 'b') return 4
       if (state.vipState === 'c') return 20
@@ -199,7 +199,7 @@ const Form4AddDict: FC<Props> = ({ onSaveDictSuccess }) => {
       return
     }
 
-    const config = utoolsLocalWordBankRepository.readConfig()
+    const config = appLocalWordBankRepository.readConfig()
     const isNameExists = config.some((wb) => wb.name.trim() === formData.name.trim())
     if (isNameExists) {
       toast.error('词库名称已存在，请使用其他名称')
@@ -460,5 +460,5 @@ const saveWordBank = (formData: FormData, wordList: Word[]) => {
   }
 
   const wordBankMeta = createWordBankMeta(formData)
-  saveLocalWordBank(utoolsLocalWordBankRepository, wordList, wordBankMeta)
+  saveLocalWordBank(appLocalWordBankRepository, wordList, wordBankMeta)
 }

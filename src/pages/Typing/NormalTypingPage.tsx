@@ -8,16 +8,14 @@ import WordPanel from './components/WordPanel'
 import { useConfetti } from './hooks/useConfetti'
 import { useKeyboardStartListener } from './hooks/useKeyboardStartListener'
 import { useLearningRecordSaver } from './hooks/useLearningRecordSaver'
-import { useNormalLearningSync } from './hooks/useNormalLearningSync'
 import { useTypingHotkeys } from './hooks/useTypingHotkeys'
 import { useTypingInitializer } from './hooks/useTypingInitializer'
 import { useTypingTimer } from './hooks/useTypingTimer'
 import { TypingContext, TypingStateActionType, initialState, typingReducer } from './store'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
-import { useMarkWordMastered } from '@/features/typing/presentation/hooks/useMarkWordMastered'
-import type { LearningType } from '@/features/typing/presentation/hooks/useWordList'
-import { useWordList } from '@/features/typing/presentation/hooks/useWordList'
+import type { LearningType } from '@/features/typing/domain'
+import { useNormalTypingSession } from '@/features/typing/presentation/hooks/useNormalTypingSession'
 import { getMode, onModeChange } from '@/platform/utools'
 import type { WordBank } from '@/typings'
 import type React from 'react'
@@ -37,31 +35,38 @@ interface NormalTypingAppInnerProps {
 
 const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWordBank }) => {
   const { state, dispatch } = useTypingContext()
-  const markWordAsMastered = useMarkWordMastered()
 
-  const { words, learningType, dueCount, newCount, todayLearned, todayReviewed, todayMastered, getNextNewWord, reloadWords } = useWordList('normal')
-
-  useNormalLearningSync({
-    isActive: true,
-    words,
-    isTyping: state.uiState.isTyping,
-    dispatch,
-  })
+  const {
+    session,
+    learningType,
+    dueCount,
+    newCount,
+    todayLearned,
+    todayReviewed,
+    todayMastered,
+    completeSessionWord,
+    markSessionWordMastered,
+    isLoading,
+  } = useNormalTypingSession()
 
   useLearningRecordSaver(state)
 
   useTypingTimer(state.uiState.isTyping)
   useKeyboardStartListener(state.uiState.isTyping, false)
 
-  // 当学完一批单词后，自动重新加载获取下一批
   useEffect(() => {
-    if (state.uiState.isFinished && learningType !== 'complete' && todayLearned + todayReviewed < 20) {
-      // 学完一批但未达上限，重新加载获取下一批
-      reloadWords()
-      // 重置 isFinished 状态，继续学习
-      dispatch({ type: TypingStateActionType.SET_IS_TYPING, payload: true })
-    }
-  }, [state.uiState.isFinished, learningType, todayLearned, todayReviewed, reloadWords, dispatch])
+    if (!session) return
+
+    dispatch({
+      type: TypingStateActionType.SYNC_SESSION,
+      payload: {
+        words: session.queueWords.map((entry) => entry.word),
+        index: session.currentIndex,
+        isFinished: session.isFinished,
+        autoStart: !session.isFinished,
+      },
+    })
+  }, [session, dispatch])
 
   useEffect(() => {
     const handleModeChange = (mode: string) => {
@@ -81,22 +86,15 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
   }, [dispatch])
 
   const handleMastered = useCallback(async () => {
-    const currentWord = state.wordListData.words?.[state.wordListData.index]
-    if (!currentWord) return
+    await markSessionWordMastered()
+  }, [markSessionWordMastered])
 
-    const result = await markWordAsMastered({
-      currentWord,
-      getNextNewWord,
-    })
-
-    if (result.replacementWord) {
-      dispatch({ type: TypingStateActionType.ADD_REPLACEMENT_WORD, payload: result.replacementWord })
-    }
-
-    if (result.shouldSkip) {
-      dispatch({ type: TypingStateActionType.SKIP_WORD })
-    }
-  }, [state.wordListData.words, state.wordListData.index, markWordAsMastered, getNextNewWord, dispatch])
+  const handleWordFinished = useCallback(
+    async (params: { isCorrect: boolean; wrongCount: number }) => {
+      await completeSessionWord(params)
+    },
+    [completeSessionWord],
+  )
 
   useTypingHotkeys(state.isImmersiveMode)
 
@@ -143,7 +141,7 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
             </div>
             <PronunciationSwitcher />
             <Switcher />
-            <StartButton isLoading={false} />
+            <StartButton isLoading={isLoading} />
           </Header>
         )}
         <div className="container mx-auto flex h-full flex-1 flex-col items-center justify-center pb-4">
@@ -161,7 +159,7 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
                   <p className="text-sm text-gray-500 dark:text-gray-500">明天继续加油！</p>
                 </div>
               ) : (
-                <WordPanel onMastered={handleMastered} />
+                <WordPanel onMastered={handleMastered} onWordFinished={handleWordFinished} />
               )}
             </div>
             {!state.isImmersiveMode && <Speed />}
