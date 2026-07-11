@@ -1,4 +1,5 @@
 export * from './delete-local-word-bank'
+export * from './get-dict-progress-stats'
 export * from './list-custom-word-banks'
 export * from './load-word-list'
 export * from './read-local-word-bank'

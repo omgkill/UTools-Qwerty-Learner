@@ -18,6 +18,7 @@ import { getConsolidateWords } from '@/features/typing/application/use-cases'
 import { loadWordList as loadWordListUseCase } from '@/features/word-bank/application'
 import { utoolsLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository.utools'
 import { dexieWordProgressRepository } from '@/infra/repositories/word-progress.repository.dexie'
+import { getMode, onModeChange } from '@/platform/utools'
 import { currentDictIdAtom } from '@/store'
 import type { Word, WordBank, WordWithIndex } from '@/typings'
 import { getTodayStartTime } from '@/utils/timeService'
@@ -173,20 +174,19 @@ const ConsolidateTypingAppInner: React.FC<ConsolidateTypingAppInnerProps> = ({ c
   useKeyboardStartListener(state.uiState.isTyping, false)
 
   useEffect(() => {
-    const handleModeChange = () => {
-      const windowMode = window.getMode()
-      if (windowMode === 'conceal' || windowMode === 'moyu') {
+    const handleModeChange = (mode: string) => {
+      if (mode === 'conceal' || mode === 'moyu') {
         dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE, payload: true })
       } else {
         dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE, payload: false })
       }
     }
 
-    handleModeChange()
-    window.addEventListener('utools-mode-change', handleModeChange)
-    return () => {
-      window.removeEventListener('utools-mode-change', handleModeChange)
-    }
+    const windowMode = getMode()
+    handleModeChange(windowMode)
+
+    const cleanup = onModeChange(handleModeChange)
+    return cleanup
   }, [dispatch])
 
   useTypingHotkeys(state.isImmersiveMode)

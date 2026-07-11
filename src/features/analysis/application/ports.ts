@@ -5,4 +5,5 @@ export interface AnalysisRepository {
   getDailyRecordsByDict(dictId: string): Promise<AnalysisDailyRecord[]>
   getWordRecordsByDict(dictId: string): Promise<AnalysisWordRecord[]>
   getWordProgressByDict(dictId: string): Promise<AnalysisWordProgress[]>
+  getWordRecordsByTimeRange(startTime: number, endTime: number): Promise<AnalysisWordRecord[]>
 }

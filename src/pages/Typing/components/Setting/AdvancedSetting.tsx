@@ -1,6 +1,7 @@
 import styles from './index.module.css'
 import { dailyLimitConfigAtom, hotkeyConfigAtom, isIgnoreCaseAtom, isShowAnswerOnHoverAtom, isShowPrevAndNextWordAtom, isTextSelectableAtom, randomConfigAtom } from '@/store'
-import { setDailyLimit } from '@/utils/db/progress'
+import { setDailyLimit } from '@/features/typing/domain'
+import { clearAllData, restartPlugin } from '@/platform/utools'
 import { Switch } from '@headlessui/react'
 import * as ScrollArea from '@radix-ui/react-scroll-area'
 import { useAtom } from 'jotai'
@@ -59,11 +60,11 @@ export default function AdvancedSetting() {
   )
 
   const handleClearAllData = useCallback(() => {
-    const result = window.clearAllData()
+    const result = clearAllData()
     if (result) {
       toast.success('数据已清空，即将重新打开...')
       setTimeout(() => {
-        window.restartPlugin()
+        restartPlugin()
       }, 1000)
     } else {
       toast.error('清空数据失败')

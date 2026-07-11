@@ -17,4 +17,8 @@ export const dexieAnalysisRepository: AnalysisRepository = {
   getWordProgressByDict(dictId) {
     return db.wordProgress.where('dict').equals(dictId).toArray()
   },
+
+  getWordRecordsByTimeRange(startTime, endTime) {
+    return db.wordRecords.where('timeStamp').between(startTime, endTime).toArray()
+  },
 }

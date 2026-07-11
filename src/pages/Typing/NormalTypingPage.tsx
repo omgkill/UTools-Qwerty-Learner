@@ -18,6 +18,7 @@ import Tooltip from '@/components/Tooltip'
 import { useMarkWordMastered } from '@/features/typing/presentation/hooks/useMarkWordMastered'
 import type { LearningType } from '@/features/typing/presentation/hooks/useWordList'
 import { useWordList } from '@/features/typing/presentation/hooks/useWordList'
+import { getMode, onModeChange } from '@/platform/utools'
 import type { WordBank } from '@/typings'
 import type React from 'react'
 import { useCallback, useContext, useEffect } from 'react'
@@ -53,22 +54,20 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
   useKeyboardStartListener(state.uiState.isTyping, false)
 
   useEffect(() => {
-    const handleModeChange = () => {
-      const windowMode = window.getMode()
-      if (windowMode === 'conceal' || windowMode === 'moyu') {
+    const handleModeChange = (mode: string) => {
+      if (mode === 'conceal' || mode === 'moyu') {
         dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE, payload: true })
       } else {
         dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE, payload: false })
       }
     }
 
-    handleModeChange()
+    const windowMode = getMode()
+    handleModeChange(windowMode)
 
-    window.addEventListener('utools-mode-change', handleModeChange)
+    const cleanup = onModeChange(handleModeChange)
 
-    return () => {
-      window.removeEventListener('utools-mode-change', handleModeChange)
-    }
+    return cleanup
   }, [dispatch])
 
   const handleMastered = useCallback(async () => {

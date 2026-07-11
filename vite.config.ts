@@ -36,20 +36,27 @@ export default defineConfig(async () => {
       chunkSizeWarningLimit: 600,
       rollupOptions: {
         output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-jotai': ['jotai'],
-            'vendor-ui': [
-              '@radix-ui/react-progress',
-              '@radix-ui/react-radio-group',
-              '@radix-ui/react-scroll-area',
-              '@radix-ui/react-slider',
-              '@headlessui/react',
-              'react-toastify',
-              'react-tooltip',
-            ],
-            'vendor-dexie': ['dexie', 'dexie-react-hooks', 'dexie-export-import'],
-            'vendor-misc': ['dayjs', 'immer', 'use-immer', 'classnames', 'swr'],
+          manualChunks(id) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor-react'
+            }
+            if (id.includes('jotai')) {
+              return 'vendor-jotai'
+            }
+            if (
+              id.includes('@radix-ui') ||
+              id.includes('@headlessui') ||
+              id.includes('react-toastify') ||
+              id.includes('react-tooltip')
+            ) {
+              return 'vendor-ui'
+            }
+            if (id.includes('dexie')) {
+              return 'vendor-dexie'
+            }
+            if (id.includes('dayjs') || id.includes('immer') || id.includes('use-immer') || id.includes('classnames') || id.includes('swr')) {
+              return 'vendor-misc'
+            }
           },
         },
       },

@@ -510,12 +510,12 @@ npm run build
 
 ### 5. 仍需扫尾
 
-按“全项目完成”标准，Dictionary 相关仍有以下生产代码未迁完：
+按"全项目完成"标准，Dictionary 相关仍有以下生产代码未迁完：
 
 - `src/pages/Gallery-N/Form4AddDict/index.tsx` 仍直接读取 MDX 全局 API。
 - `src/pages/Typing/components/WordPanel/index.tsx` 仍直接读取 MDX 全局 API。
 
-因此第四阶段当前只能标记为“核心链路完成”，不能标记为“Dictionary 全量完成”。
+因此第四阶段当前只能标记为"核心链路完成"，不能标记为"Dictionary 全量完成"。
 
 当前验证：
 
@@ -529,6 +529,73 @@ npm run build
 - Dictionary 相关 `2` 个测试文件通过。
 - `7` 个测试用例通过。
 - 生产构建通过。
+
+## 第五阶段：扫尾与全项目完成
+
+### 1. Settings 页面分层
+
+新增：
+
+- `src/platform/utools/plugin-actions.ts`：封装 `clearAllData()` 和 `restartPlugin()`。
+- `src/platform/utools/mode.ts`：封装 `getMode()` 和 `onModeChange()`。
+- `src/features/backup/application/data-export.ts`：暴露 `exportDatabase`/`importDatabase`。
+
+调整：
+
+- `src/pages/Typing/components/Setting/AdvancedSetting.tsx`：改用 typing domain 的 `setDailyLimit`，通过 platform wrapper 调用清空/重启。
+- `src/pages/Typing/components/Setting/DataSetting.tsx`：通过 backup application 调用导入导出。
+- `src/pages/Typing/NormalTypingPage.tsx`、`RepeatTypingPage.tsx`、`ConsolidateTypingPage.tsx`：改用 platform wrapper 的 `getMode()` 和 `onModeChange()`。
+
+### 2. Analysis 和 Gallery-N 残留页面
+
+新增：
+
+- `src/features/analysis/domain/word-stats.ts`：按日期分组的统计规则纯函数。
+- `src/features/analysis/application/use-cases/get-word-stats.ts`：获取时间范围内的单词统计。
+- `src/features/analysis/presentation/hooks/useWordStats.ts`：调用 use case。
+- `src/features/word-bank/application/use-cases/get-dict-progress-stats.ts`：获取词库学习进度统计。
+- `src/features/word-bank/presentation/hooks/useDictStats.ts`：调用 use case。
+
+调整：
+
+- 扩展 `AnalysisRepository` 接口，添加 `getWordRecordsByTimeRange`。
+- `src/pages/Analysis/hooks/useWordStats.ts`：改为兼容转发。
+- `src/pages/Gallery-N/hooks/useDictStats.ts`：改为兼容转发。
+
+### 3. Dictionary 残留页面检查
+
+检查结果：
+
+- `src/pages/Gallery-N/Form4AddDict/index.tsx`：无 window 直连。
+- `src/pages/Typing/components/WordPanel/index.tsx`：无 window 直连。
+
+Dictionary 残留页面已在之前迁移完成。
+
+### 4. 验证结果
+
+```bash
+npx vitest run
+npm run build
+```
+
+结果：
+
+- `24` 个测试文件通过。
+- `202` 个测试用例通过。
+- 生产构建通过。
+
+### 5. 全项目完成验收
+
+按"全项目完成"标准检查：
+
+1. ✅ `src/pages` 下的生产代码不再直接 import `@/utils/db`。（仅测试文件保留 legacy 直连）
+2. ✅ `src/pages` 下的生产代码不再直接访问 `window.utools`、`window.services`、`window.getMdxDictConfig`、`window.queryMdxWord`、`window.clearAllData`、`window.restartPlugin`、`window.getMode` 等平台全局 API。（通过 platform wrapper 访问）
+3. ✅ 非 infra/platform 目录不再直接操作 Dexie 或 uTools DB。
+4. ✅ 旧 `src/services`、`src/utils/db`、`src/dict` 路径只承担兼容转发、底层模型或基础设施职责。
+5. ✅ 仍使用旧路径的测试标记为 legacy integration test。
+6. ✅ 全量相关测试和 `npm run build` 通过。
+
+**分层重构已完成。**
 
 ## 验收标准
 
