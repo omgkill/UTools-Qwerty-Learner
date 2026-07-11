@@ -3,6 +3,7 @@ import type { WordInfo } from './types'
 
 export enum TypingStateActionType {
   SYNC_SESSION = 'SYNC_SESSION',
+  SYNC_SESSION_STATUS = 'SYNC_SESSION_STATUS',
   RESET_PROGRESS = 'RESET_PROGRESS',
   SET_IS_SKIP = 'SET_IS_SKIP',
   SET_IS_TYPING = 'SET_IS_TYPING',
@@ -30,13 +31,17 @@ export type TypingStateAction =
       type: TypingStateActionType.SYNC_SESSION
       payload: { words: WordWithIndex[]; index: number; isFinished: boolean; autoStart?: boolean }
     }
+  | {
+      type: TypingStateActionType.SYNC_SESSION_STATUS
+      payload: { isFinished: boolean; autoStart?: boolean }
+    }
   | { type: TypingStateActionType.RESET_PROGRESS }
   | { type: TypingStateActionType.SET_IS_SKIP; payload: boolean }
   | { type: TypingStateActionType.SET_IS_TYPING; payload: boolean }
   | { type: TypingStateActionType.TOGGLE_IS_TYPING }
   | { type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE; payload?: boolean }
-  | { type: TypingStateActionType.REPORT_WRONG_WORD }
-  | { type: TypingStateActionType.REPORT_CORRECT_WORD }
+  | { type: TypingStateActionType.REPORT_WRONG_WORD; payload: number }
+  | { type: TypingStateActionType.REPORT_CORRECT_WORD; payload: number }
   | { type: TypingStateActionType.INCREASE_CORRECT_COUNT }
   | { type: TypingStateActionType.INCREASE_WRONG_COUNT }
   | { type: TypingStateActionType.SKIP_2_WORD_INDEX; newIndex: number }

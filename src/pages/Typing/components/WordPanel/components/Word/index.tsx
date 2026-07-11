@@ -37,7 +37,7 @@ export default function WordComponent({
   const [isHoveringWord, setIsHoveringWord] = useState(false)
   const currentLanguage = useAtomValue(currentDictInfoAtom)?.language ?? 'en'
 
-  const { updateInput } = useWordInput(wordState, setWordState)
+  const { updateInput } = useWordInput(word.index, wordState, setWordState)
   useWordCompletion(word, wordState, onFinish, isRepeatLearning)
 
   const handleHoverWord = useCallback((checked: boolean) => {

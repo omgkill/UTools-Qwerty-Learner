@@ -9,6 +9,7 @@ import { useAtomValue } from 'jotai'
 import { useCallback, useContext, useEffect } from 'react'
 
 export function useWordInput(
+  wordIndex: number,
   wordState: WordState,
   setWordState: (updater: (draft: WordState) => void) => void,
 ) {
@@ -108,9 +109,9 @@ export function useWordInput(
       })
 
       dispatch({ type: TypingStateActionType.INCREASE_WRONG_COUNT })
-      dispatch({ type: TypingStateActionType.REPORT_WRONG_WORD })
+      dispatch({ type: TypingStateActionType.REPORT_WRONG_WORD, payload: wordIndex })
     }
-  }, [wordState.inputWord, wordState.hasWrong, wordState.displayWord, isIgnoreCase, setWordState, dispatch])
+  }, [wordIndex, wordState.inputWord, wordState.hasWrong, wordState.displayWord, isIgnoreCase, setWordState, dispatch])
 
   useEffect(() => {
     if (wordState.hasWrong) {

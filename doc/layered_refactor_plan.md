@@ -72,7 +72,6 @@
 
 - 新词
 - 复习词
-- 额外复习词
 - 掌握后补位词
 
 因此正确性依赖外部调用顺序，而不是状态模型本身。
@@ -110,7 +109,6 @@
 
 - `new`
 - `review`
-- `extra_review`
 - `replacement`
 
 目标：
@@ -215,6 +213,40 @@ reducer 后续只保留纯 UI 状态，例如：
 4. 页面改为消费 session snapshot。
 5. 清理旧的分散推进逻辑和多处 effect 协调。
 
+## 2026-07-11 当前评审结论
+
+当前代码已经完成了前两阶段的大部分工作，但还没有达到本文件的验收标准。
+
+已完成：
+
+1. `TypingSession`、`currentWordKind`、`startTypingSession`、`completeCurrentWord`、`markCurrentWordMastered` 已建立。
+2. 正常学习会话已经有独立的 snapshot 持久化与恢复逻辑。
+3. application 层已经补了一批事务测试，覆盖新词、复习词、掌握补位、20 词批次切换和刷新恢复。
+
+未完成：
+
+1. `NormalTypingPage` 仍然把 session 的 `words/index` 同步到 reducer，再由 `WordPanel` 从 reducer 读取当前词。
+2. UI 仍然保留能直接修改当前索引的入口，导致“屏幕上显示的词”和“事务实际提交的词”可能分叉。
+3. 页面层还缺少明确的边界测试来验证“页面显示的当前词 = session 当前词 = 事务提交的当前词”。
+
+## 2026-07-11 本次实施计划
+
+本次修改只处理背单词 normal 主链路，目标是把它收敛到本文件原本定义的验收标准。
+
+实施步骤：
+
+1. 文档先对齐当前缺口、实施步骤和验收标准，避免代码继续在中间态漂移。
+2. `NormalTypingPage` 改成直接消费 `TypingSession`：
+   - 当前词
+   - 前后词
+   - 词列表高亮
+   - 完成与结束态
+3. `WordPanel`、`WordList`、相邻词提示不再依赖 reducer 的 `wordListData.index` 作为 normal 主链路真实游标。
+4. 清理 normal 主链路里 UI 直接跳词的能力，避免 reducer 和 session 分叉。
+5. 统计动作改为显式携带当前词索引，而不是在 reducer 中通过“当前 index”反推当前词。
+6. 清理 normal 主链路里没有真实产出的历史语义，避免 session 类型和实际事务分叉。
+7. 增加页面边界测试，验证显示词、提交词、session snapshot 三者一致。
+
 ## 验收标准
 
 只有满足以下条件，才能认为这轮背单词核心重构完成：
@@ -224,3 +256,15 @@ reducer 后续只保留纯 UI 状态，例如：
 3. `due > 20`、掌握补位、错误重输、刷新恢复四类场景有稳定的集成测试。
 4. 页面层不再通过 `reps === 1` 或类似副作用结果反推业务语义。
 5. `NormalTypingPage` 主流程不再依赖多个 effect 拼接学习推进。
+
+补充到可执行的代码标准：
+
+1. normal 主链路中，页面展示的当前词必须直接来自 `TypingSession.currentWord` 或 `TypingSession.queueWords[TypingSession.currentIndex]`。
+2. normal 主链路中，页面不能再直接 dispatch 一个“修改业务游标”的动作。
+3. `completeCurrentWord` 与 `markCurrentWordMastered` 提交的必须是页面当前展示的那个词。
+4. reducer 在 normal 主链路里只维护 UI 可视状态和输入统计，不再拥有独立的业务队列推进权。
+5. 页面测试至少要覆盖：
+   - 当前 session 展示正确
+   - 完成输入时提交的是当前展示词
+   - session 更新后页面切到新的当前词
+   - 刷新恢复后展示词与 session snapshot 一致

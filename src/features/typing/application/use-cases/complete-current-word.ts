@@ -41,9 +41,6 @@ export async function completeCurrentWord(params: CompleteCurrentWordParams): Pr
       case 'review':
         todayRecord = await dailyRecordRepository.incrementReviewed(session.dictId, false)
         break
-      case 'extra_review':
-        todayRecord = await dailyRecordRepository.incrementReviewed(session.dictId, true)
-        break
     }
   }
 

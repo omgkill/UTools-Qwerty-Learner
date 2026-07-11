@@ -34,7 +34,7 @@ export function useWordCompletion(
       onFinishCalledRef.current = true
 
       if (!wordState.hasMadeInputWrong) {
-        dispatch({ type: TypingStateActionType.REPORT_CORRECT_WORD })
+        dispatch({ type: TypingStateActionType.REPORT_CORRECT_WORD, payload: word.index })
       }
 
       const isCorrect = !wordState.hasMadeInputWrong

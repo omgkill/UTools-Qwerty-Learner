@@ -4,7 +4,7 @@ export type LearningType = 'review' | 'new' | 'complete'
 export type TypingStateSessionType = 'normal' | 'repeat' | 'consolidate'
 export type QueuedLearningSessionType = 'repeat' | 'consolidate'
 
-export type TypingWordKind = 'new' | 'review' | 'extra_review' | 'replacement'
+export type TypingWordKind = 'new' | 'review' | 'replacement'
 
 export type TypingSessionQueueItem = {
   word: WordWithIndex

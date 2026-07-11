@@ -1,20 +1,21 @@
 import { TypingContext, TypingStateActionType, initialState } from '../../store'
 import Tooltip from '@/components/Tooltip'
 import { wordDictationConfigAtom } from '@/store'
+import type { Word } from '@/typings'
 import { useAtomValue } from 'jotai'
 import { useCallback, useContext, useMemo } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import IconPrev from '~icons/tabler/arrow-narrow-left'
 import IconNext from '~icons/tabler/arrow-narrow-right'
 
-export default function PrevAndNextWord({ type }: LastAndNextWordProps) {
+export default function PrevAndNextWord({ type, word: wordOverride, onSelect, disableFallbackNavigation = false }: LastAndNextWordProps) {
   const typingContext = useContext(TypingContext)
   const state = typingContext?.state ?? initialState
   const dispatch = typingContext?.dispatch
 
   const wordDictationConfig = useAtomValue(wordDictationConfigAtom)
   const newIndex = useMemo(() => state.wordListData.index + (type === 'prev' ? -1 : 1), [state.wordListData.index, type])
-  const word = state.wordListData.words[newIndex]
+  const word = wordOverride ?? state.wordListData.words[newIndex]
   const shortCutKey = useMemo(() => (type === 'prev' ? 'Ctrl + Shift + ArrowLeft' : 'Ctrl + Shift + ArrowRight'), [type])
 
   const wordInfo = word ? state.wordInfoMap[word.name] : undefined
@@ -23,18 +24,26 @@ export default function PrevAndNextWord({ type }: LastAndNextWordProps) {
   const onClickWord = useCallback(() => {
     if (!word) return
 
+    if (onSelect) {
+      onSelect()
+      return
+    }
+
+    if (disableFallbackNavigation) return
+
     if (!dispatch) return
     if (type === 'prev') dispatch({ type: TypingStateActionType.SKIP_2_WORD_INDEX, newIndex })
     if (type === 'next') dispatch({ type: TypingStateActionType.SKIP_2_WORD_INDEX, newIndex })
-  }, [type, dispatch, newIndex, word])
+  }, [type, dispatch, disableFallbackNavigation, newIndex, onSelect, word])
 
   useHotkeys(
     shortCutKey,
     (e) => {
+      if (!onSelect && (disableFallbackNavigation || !dispatch)) return
       e.preventDefault()
       onClickWord()
     },
-    { preventDefault: true },
+    { preventDefault: Boolean(onSelect || (!disableFallbackNavigation && dispatch)) },
   )
 
   const headWord = useMemo(() => {
@@ -53,7 +62,9 @@ export default function PrevAndNextWord({ type }: LastAndNextWordProps) {
         <Tooltip content={`快捷键: ${shortCutKey}`}>
           <div
             onClick={onClickWord}
-            className="flex max-w-xs cursor-pointer select-none items-center text-gray-700 opacity-60 duration-200 ease-in-out hover:opacity-100 dark:text-gray-400"
+            className={`flex max-w-xs select-none items-center text-gray-700 opacity-60 duration-200 ease-in-out dark:text-gray-400 ${
+              onSelect || (!disableFallbackNavigation && dispatch) ? 'cursor-pointer hover:opacity-100' : ''
+            }`}
           >
             {type === 'prev' && <IconPrev className="mr-4 shrink-0 grow-0 text-2xl" />}
 
@@ -82,4 +93,7 @@ export default function PrevAndNextWord({ type }: LastAndNextWordProps) {
 export type LastAndNextWordProps = {
   /** 上一个单词还是下一个单词 */
   type: 'prev' | 'next'
+  word?: Word
+  onSelect?: () => void
+  disableFallbackNavigation?: boolean
 }

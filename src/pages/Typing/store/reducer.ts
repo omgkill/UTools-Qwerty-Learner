@@ -21,6 +21,18 @@ export function typingReducer(state: TypingState, action: TypingStateAction): Ty
         },
       }
 
+    case TypingStateActionType.SYNC_SESSION_STATUS:
+      return {
+        ...state,
+        uiState: {
+          ...state.uiState,
+          isFinished: action.payload.isFinished,
+          isCurrentWordMastered: false,
+          isShowSkip: false,
+          isTyping: action.payload.isFinished ? false : action.payload.autoStart ? true : state.uiState.isTyping,
+        },
+      }
+
     case TypingStateActionType.RESET_PROGRESS: {
       return {
         ...state,
@@ -60,9 +72,7 @@ export function typingReducer(state: TypingState, action: TypingStateAction): Ty
       }
 
     case TypingStateActionType.REPORT_WRONG_WORD: {
-      const currentWord = state.wordListData.words[state.wordListData.index]
-      if (!currentWord) return state
-      const wordIndex = currentWord.index
+      const wordIndex = action.payload
       if (state.statsData.wrongWordIndexes.indexOf(wordIndex) !== -1) return state
       return {
         ...state,
@@ -74,9 +84,7 @@ export function typingReducer(state: TypingState, action: TypingStateAction): Ty
     }
 
     case TypingStateActionType.REPORT_CORRECT_WORD: {
-      const currentWord = state.wordListData.words[state.wordListData.index]
-      if (!currentWord) return state
-      const wordIndex = currentWord.index
+      const wordIndex = action.payload
       if (
         state.statsData.correctWordIndexes.indexOf(wordIndex) !== -1 ||
         state.statsData.wrongWordIndexes.indexOf(wordIndex) !== -1

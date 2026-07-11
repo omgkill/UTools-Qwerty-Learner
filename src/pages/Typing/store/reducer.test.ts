@@ -85,6 +85,40 @@ describe('typingReducer', () => {
     expect(next.uiState.isTyping).toBe(false)
   })
 
+  it('SYNC_SESSION_STATUS should only update UI flags without replacing the queue', () => {
+    const words = [createWord('alpha', 0), createWord('beta', 1)]
+    const state = createState(words, 1)
+    state.uiState.isTyping = false
+    state.uiState.isShowSkip = true
+    state.uiState.isCurrentWordMastered = true
+
+    const next = typingReducer(state, {
+      type: TypingStateActionType.SYNC_SESSION_STATUS,
+      payload: {
+        isFinished: false,
+        autoStart: true,
+      },
+    })
+
+    expect(next.wordListData.words).toEqual(words)
+    expect(next.wordListData.index).toBe(1)
+    expect(next.uiState.isTyping).toBe(true)
+    expect(next.uiState.isFinished).toBe(false)
+    expect(next.uiState.isShowSkip).toBe(false)
+    expect(next.uiState.isCurrentWordMastered).toBe(false)
+  })
+
+  it('REPORT_CORRECT_WORD should use the explicit word index payload', () => {
+    const state = createState([createWord('legacy', 99)], 0)
+
+    const next = typingReducer(state, {
+      type: TypingStateActionType.REPORT_CORRECT_WORD,
+      payload: 3,
+    })
+
+    expect(next.statsData.correctWordIndexes).toEqual([3])
+  })
+
   it('SKIP_2_WORD_INDEX should jump within the current queue', () => {
     const state = createState([createWord('alpha', 0), createWord('beta', 1), createWord('gamma', 2)], 1)
 

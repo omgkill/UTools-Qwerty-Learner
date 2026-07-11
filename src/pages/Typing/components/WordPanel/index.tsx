@@ -9,7 +9,7 @@ import { parseMdxEntry } from '@/utils/mdxParser'
 import { usePrefetchPronunciationSound } from '@/hooks/usePronunciation'
 import { utoolsMdxDictionaryRepository } from '@/infra/repositories/dictionary.repository.utools'
 import { hotkeyConfigAtom, isShowPrevAndNextWordAtom, phoneticConfigAtom } from '@/store'
-import type { Word } from '@/typings'
+import type { WordWithIndex } from '@/typings'
 import { useAtomValue } from 'jotai'
 import { useCallback, useContext, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -18,9 +18,12 @@ import { useHotkeys } from 'react-hotkeys-hook'
 type WordPanelProps = {
   onMastered?: () => void
   onWordFinished: (params: { isCorrect: boolean; wrongCount: number }) => Promise<void> | void
+  words?: WordWithIndex[]
+  currentIndex?: number
+  disableWordJump?: boolean
 }
 
-export default function WordPanel({ onMastered, onWordFinished }: WordPanelProps) {
+export default function WordPanel({ onMastered, onWordFinished, words, currentIndex, disableWordJump = false }: WordPanelProps) {
   const handleMastered = onMastered ?? (() => undefined)
   const typingContext = useContext(TypingContext)
   const state = typingContext?.state ?? initialState
@@ -29,9 +32,11 @@ export default function WordPanel({ onMastered, onWordFinished }: WordPanelProps
   const isShowPrevAndNextWord = useAtomValue(isShowPrevAndNextWordAtom)
   const hotkeyConfig = useAtomValue(hotkeyConfigAtom)
   const navigate = useNavigate()
-  const currentWord = state.wordListData.words[state.wordListData.index]
-  const prevWord = state.wordListData.words[state.wordListData.index - 1] as Word | undefined
-  const nextWord = state.wordListData.words[state.wordListData.index + 1] as Word | undefined
+  const activeWords = words ?? state.wordListData.words
+  const activeIndex = currentIndex ?? state.wordListData.index
+  const currentWord = activeWords[activeIndex]
+  const prevWord = activeWords[activeIndex - 1]
+  const nextWord = activeWords[activeIndex + 1]
 
   usePrefetchPronunciationSound(currentWord?.name)
   usePrefetchPronunciationSound(prevWord?.name)
@@ -123,14 +128,14 @@ export default function WordPanel({ onMastered, onWordFinished }: WordPanelProps
   return (
     <div className="container flex w-full flex-col items-center justify-center">
       {!state.isImmersiveMode && (
-        <div className="container flex h-24 w-full shrink-0 grow-0 justify-between px-12 pt-10">
-          {isShowPrevAndNextWord && state.uiState.isTyping && (
-            <>
-              <PrevAndNextWord type="prev" />
-              <PrevAndNextWord type="next" />
-            </>
-          )}
-        </div>
+          <div className="container flex h-24 w-full shrink-0 grow-0 justify-between px-12 pt-10">
+            {isShowPrevAndNextWord && state.uiState.isTyping && (
+              <>
+                <PrevAndNextWord type="prev" word={prevWord} disableFallbackNavigation={disableWordJump} />
+                <PrevAndNextWord type="next" word={nextWord} disableFallbackNavigation={disableWordJump} />
+              </>
+            )}
+          </div>
       )}
       <div className="container flex flex-col items-center justify-center">
         {currentWord && (

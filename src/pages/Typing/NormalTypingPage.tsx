@@ -33,7 +33,7 @@ interface NormalTypingAppInnerProps {
   currentWordBank: WordBank
 }
 
-const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWordBank }) => {
+export const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWordBank }) => {
   const { state, dispatch } = useTypingContext()
 
   const {
@@ -49,6 +49,9 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
     isLoading,
   } = useNormalTypingSession()
 
+  const sessionWords = session?.queueWords.map((entry) => entry.word) ?? []
+  const sessionIndex = session?.currentIndex ?? 0
+
   useLearningRecordSaver(state)
 
   useTypingTimer(state.uiState.isTyping)
@@ -58,10 +61,8 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
     if (!session) return
 
     dispatch({
-      type: TypingStateActionType.SYNC_SESSION,
+      type: TypingStateActionType.SYNC_SESSION_STATUS,
       payload: {
-        words: session.queueWords.map((entry) => entry.word),
-        index: session.currentIndex,
         isFinished: session.isFinished,
         autoStart: !session.isFinished,
       },
@@ -109,7 +110,7 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
     }
   }, [dispatch])
 
-  useConfetti(state.uiState.isFinished && !state.isImmersiveMode)
+  useConfetti(Boolean(session?.isFinished) && !state.isImmersiveMode)
 
   const typeInfo = LEARNING_TYPE_LABELS[learningType]
 
@@ -159,7 +160,13 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
                   <p className="text-sm text-gray-500 dark:text-gray-500">明天继续加油！</p>
                 </div>
               ) : (
-                <WordPanel onMastered={handleMastered} onWordFinished={handleWordFinished} />
+                <WordPanel
+                  onMastered={handleMastered}
+                  onWordFinished={handleWordFinished}
+                  words={sessionWords}
+                  currentIndex={sessionIndex}
+                  disableWordJump
+                />
               )}
             </div>
             {!state.isImmersiveMode && <Speed />}
@@ -167,7 +174,7 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
         </div>
       </Layout>
 
-      {!state.isImmersiveMode && <WordList />}
+      {!state.isImmersiveMode && <WordList words={sessionWords} currentIndex={sessionIndex} />}
     </>
   )
 }
