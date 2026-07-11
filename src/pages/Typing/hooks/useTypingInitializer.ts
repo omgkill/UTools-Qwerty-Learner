@@ -1,6 +1,6 @@
+import { useCustomWordBanks } from '@/features/word-bank/presentation/hooks'
 import { currentWordBankAtom, currentWordBankIdAtom, wordBanksAtom } from '@/store'
-import type { WordBank } from '@/typings'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { useAtom, useAtomValue } from 'jotai'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -9,23 +9,14 @@ export function useTypingInitializer() {
   const [currentWordBankId, setCurrentWordBankId] = useAtom(currentWordBankIdAtom)
   const currentWordBank = useAtomValue(currentWordBankAtom)
   const wordBanks = useAtomValue(wordBanksAtom)
-  const setWordBanks = useSetAtom(wordBanksAtom)
+  const { loadCustomWordBanks } = useCustomWordBanks()
   const navigate = useNavigate()
 
   useEffect(() => {
-    const config = window.readLocalWordBankConfig()
-    console.log('[useTypingInitializer] Loaded word bank config:', config)
-    const customWordBanks = config.filter((wb: WordBank) => wb.id && wb.id.startsWith('x-dict-'))
-    const uniqueWordBanks = customWordBanks.reduce((acc: WordBank[], wb: WordBank) => {
-      if (!acc.some((d) => d.id === wb.id)) {
-        acc.push(wb)
-      }
-      return acc
-    }, [])
-    console.log('[useTypingInitializer] Filtered custom word banks:', uniqueWordBanks)
-    setWordBanks(uniqueWordBanks)
+    const customWordBanks = loadCustomWordBanks()
+    console.log('[useTypingInitializer] Filtered custom word banks:', customWordBanks)
     setIsInitialized(true)
-  }, [setWordBanks])
+  }, [loadCustomWordBanks])
 
   useEffect(() => {
     if (!isInitialized) return

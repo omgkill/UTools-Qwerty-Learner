@@ -6,17 +6,20 @@ import Switcher from './components/Switcher'
 import WordList from './components/WordList'
 import WordPanel from './components/WordPanel'
 import { useConfetti } from './hooks/useConfetti'
-import { TypingContext, TypingStateActionType, initialState, typingReducer } from './store'
-import { useTypingInitializer } from './hooks/useTypingInitializer'
-import { useTypingHotkeys } from './hooks/useTypingHotkeys'
-import { useLearningRecordSaver } from './hooks/useLearningRecordSaver'
-import { useTypingTimer } from './hooks/useTypingTimer'
 import { useKeyboardStartListener } from './hooks/useKeyboardStartListener'
+import { useLearningRecordSaver } from './hooks/useLearningRecordSaver'
+import { useTypingHotkeys } from './hooks/useTypingHotkeys'
+import { useTypingInitializer } from './hooks/useTypingInitializer'
+import { useTypingTimer } from './hooks/useTypingTimer'
+import { TypingContext, TypingStateActionType, initialState, typingReducer } from './store'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
-import type { Word, WordBank, WordWithIndex } from '@/typings'
+import { getConsolidateWords } from '@/features/typing/application/use-cases'
+import { loadWordList as loadWordListUseCase } from '@/features/word-bank/application'
+import { utoolsLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository.utools'
+import { dexieWordProgressRepository } from '@/infra/repositories/word-progress.repository.dexie'
 import { currentDictIdAtom } from '@/store'
-import { db } from '@/utils/db'
+import type { Word, WordBank, WordWithIndex } from '@/typings'
 import { getTodayStartTime } from '@/utils/timeService'
 import { useAtomValue } from 'jotai'
 import type React from 'react'
@@ -41,7 +44,7 @@ function shuffleWithSeed<T>(array: T[], seed: string): T[] {
   const result = [...array]
   let hash = 0
   for (let i = 0; i < seed.length; i++) {
-    hash = ((hash << 5) - hash) + seed.charCodeAt(i)
+    hash = (hash << 5) - hash + seed.charCodeAt(i)
     hash = hash & hash
   }
 
@@ -104,19 +107,13 @@ const ConsolidateTypingAppInner: React.FC<ConsolidateTypingAppInnerProps> = ({ c
         return
       }
 
-      // 获取已学习但未掌握的单词（masteryLevel > 0 && masteryLevel < 7）
-      const allProgress = await db.wordProgress
-        .where('dict')
-        .equals(currentDictId)
-        .toArray()
+      const learnedWords = await getConsolidateWords({
+        dictId: currentDictId,
+        wordList,
+        wordProgressRepository: dexieWordProgressRepository,
+      })
 
-      const learnedButNotMasteredNames = new Set(
-        allProgress
-          .filter((p) => p.masteryLevel > 0 && p.masteryLevel < 7)
-          .map((p) => p.word)
-      )
-
-      if (learnedButNotMasteredNames.size === 0) {
+      if (learnedWords.length === 0) {
         setHasWords(false)
         return
       }
@@ -127,17 +124,14 @@ const ConsolidateTypingAppInner: React.FC<ConsolidateTypingAppInnerProps> = ({ c
 
       if (saved.wordNames && saved.wordNames.length > 0) {
         const savedSet = new Set(saved.wordNames)
-        finalWords = wordList
-          .filter((w) => savedSet.has(w.name) && learnedButNotMasteredNames.has(w.name))
-          .filter((w) => learnedButNotMasteredNames.has(w.name))
+        finalWords = learnedWords.filter((word) => savedSet.has(word.name))
 
         const orderedNames = saved.wordNames.filter((name) => finalWords.some((w) => w.name === name))
         finalWords = orderedNames.map((name) => finalWords.find((w) => w.name === name)).filter((w): w is WordWithIndex => w !== undefined)
         finalIndex = Math.min(saved.index, finalWords.length - 1)
       } else {
-        const consolidateWords = wordList.filter((w) => learnedButNotMasteredNames.has(w.name))
         const date = getTodayDate()
-        finalWords = shuffleWithSeed(consolidateWords, `${currentDictId}-${date}`)
+        finalWords = shuffleWithSeed(learnedWords, `${currentDictId}-${date}`)
         finalIndex = 0
       }
 
@@ -241,9 +235,7 @@ const ConsolidateTypingAppInner: React.FC<ConsolidateTypingAppInnerProps> = ({ c
         <div className="flex h-full flex-col items-center justify-center space-y-6">
           <div className="text-6xl">📚</div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">暂无可巩固的单词</h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            请先进行正常学习，积累一定数量的单词后再来巩固学习
-          </p>
+          <p className="text-gray-600 dark:text-gray-400">请先进行正常学习，积累一定数量的单词后再来巩固学习</p>
           <button
             onClick={() => navigate('/')}
             className="rounded-lg bg-indigo-500 px-4 py-2 text-white transition-colors hover:bg-indigo-600"
@@ -262,7 +254,7 @@ const ConsolidateTypingAppInner: React.FC<ConsolidateTypingAppInnerProps> = ({ c
           <Header>
             <Tooltip content="切换词库">
               <NavLink
-                className="block rounded-lg px-3 py-1 text-lg transition-colors duration-300 ease-in-out hover:bg-indigo-400 hover:text-white focus:outline-none text-white text-opacity-60 hover:text-opacity-100"
+                className="block rounded-lg px-3 py-1 text-lg text-white text-opacity-60 transition-colors duration-300 ease-in-out hover:bg-indigo-400 hover:text-white hover:text-opacity-100 focus:outline-none"
                 to="/gallery"
               >
                 {currentWordBank.name}
@@ -333,44 +325,7 @@ function useTypingContext() {
 }
 
 async function loadWordList(currentWordBank: WordBank): Promise<WordWithIndex[] | null> {
-  if (!currentWordBank) return null
-
-  const isLocalWordBank = currentWordBank.id.startsWith('x-dict-') || currentWordBank.languageCategory === 'custom'
-
-  try {
-    let words: Word[] = []
-
-    if (isLocalWordBank) {
-      const rawWords = await window.readLocalWordBank(currentWordBank.id)
-      words = rawWords.map((w: Partial<Word>) => ({
-        name: w.name || '',
-        trans: w.trans || [],
-        usphone: w.usphone || '',
-        ukphone: w.ukphone || '',
-        notation: w.notation,
-        tense: w.tense,
-      }))
-    } else {
-      const response = await fetch('.' + currentWordBank.url)
-      const rawWords = await response.json()
-      words = rawWords.map((w: Partial<Word>) => ({
-        name: w.name || '',
-        trans: w.trans || [],
-        usphone: w.usphone || '',
-        ukphone: w.ukphone || '',
-        notation: w.notation,
-        tense: w.tense,
-      }))
-    }
-
-    return words.map((word, index) => ({
-      ...word,
-      index,
-    }))
-  } catch (e) {
-    console.error('Failed to load word list:', e)
-    return null
-  }
+  return loadWordListUseCase(utoolsLocalWordBankRepository, currentWordBank)
 }
 
 export default ConsolidateTypingPage

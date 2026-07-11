@@ -1,13 +1,7 @@
+import type { TypingStateSnapshot } from '@/features/typing/domain'
 import type { WordWithIndex } from '@/typings'
 
-export interface ITypingState {
-  id?: number
-  dict: string
-  date: string
-  isRepeatLearning: boolean
-  learningWords: WordWithIndex[]
-  currentIndex: number
-}
+export type ITypingState = TypingStateSnapshot
 
 export class TypingState implements ITypingState {
   id?: number

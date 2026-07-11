@@ -1,9 +1,11 @@
+import { recordDataWrite } from '@/features/backup/application'
+import type { TypingStateRepository } from '@/features/typing/application/ports'
+import type { TypingStateSnapshot } from '@/features/typing/domain'
+import { dexieTypingStateRepository } from '@/infra/repositories/typing-state.repository.dexie'
 import type { WordWithIndex } from '@/typings'
-import { db, type ITypingState } from '@/utils/db'
-import { getTodayDate } from '@/utils/db/progress'
-import { recordDataWrite } from '@/utils/db'
+import { getTodayDate } from '@/features/typing/domain/learning-config'
 
-export type SavedRepeatLearningState = ITypingState
+export type SavedRepeatLearningState = TypingStateSnapshot
 
 export type RepeatLearningState = {
   isRepeatLearning: boolean
@@ -27,11 +29,12 @@ const findLatestState = (states: SavedRepeatLearningState[]): SavedRepeatLearnin
   })
 }
 
-export async function getSavedRepeatLearningState(dictId: string, date = getTodayDate()): Promise<SavedRepeatLearningState | null> {
-  const states = await db.typingStates
-    .where('[dict+date]')
-    .equals([dictId, date])
-    .toArray()
+export async function getSavedRepeatLearningState(
+  dictId: string,
+  date = getTodayDate(),
+  typingStateRepository: TypingStateRepository = dexieTypingStateRepository,
+): Promise<SavedRepeatLearningState | null> {
+  const states = await typingStateRepository.getStates(dictId, date)
 
   const latest = findLatestState(states)
   if (!latest) return null
@@ -42,7 +45,7 @@ export async function getSavedRepeatLearningState(dictId: string, date = getToda
     .filter((id): id is number => typeof id === 'number')
 
   if (staleIds.length > 0) {
-    await db.typingStates.bulkDelete(staleIds)
+    await typingStateRepository.deleteStates(staleIds)
     recordDataWrite()
   }
 
@@ -52,8 +55,10 @@ export async function getSavedRepeatLearningState(dictId: string, date = getToda
 export class RepeatLearningManager {
   private state: RepeatLearningState = emptyState
 
+  constructor(private typingStateRepository: TypingStateRepository = dexieTypingStateRepository) {}
+
   async initialize(dictId: string): Promise<SavedRepeatLearningState | null> {
-    const saved = await getSavedRepeatLearningState(dictId)
+    const saved = await getSavedRepeatLearningState(dictId, getTodayDate(), this.typingStateRepository)
 
     if (!saved || !saved.isRepeatLearning || saved.learningWords.length === 0) {
       this.state = emptyState
@@ -141,11 +146,11 @@ export class RepeatLearningManager {
   }
 
   private async save(state: SavedRepeatLearningState): Promise<void> {
-    const existing = await getSavedRepeatLearningState(state.dict, state.date)
+    const existing = await getSavedRepeatLearningState(state.dict, state.date, this.typingStateRepository)
 
     const nextState = existing ? { ...state, id: existing.id } : state
 
-    await db.typingStates.put(nextState)
+    await this.typingStateRepository.saveState(nextState)
     recordDataWrite()
   }
 }

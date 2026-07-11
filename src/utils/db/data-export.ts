@@ -127,5 +127,7 @@ export async function importDatabase2UTools() {
   return true
 }
 
-window.exportDatabase2UTools = exportDatabase2UTools
-window.importDatabase2UTools = importDatabase2UTools
+if (typeof window !== 'undefined') {
+  window.exportDatabase2UTools = exportDatabase2UTools
+  window.importDatabase2UTools = importDatabase2UTools
+}

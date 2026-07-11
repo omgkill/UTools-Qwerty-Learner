@@ -1,14 +1,8 @@
-import type { Word } from '@/typings'
 import type { WordState } from './useWordState'
+import { useCompleteWord } from '@/features/typing/presentation/hooks/useCompleteWord'
 import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
-import { useSaveWordRecord } from '@/utils/db'
-import { DailyRecord, WordProgress, getNextReviewTime, getTodayDate, updateMasteryLevel } from '@/utils/db/progress'
-import { db } from '@/utils/db'
-import { getTodayStartTime, now } from '@/utils/timeService'
+import type { Word } from '@/typings'
 import { useCallback, useContext, useEffect } from 'react'
-import { currentDictIdAtom } from '@/store'
-import { useAtomValue } from 'jotai'
-import type { IWordProgress } from '@/utils/db/progress'
 
 const onFinishCalledRef = { current: false }
 
@@ -29,9 +23,7 @@ export function useWordCompletion(
     },
     [rawDispatch],
   )
-  const dictID = useAtomValue(currentDictIdAtom)
-
-  const saveWordRecord = useSaveWordRecord()
+  const completeWord = useCompleteWord()
 
   useEffect(() => {
     onFinishCalledRef.current = false
@@ -53,36 +45,19 @@ export function useWordCompletion(
       const startTime = performance.now()
 
       if (!isRepeatLearning) {
-        Promise.all([
-          saveWordRecord({
-            word: word.name,
-            wrongCount: wordState.wrongCount,
-            letterTimeArray: wordState.letterTimeArray,
-            letterMistake: wordState.letterMistake,
-          }).then((id) => {
-            console.log(`[DB] saveWordRecord done in ${performance.now() - startTime}ms, id=${id}`)
-            return id
-          }),
-          updateWordProgress(dictID, word.name, isCorrect, wordState.wrongCount).then((progress) => {
-            console.log(`[DB] updateWordProgress done in ${performance.now() - startTime}ms`)
-            return progress
-          }),
-        ])
-          .then(([, progress]) => {
-            if (progress && dictID) {
-              const isNewWord = progress.reps === 1
-              // 只有输入正确时才计数
-              if (isCorrect) {
-                if (isNewWord) {
-                  return incrementLearned(dictID)
-                } else {
-                  return incrementReviewed(dictID, isExtraReview)
-                }
-              }
+        completeWord({
+          word: word.name,
+          isCorrect,
+          wrongCount: wordState.wrongCount,
+          letterTimeArray: wordState.letterTimeArray,
+          letterMistake: wordState.letterMistake,
+          isExtraReview,
+        })
+          .then(({ wordRecordId }) => {
+            console.log(`[DB] completeWord done in ${performance.now() - startTime}ms, id=${wordRecordId}`)
+            if (wordRecordId > 0) {
+              dispatch({ type: TypingStateActionType.ADD_WORD_RECORD_ID, payload: wordRecordId })
             }
-          })
-          .then(() => {
-            console.log(`[DB] All IndexedDB operations done in ${performance.now() - startTime}ms`)
           })
           .catch((e) => console.error('Failed to save word records:', e))
       }
@@ -98,77 +73,9 @@ export function useWordCompletion(
     wordState.wrongCount,
     word.name,
     dispatch,
-    saveWordRecord,
-    dictID,
+    completeWord,
     onFinish,
     isExtraReview,
     isRepeatLearning,
   ])
-}
-
-async function updateWordProgress(dictID: string, word: string, isCorrect: boolean, wrongCount: number): Promise<IWordProgress | undefined> {
-  if (!dictID) return undefined
-
-  const existingProgress = await db.wordProgress
-    .where('[dict+word]')
-    .equals([dictID, word])
-    .first()
-
-  const currentProgress = existingProgress || new WordProgress(word, dictID)
-  const { newLevel } = updateMasteryLevel(currentProgress.masteryLevel, isCorrect, wrongCount)
-
-  currentProgress.masteryLevel = newLevel
-  currentProgress.nextReviewTime = getNextReviewTime(newLevel)
-  currentProgress.lastReviewTime = now()
-  currentProgress.reps = (currentProgress.reps || 0) + 1
-
-  if (currentProgress.reps === 1 && !isCorrect) {
-    currentProgress.nextReviewTime = getTodayStartTime() + 24 * 60 * 60 * 1000
-  }
-
-  if (isCorrect) {
-    currentProgress.correctCount++
-    currentProgress.streak++
-  } else {
-    currentProgress.wrongCount++
-    currentProgress.streak = 0
-  }
-
-  currentProgress.id = await db.wordProgress.put(currentProgress)
-
-  return currentProgress
-}
-
-async function incrementLearned(dictID: string): Promise<void> {
-  if (!dictID) return
-
-  const today = getTodayDate()
-  let record = await db.dailyRecords.where('[dict+date]').equals([dictID, today]).first()
-
-  if (!record) {
-    record = new DailyRecord(dictID, today)
-  }
-
-  record.learnedCount++
-  record.lastUpdateTime = now()
-  record.id = await db.dailyRecords.put(record)
-}
-
-async function incrementReviewed(dictID: string, isExtra = false): Promise<void> {
-  if (!dictID) return
-
-  const today = getTodayDate()
-  let record = await db.dailyRecords.where('[dict+date]').equals([dictID, today]).first()
-
-  if (!record) {
-    record = new DailyRecord(dictID, today)
-  }
-
-  if (isExtra) {
-    record.extraReviewedCount++
-  } else {
-    record.reviewedCount++
-  }
-  record.lastUpdateTime = now()
-  record.id = await db.dailyRecords.put(record)
 }

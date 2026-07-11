@@ -9,6 +9,8 @@ import IconDelete from '~icons/mdi/delete'
 import IconX from '~icons/tabler/x'
 import EditIcon from '~icons/uil/edit-alt'
 import type { LanguageType, WordBank } from '@/typings'
+import { deleteLocalWordBank, updateLocalWordBankConfig } from '@/features/word-bank/application'
+import { utoolsLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository.utools'
 
 type Form4EditDictProps = {
   wordBankId: string
@@ -31,7 +33,7 @@ const Form4EditDict: FC<Form4EditDictProps> = ({ wordBankId }) => {
   }
   async function openModal(event: MouseEvent<HTMLButtonElement>) {
     event.stopPropagation()
-    const config = await window.readLocalWordBankConfig()
+    const config = utoolsLocalWordBankRepository.readConfig()
     setWordBanksList([...config])
     for (let i = 0; i < config.length; i++) {
       if (config[i].id === wordBankId) {
@@ -63,8 +65,7 @@ const Form4EditDict: FC<Form4EditDictProps> = ({ wordBankId }) => {
     })
     const nextList = [...wordBanksList]
     nextList[wordBankIndex] = newWordBankInfo
-    await window.writeLocalWordBankConfig(nextList)
-    window.initLocalWordBanks()
+    updateLocalWordBankConfig(utoolsLocalWordBankRepository, nextList)
     handleRefresh()
 
     setIsOpen(false)
@@ -81,13 +82,12 @@ const Form4EditDict: FC<Form4EditDictProps> = ({ wordBankId }) => {
   async function handleDelClick(event?: MouseEvent<HTMLButtonElement>) {
     event?.preventDefault()
 
-    const result = await window.delLocalWordBank(wordBankId)
+    const result = deleteLocalWordBank(utoolsLocalWordBankRepository, wordBankId)
     if (result) {
       toast.success('删除成功')
     } else {
       toast.error('删除失败')
     }
-    window.initLocalWordBanks()
     handleRefresh()
     setIsOpen(false)
   }

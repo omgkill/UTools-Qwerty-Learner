@@ -23,7 +23,16 @@ declare global {
     removeMdxDict: (path: string) => Array<{ path: string; name: string }>
     updateMdxDictOrder: (dicts: Array<{ path: string; name: string }>) => Array<{ path: string; name: string }>
     queryMdxWord: (word: string) => Promise<Array<{ dictPath: string; dictName: string; ok: boolean; content?: string; error?: string }>>
-    queryFirstMdxWord: (word: string) => Promise<{ dictPath: string; dictName: string; ok: boolean; content?: string; error?: string } | null>
+    queryFirstMdxWord: (
+      word: string,
+    ) => Promise<{ dictPath: string; dictName: string; ok: boolean; content?: string; error?: string } | null>
+    dictMdxLoader: {
+      load: (path: string) => Promise<{
+        mdxLookup: (word: string) => Promise<string[]>
+        mddLookup?: ((resource: string) => Promise<Buffer>) | null
+      }>
+      unload?: (path: string) => void
+    }
     services: {
       getDictList: () => Array<{ path: string; name: string }>
       queryWord?: (word: string) => Promise<Array<{ dictPath: string; dictName: string; ok: boolean; content?: string; error?: string }>>

@@ -1,12 +1,13 @@
 import DictionaryGroup from './CategoryDicts'
 import Form4AddDict from './Form4AddDict'
 import Layout from '@/components/Layout'
+import { useCustomWordBanks } from '@/features/word-bank/presentation/hooks'
 import { wordBanksAtom } from '@/store'
 import type { WordBank } from '@/typings'
 import groupBy, { groupByDictTags } from '@/utils/groupBy'
 import { VIP_STATE_KEY, getUtoolsValue } from '@/utils/utools'
 import * as ScrollArea from '@radix-ui/react-scroll-area'
-import { useAtomValue, useSetAtom } from 'jotai'
+import { useAtomValue } from 'jotai'
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { useNavigate } from 'react-router-dom'
@@ -23,32 +24,20 @@ export const GalleryContext = createContext<{ state: GalleryState }>({ state: { 
 export default function GalleryPage() {
   const navigate = useNavigate()
   const wordBanks = useAtomValue(wordBanksAtom)
-  const setWordBanks = useSetAtom(wordBanksAtom)
+  const { loadCustomWordBanks } = useCustomWordBanks()
 
   const [refreshCount, setPageRefresh] = useState(0)
   const [galleryState] = useState<GalleryState>({ vipState: getUtoolsValue(VIP_STATE_KEY, '') })
 
-  const loadWordBanks = useCallback(() => {
-    const config = window.readLocalWordBankConfig()
-    const customWordBanks = config.filter((wb: WordBank) => wb.id && wb.id.startsWith('x-dict-'))
-    const uniqueWordBanks = customWordBanks.reduce((acc: WordBank[], wb: WordBank) => {
-      if (!acc.some((d) => d.id === wb.id)) {
-        acc.push(wb)
-      }
-      return acc
-    }, [])
-    setWordBanks(uniqueWordBanks)
-  }, [setWordBanks])
-
   useEffect(() => {
-    loadWordBanks()
-  }, [loadWordBanks])
+    loadCustomWordBanks()
+  }, [loadCustomWordBanks])
 
   useEffect(() => {
     if (refreshCount > 0) {
-      loadWordBanks()
+      loadCustomWordBanks()
     }
-  }, [refreshCount, loadWordBanks])
+  }, [refreshCount, loadCustomWordBanks])
 
   const { groupedByCategoryAndTag } = useMemo(() => {
     const groupedByCategory = Object.entries(groupBy(wordBanks, (wb) => wb.category))

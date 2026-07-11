@@ -6,19 +6,21 @@ import Switcher from './components/Switcher'
 import WordList from './components/WordList'
 import WordPanel from './components/WordPanel'
 import { useConfetti } from './hooks/useConfetti'
-import { TypingContext, TypingStateActionType, initialState, typingReducer } from './store'
-import { useTypingInitializer } from './hooks/useTypingInitializer'
-import { useTypingHotkeys } from './hooks/useTypingHotkeys'
-import { useLearningRecordSaver } from './hooks/useLearningRecordSaver'
-import { useTypingTimer } from './hooks/useTypingTimer'
 import { useKeyboardStartListener } from './hooks/useKeyboardStartListener'
+import { useLearningRecordSaver } from './hooks/useLearningRecordSaver'
+import { useRepeatLearningManager } from './hooks/useRepeatLearningManager'
+import { useTypingHotkeys } from './hooks/useTypingHotkeys'
+import { useTypingInitializer } from './hooks/useTypingInitializer'
+import { useTypingTimer } from './hooks/useTypingTimer'
+import { TypingContext, TypingStateActionType, initialState, typingReducer } from './store'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
-import type { Word, WordBank, WordWithIndex } from '@/typings'
-import { getRepeatLearningWords } from '@/services'
+import { getRepeatLearningWords } from '@/features/typing/application/use-cases'
+import { loadWordList as loadWordListUseCase } from '@/features/word-bank/application'
+import { utoolsLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository.utools'
+import { dexieWordRecordRepository } from '@/infra/repositories/word-record.repository.dexie'
 import { currentDictIdAtom } from '@/store'
-import { db } from '@/utils/db'
-import { useRepeatLearningManager } from './hooks/useRepeatLearningManager'
+import type { Word, WordBank, WordWithIndex } from '@/typings'
 import { useAtomValue } from 'jotai'
 import type React from 'react'
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
@@ -76,12 +78,7 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
       const words = await getRepeatLearningWords({
         currentDictId,
         wordList,
-        listWordRecordsInRange: async (dictId, start, end) => {
-          return db.wordRecords
-            .where('[dict+timeStamp]')
-            .between([dictId, start], [dictId, end])
-            .toArray()
-        },
+        wordRecordRepository: dexieWordRecordRepository,
       })
 
       if (words.length === 0) {
@@ -92,7 +89,7 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
       wordNamesRef.current = words.map((word) => word.name)
       setRepeatWords(words)
       setCurrentIndex(0)
-      
+
       dispatch({
         type: TypingStateActionType.SET_WORDS,
         payload: { words },
@@ -187,9 +184,7 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
         <div className="flex h-full flex-col items-center justify-center space-y-6">
           <div className="text-6xl">📚</div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">暂无可重复学习的单词</h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            请先进行正常学习，积累一定数量的单词后再来重复学习
-          </p>
+          <p className="text-gray-600 dark:text-gray-400">请先进行正常学习，积累一定数量的单词后再来重复学习</p>
           <button
             onClick={() => navigate('/')}
             className="rounded-lg bg-indigo-500 px-4 py-2 text-white transition-colors hover:bg-indigo-600"
@@ -208,7 +203,7 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
           <Header>
             <Tooltip content="切换词库">
               <NavLink
-                className="block rounded-lg px-3 py-1 text-lg transition-colors duration-300 ease-in-out hover:bg-indigo-400 hover:text-white focus:outline-none text-white text-opacity-60 hover:text-opacity-100"
+                className="block rounded-lg px-3 py-1 text-lg text-white text-opacity-60 transition-colors duration-300 ease-in-out hover:bg-indigo-400 hover:text-white hover:text-opacity-100 focus:outline-none"
                 to="/gallery"
               >
                 {currentWordBank.name}
@@ -279,44 +274,7 @@ function useTypingContext() {
 }
 
 async function loadWordList(currentWordBank: WordBank): Promise<WordWithIndex[] | null> {
-  if (!currentWordBank) return null
-
-  const isLocalWordBank = currentWordBank.id.startsWith('x-dict-') || currentWordBank.languageCategory === 'custom'
-
-  try {
-    let words: Word[] = []
-    
-    if (isLocalWordBank) {
-      const rawWords = await window.readLocalWordBank(currentWordBank.id)
-      words = rawWords.map((w: Partial<Word>) => ({
-        name: w.name || '',
-        trans: w.trans || [],
-        usphone: w.usphone || '',
-        ukphone: w.ukphone || '',
-        notation: w.notation,
-        tense: w.tense,
-      }))
-    } else {
-      const response = await fetch('.' + currentWordBank.url)
-      const rawWords = await response.json()
-      words = rawWords.map((w: Partial<Word>) => ({
-        name: w.name || '',
-        trans: w.trans || [],
-        usphone: w.usphone || '',
-        ukphone: w.ukphone || '',
-        notation: w.notation,
-        tense: w.tense,
-      }))
-    }
-
-    return words.map((word, index) => ({
-      ...word,
-      index,
-    }))
-  } catch (e) {
-    console.error('Failed to load word list:', e)
-    return null
-  }
+  return loadWordListUseCase(utoolsLocalWordBankRepository, currentWordBank)
 }
 
 export default RepeatTypingPage

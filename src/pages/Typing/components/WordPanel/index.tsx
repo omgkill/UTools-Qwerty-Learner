@@ -4,8 +4,10 @@ import Phonetic from './components/Phonetic'
 import Translation from './components/Translation'
 import WordComponent from './components/Word'
 import Tooltip from '@/components/Tooltip'
+import { listMdxDicts, queryFirstMdxWord } from '@/features/dictionary/application/use-cases'
 import { parseMdxEntry } from '@/utils/mdxParser'
 import { usePrefetchPronunciationSound } from '@/hooks/usePronunciation'
+import { utoolsMdxDictionaryRepository } from '@/infra/repositories/dictionary.repository.utools'
 import { hotkeyConfigAtom, isShowPrevAndNextWordAtom, phoneticConfigAtom } from '@/store'
 import type { Word } from '@/typings'
 import { useAtomValue } from 'jotai'
@@ -48,8 +50,7 @@ export default function WordPanel({ onMastered }: { onMastered?: () => void }) {
   const requestWordMeaning = useCallback(
     async (targetWord: Word | undefined) => {
       if (!targetWord) return
-      if (!window.queryFirstMdxWord) return
-      const dicts = window.getMdxDictConfig?.() || window.services?.getDictList?.() || []
+      const dicts = listMdxDicts(utoolsMdxDictionaryRepository)
       if (!dicts[0]) return
       if (queriedWordsRef.current.has(targetWord.name)) return
 
@@ -61,7 +62,7 @@ export default function WordPanel({ onMastered }: { onMastered?: () => void }) {
 
       queriedWordsRef.current.add(targetWord.name)
       try {
-        const result = await window.queryFirstMdxWord(targetWord.name)
+        const result = await queryFirstMdxWord(utoolsMdxDictionaryRepository, targetWord.name)
         if (!result || !result.ok || !result.content) return
 
         const parsed = parseMdxEntry(result.content)

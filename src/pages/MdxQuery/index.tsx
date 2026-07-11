@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useHotkeys } from 'react-hotkeys-hook'
-import { useAtomValue } from 'jotai'
-import { hotkeyConfigAtom } from '@/store'
 import './index.css'
+import { useMdxDicts, useMdxQuery } from '@/features/dictionary/presentation/hooks'
+import { hotkeyConfigAtom } from '@/store'
+import { useAtomValue } from 'jotai'
+import { useCallback, useEffect, useRef } from 'react'
+import { useHotkeys } from 'react-hotkeys-hook'
+import { useNavigate, useParams } from 'react-router-dom'
 
 const log = (msg: string) => {
   const timestamp = new Date().toISOString().substr(11, 12)
@@ -12,89 +13,25 @@ const log = (msg: string) => {
   ;(window as unknown as { debugLog?: (message: string) => void }).debugLog?.(`[MdxQuery] ${msg}`)
 }
 
-interface MdxResult {
-  dictPath: string
-  dictName: string
-  ok: boolean
-  content?: string
-  error?: string
-}
-
-interface DictItem {
-  path: string
-  name: string
-}
-
 export default function MdxQueryPage() {
   const { word: routeWord } = useParams<{ word?: string }>()
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(true)
-  const [dicts, setDicts] = useState<DictItem[]>([])
-  const [results, setResults] = useState<MdxResult[]>([])
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const hotkeyConfig = useAtomValue(hotkeyConfigAtom)
   const pageRef = useRef<HTMLDivElement>(null)
 
   const isFromRoute = Boolean(routeWord)
+  const { dicts } = useMdxDicts()
+  const { loading, results, expanded, toggleExpand } = useMdxQuery({
+    routeWord,
+    collapseFirstResult: isFromRoute,
+    log,
+  })
 
   log(`render: loading=${loading}, dicts.length=${dicts.length}, results.length=${results.length}, routeWord=${routeWord}`)
-
-  const loadDicts = useCallback(() => {
-    log('loadDicts called')
-    try {
-      const config = window.getMdxDictConfig?.() || window.services?.getDictList?.() || []
-      log(`loadDicts: found ${config.length} dicts`)
-      setDicts(config)
-    } catch (e) {
-      console.error('getDictList error', e)
-    }
-  }, [])
-
-  const handleSearch = useCallback(async (word: string) => {
-    const w = word.trim()
-    log(`handleSearch: word="${w}"`)
-    if (!w) {
-      setLoading(false)
-      return
-    }
-    setLoading(true)
-    try {
-      const res = await window.queryMdxWord?.(w) || await window.services?.queryWord?.(w) || []
-      log(`handleSearch: got ${res.length} results`)
-      console.log('MdxQuery results:', res)
-      setResults(res)
-      const exp: Record<string, boolean> = {}
-      for (const r of res) {
-        if (r.ok && r.content) {
-          exp[r.dictPath] = true
-        }
-      }
-      if (isFromRoute && res.length > 0) {
-        const firstResult = res[0]
-        if (firstResult.ok && firstResult.content) {
-          exp[firstResult.dictPath] = false
-        }
-      }
-      setExpanded(exp)
-    } catch (e) {
-      console.error('queryWord error', e)
-    } finally {
-      setLoading(false)
-    }
-  }, [isFromRoute])
-
-  const toggleExpand = useCallback((dictPath: string) => {
-    setExpanded(prev => ({ ...prev, [dictPath]: !prev[dictPath] }))
-  }, [])
 
   const handleBack = useCallback(() => {
     navigate(-1)
   }, [navigate])
-
-  useEffect(() => {
-    log('useEffect: loadDicts')
-    loadDicts()
-  }, [loadDicts])
 
   useEffect(() => {
     if (!loading && pageRef.current) {
@@ -113,52 +50,18 @@ export default function MdxQueryPage() {
     [isFromRoute, handleBack],
   )
 
-  useEffect(() => {
-    log('useEffect: setup mode change listener for search')
-    
-    const handleModeChange = (e: CustomEvent) => {
-      const action = e.detail
-      log(`handleModeChange: action.payload=${action?.payload}`)
-      if (action?.payload) {
-        const inputWord = String(action.payload).trim()
-        if (inputWord) {
-          handleSearch(inputWord)
-        }
-      }
-    }
-    window.addEventListener('utools-mode-change', handleModeChange as EventListener)
-
-    if (routeWord) {
-      const decodedWord = decodeURIComponent(routeWord)
-      log(`useEffect: routeWord=${decodedWord}`)
-      handleSearch(decodedWord)
-    } else {
-      const action = window.getAction?.()
-      log(`useEffect: getAction() = ${JSON.stringify(action)}`)
-      if (action?.payload) {
-        const inputWord = String(action.payload).trim()
-        if (inputWord) {
-          handleSearch(inputWord)
-        } else {
-          setLoading(false)
-        }
-      } else {
-        setLoading(false)
-      }
-    }
-
-    return () => {
-      window.removeEventListener('utools-mode-change', handleModeChange as EventListener)
-    }
-  }, [handleSearch, routeWord])
-
   const renderBackButton = () => (
-    <button
-      onClick={handleBack}
-      className="back-btn"
-      title={`返回（${hotkeyConfig.goBack.toUpperCase()}）`}
-    >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <button onClick={handleBack} className="back-btn" title={`返回（${hotkeyConfig.goBack.toUpperCase()}）`}>
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <path d="M19 12H5M12 19l-7-7 7-7" />
       </svg>
     </button>
@@ -166,11 +69,7 @@ export default function MdxQueryPage() {
 
   const renderHeader = () => {
     if (!isFromRoute) return null
-    return (
-      <div className="mdict-header">
-        {renderBackButton()}
-      </div>
-    )
+    return <div className="mdict-header">{renderBackButton()}</div>
   }
 
   if (loading) {

@@ -1,10 +1,11 @@
+import { db, resolveDictId } from '../index'
 import type { IWordProgress } from '../progress'
 import { MASTERY_LEVELS, WordProgress, getNextReviewTime, updateMasteryLevel } from '../progress'
+import { recordDataWrite } from '@/features/backup/application'
 import { currentDictIdAtom } from '@/store'
 import { getTodayStartTime, now } from '@/utils/timeService'
 import { useAtomValue } from 'jotai'
 import { useCallback } from 'react'
-import { db, recordDataWrite, resolveDictId } from '../index'
 
 export function useWordProgress() {
   const dictID = useAtomValue(currentDictIdAtom)

@@ -6,26 +6,21 @@ import Switcher from './components/Switcher'
 import WordList from './components/WordList'
 import WordPanel from './components/WordPanel'
 import { useConfetti } from './hooks/useConfetti'
-import type { LearningType } from './hooks/useWordList'
-import { useWordList } from './hooks/useWordList'
-import { TypingContext, TypingStateActionType, initialState, typingReducer } from './store'
-import { useTypingInitializer } from './hooks/useTypingInitializer'
-import { useTypingHotkeys } from './hooks/useTypingHotkeys'
-import { useLearningRecordSaver } from './hooks/useLearningRecordSaver'
-import { useTypingTimer } from './hooks/useTypingTimer'
 import { useKeyboardStartListener } from './hooks/useKeyboardStartListener'
+import { useLearningRecordSaver } from './hooks/useLearningRecordSaver'
 import { useNormalLearningSync } from './hooks/useNormalLearningSync'
+import { useTypingHotkeys } from './hooks/useTypingHotkeys'
+import { useTypingInitializer } from './hooks/useTypingInitializer'
+import { useTypingTimer } from './hooks/useTypingTimer'
+import { TypingContext, TypingStateActionType, initialState, typingReducer } from './store'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
+import { useMarkWordMastered } from '@/features/typing/presentation/hooks/useMarkWordMastered'
+import type { LearningType } from '@/features/typing/presentation/hooks/useWordList'
+import { useWordList } from '@/features/typing/presentation/hooks/useWordList'
 import type { WordBank } from '@/typings'
-import { DailyRecordService, WordProgressService, handleMasteredFlow } from '@/services'
-import { WordRecord } from '@/utils/db/record'
-import { db } from '@/utils/db'
-import { currentDictIdAtom } from '@/store'
-import { getUtoolsValue } from '@/utils/utools'
-import { useAtomValue } from 'jotai'
 import type React from 'react'
-import { useCallback, useContext, useEffect, useMemo } from 'react'
+import { useCallback, useContext, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useImmerReducer } from 'use-immer'
 
@@ -41,22 +36,9 @@ interface NormalTypingAppInnerProps {
 
 const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWordBank }) => {
   const { state, dispatch } = useTypingContext()
+  const markWordAsMastered = useMarkWordMastered()
 
-  const wordProgressService = useMemo(() => new WordProgressService(db), [])
-  const dailyRecordService = useMemo(() => new DailyRecordService(db), [])
-
-  const {
-    words,
-    learningType,
-    dueCount,
-    newCount,
-    todayLearned,
-    todayReviewed,
-    todayMastered,
-    getNextNewWord,
-  } = useWordList('normal')
-
-  const dictID = useAtomValue(currentDictIdAtom)
+  const { words, learningType, dueCount, newCount, todayLearned, todayReviewed, todayMastered, getNextNewWord } = useWordList('normal')
 
   useNormalLearningSync({
     isActive: true,
@@ -66,17 +48,6 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
   })
 
   useLearningRecordSaver(state)
-
-  const createWordRecord = useCallback(async (word: string) => {
-    const resolvedDictId = dictID || getUtoolsValue('currentWordBank', '')
-    if (!resolvedDictId) return
-    try {
-      const wordRecord = new WordRecord(word, resolvedDictId, [], 0, {})
-      await db.wordRecords.add(wordRecord)
-    } catch (e) {
-      console.error('Failed to save mastered word record:', e)
-    }
-  }, [dictID])
 
   useTypingTimer(state.uiState.isTyping)
   useKeyboardStartListener(state.uiState.isTyping, false)
@@ -102,16 +73,12 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
 
   const handleMastered = useCallback(async () => {
     const currentWord = state.wordListData.words?.[state.wordListData.index]
-    if (!currentWord || !dictID) return
+    if (!currentWord) return
 
-    const result = await handleMasteredFlow({
+    const result = await markWordAsMastered({
       currentWord,
-      markAsMastered: (word: string) => wordProgressService.markAsMastered(dictID, word),
       getNextNewWord,
-      createWordRecord,
     })
-
-    await dailyRecordService.incrementMastered(dictID)
 
     if (result.replacementWord) {
       dispatch({ type: TypingStateActionType.ADD_REPLACEMENT_WORD, payload: result.replacementWord })
@@ -120,7 +87,7 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
     if (result.shouldSkip) {
       dispatch({ type: TypingStateActionType.SKIP_WORD })
     }
-  }, [state.wordListData.words, state.wordListData.index, dictID, wordProgressService, getNextNewWord, createWordRecord, dailyRecordService, dispatch])
+  }, [state.wordListData.words, state.wordListData.index, markWordAsMastered, getNextNewWord, dispatch])
 
   useTypingHotkeys(state.isImmersiveMode)
 
@@ -146,7 +113,7 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
           <Header>
             <Tooltip content="切换词库">
               <NavLink
-                className="block rounded-lg px-3 py-1 text-lg transition-colors duration-300 ease-in-out hover:bg-indigo-400 hover:text-white focus:outline-none text-white text-opacity-60 hover:text-opacity-100"
+                className="block rounded-lg px-3 py-1 text-lg text-white text-opacity-60 transition-colors duration-300 ease-in-out hover:bg-indigo-400 hover:text-white hover:text-opacity-100 focus:outline-none"
                 to="/gallery"
               >
                 {currentWordBank.name}
@@ -159,12 +126,8 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
               {(todayLearned > 0 || todayReviewed > 0) && (
                 <span className="rounded bg-white/20 px-2 py-0.5">今日 {todayLearned + todayReviewed} 词</span>
               )}
-              {todayMastered > 0 && (
-                <span className="rounded bg-purple-500/30 px-2 py-0.5 text-purple-200">✓ 已掌握 {todayMastered}</span>
-              )}
-              {dueCount > 0 && (
-                <span className="rounded bg-orange-500/30 px-2 py-0.5 text-orange-200">待复习 {dueCount}</span>
-              )}
+              {todayMastered > 0 && <span className="rounded bg-purple-500/30 px-2 py-0.5 text-purple-200">✓ 已掌握 {todayMastered}</span>}
+              {dueCount > 0 && <span className="rounded bg-orange-500/30 px-2 py-0.5 text-orange-200">待复习 {dueCount}</span>}
               {newCount > 0 && learningType === 'new' && (
                 <span className="rounded bg-green-500/30 px-2 py-0.5 text-green-200">新词 {newCount}</span>
               )}
@@ -183,7 +146,8 @@ const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ currentWord
                   <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">✓ 学习完成</h2>
                   <p className="text-gray-600 dark:text-gray-400">
                     今日学习 <span className="font-bold text-indigo-600 dark:text-indigo-400">{todayLearned + todayReviewed}</span> 个单词
-                    （新词 <span className="font-bold">{todayLearned}</span> 个，复习 <span className="font-bold">{todayReviewed}</span> 个）
+                    （新词 <span className="font-bold">{todayLearned}</span> 个，复习 <span className="font-bold">{todayReviewed}</span>{' '}
+                    个）
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-500">明天继续加油！</p>
                 </div>

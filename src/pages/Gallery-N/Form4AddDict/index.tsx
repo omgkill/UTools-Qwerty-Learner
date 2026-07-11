@@ -5,6 +5,10 @@ import type { ParsedWordList } from './parseWordList'
 import { parseWordList, parseWordListFile } from './parseWordList'
 import LoadingIndicator from '@/components/LoadingIndicator'
 import Tooltip from '@/components/Tooltip'
+import { listMdxDicts, queryFirstMdxWord } from '@/features/dictionary/application/use-cases'
+import { saveLocalWordBank } from '@/features/word-bank/application'
+import { utoolsMdxDictionaryRepository } from '@/infra/repositories/dictionary.repository.utools'
+import { utoolsLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository.utools'
 import type { LanguageCategoryType, LanguageType, Word, WordBank } from '@/typings'
 import { Dialog, Transition } from '@headlessui/react'
 import type { ChangeEvent, FC, FormEvent } from 'react'
@@ -29,6 +33,7 @@ const Form4AddDict: FC<Props> = ({ onSaveDictSuccess }) => {
   const [summary, setSummary] = useState({ rawCount: 0, duplicateCount: 0, skippedNoExplain: 0, validCount: 0 })
   const [skippedWords, setSkippedWords] = useState<string[]>([])
   const [importResult, setImportResult] = useState('')
+  const [pendingWordList, setPendingWordList] = useState<Word[] | null>(null)
 
   const [isOpen, setIsOpen] = useState(false)
 
@@ -48,7 +53,7 @@ const Form4AddDict: FC<Props> = ({ onSaveDictSuccess }) => {
     setSkippedWords([])
     setImportResult('')
 
-    const config = window.readLocalWordBankConfig()
+    const config = utoolsLocalWordBankRepository.readConfig()
     const limitCount = (() => {
       if (state.vipState === 'b') return 4
       if (state.vipState === 'c') return 20
@@ -75,7 +80,7 @@ const Form4AddDict: FC<Props> = ({ onSaveDictSuccess }) => {
     setSummary({ rawCount: 0, duplicateCount: 0, skippedNoExplain: 0, validCount: 0 })
     setSkippedWords([])
     setImportResult('')
-    window._pendingWordList = null
+    setPendingWordList(null)
   }
 
   const resolveWordList = async (parsed: ParsedWordList) => {
@@ -84,17 +89,17 @@ const Form4AddDict: FC<Props> = ({ onSaveDictSuccess }) => {
       setWordCount(0)
       setSummary({ rawCount: parsed.rawCount, duplicateCount: parsed.rawCount, skippedNoExplain: 0, validCount: 0 })
       setSkippedWords([])
-      window._pendingWordList = null
+      setPendingWordList(null)
       return
     }
 
-    const dicts = window.getMdxDictConfig?.() || window.services?.getDictList?.() || []
-    if (!dicts[0] || !window.queryFirstMdxWord) {
+    const dicts = listMdxDicts(utoolsMdxDictionaryRepository)
+    if (!dicts[0]) {
       setAlertMessage({ loadDictMsg: '', resolveDictMsg: '未检测到词典，无法校验释义' })
       setWordCount(0)
       setSummary({ rawCount: parsed.rawCount, duplicateCount: parsed.rawCount - parsed.words.length, skippedNoExplain: 0, validCount: 0 })
       setSkippedWords([])
-      window._pendingWordList = null
+      setPendingWordList(null)
       return
     }
 
@@ -105,7 +110,7 @@ const Form4AddDict: FC<Props> = ({ onSaveDictSuccess }) => {
     const validWords: Word[] = []
     for (const word of parsed.words) {
       try {
-        const result = await window.queryFirstMdxWord(word.name)
+        const result = await queryFirstMdxWord(utoolsMdxDictionaryRepository, word.name)
         if (result && result.ok && result.content) {
           validWords.push(word)
         } else {
@@ -123,7 +128,7 @@ const Form4AddDict: FC<Props> = ({ onSaveDictSuccess }) => {
     setSummary({ rawCount: parsed.rawCount, duplicateCount, skippedNoExplain, validCount })
     setWordCount(validCount)
     setSkippedWords(skippedNoExplainWords)
-    window._pendingWordList = validCount > 0 ? validWords : null
+    setPendingWordList(validCount > 0 ? validWords : null)
 
     if (validCount === 0) {
       setAlertMessage({ loadDictMsg: '', resolveDictMsg: '没有可导入的单词' })
@@ -184,7 +189,7 @@ const Form4AddDict: FC<Props> = ({ onSaveDictSuccess }) => {
       toast.info('词库名称过长(应少于10个字)')
       return
     }
-    if (!window._pendingWordList || window._pendingWordList.length === 0) {
+    if (!pendingWordList || pendingWordList.length === 0) {
       toast.info('未导入词库文件或文件无有效单词')
       return
     }
@@ -194,15 +199,15 @@ const Form4AddDict: FC<Props> = ({ onSaveDictSuccess }) => {
       return
     }
 
-    const config = window.readLocalWordBankConfig()
+    const config = utoolsLocalWordBankRepository.readConfig()
     const isNameExists = config.some((wb) => wb.name.trim() === formData.name.trim())
     if (isNameExists) {
       toast.error('词库名称已存在，请使用其他名称')
       return
     }
 
-    saveWordBank(formData, window._pendingWordList)
-    window._pendingWordList = null
+    saveWordBank(formData, pendingWordList)
+    setPendingWordList(null)
     const summaryText =
       summary.validCount > 0
         ? `导入 ${summary.validCount} 个，去重 ${summary.duplicateCount} 个，跳过无释义 ${summary.skippedNoExplain} 个`
@@ -455,5 +460,5 @@ const saveWordBank = (formData: FormData, wordList: Word[]) => {
   }
 
   const wordBankMeta = createWordBankMeta(formData)
-  window.newLocalWordBankFromJson(wordList, wordBankMeta)
+  saveLocalWordBank(utoolsLocalWordBankRepository, wordList, wordBankMeta)
 }

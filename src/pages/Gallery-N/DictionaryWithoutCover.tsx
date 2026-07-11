@@ -3,7 +3,9 @@ import { useDictStats } from './hooks/useDictStats'
 import { InnerContext } from './index'
 import bookCover from '@/assets/book-cover.png'
 import Tooltip from '@/components/Tooltip'
+import { deleteLocalWordBank } from '@/features/word-bank/application'
 import useIntersectionObserver from '@/hooks/useIntersectionObserver'
+import { utoolsLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository.utools'
 import { currentWordBankIdAtom } from '@/store'
 import type { WordBank } from '@/typings'
 import * as Progress from '@radix-ui/react-progress'
@@ -37,13 +39,12 @@ export default function DictionaryComponent({ wordBank, onClick }: Props) {
   }
 
   const handleConfirmDelete = async () => {
-    const result = await window.delLocalWordBank(wordBank.id)
+    const result = deleteLocalWordBank(utoolsLocalWordBankRepository, wordBank.id)
     if (result) {
       toast.success('删除成功')
     } else {
       toast.error('删除失败')
     }
-    window.initLocalWordBanks()
     handleRefresh()
     setConfirmIsOpen(false)
   }

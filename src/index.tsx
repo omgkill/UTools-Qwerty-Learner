@@ -1,10 +1,7 @@
 import Loading from './components/Loading'
 import './index.css'
-import '@/utils/db/data-export'
-import type { BackupMeta } from '@/utils/db'
-import { BACKUP_META_KEY, LOCAL_WRITE_KEY } from '@/utils/db'
-import { VIP_STATE_KEY, getUtoolsValue, setConcealFeature, setUtoolsValue } from '@/utils/utools'
-import { now } from '@/utils/timeService'
+import { restoreUserDataFromUTools, setupAutoBackupToUTools } from '@/features/backup/application'
+import { VIP_STATE_KEY, setConcealFeature, setUtoolsValue } from '@/utils/utools'
 import React, { Suspense, lazy, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
@@ -45,16 +42,6 @@ const log = (msg: string) => {
   ;(window as unknown as { debugLog?: (message: string) => void }).debugLog?.(`[index.tsx] ${msg}`)
 }
 
-let hasRestoredFromUtools = false
-const RESTORE_PROCESS_KEY = 'utools-restore-process-id'
-
-const getMainProcessId = () => {
-  if (typeof window === 'undefined') return null
-  const ppid = window.process?.ppid
-  if (typeof ppid === 'number' && Number.isFinite(ppid)) return ppid
-  return null
-}
-
 function Root() {
   const [mode, setMode] = useState<string | null>(null)
   const [isModeReady, setIsModeReady] = useState(false)
@@ -62,47 +49,7 @@ function Root() {
 
   useEffect(() => {
     async function restoreData() {
-      if (hasRestoredFromUtools) {
-        setIsDataRestored(true)
-        return
-      }
-      const mainProcessId = getMainProcessId()
-      if (mainProcessId !== null) {
-        const storedId = getUtoolsValue<number | null>(RESTORE_PROCESS_KEY, null)
-        if (storedId === mainProcessId) {
-          hasRestoredFromUtools = true
-          setIsDataRestored(true)
-          return
-        }
-        setUtoolsValue(RESTORE_PROCESS_KEY, mainProcessId)
-      }
-      const localWriteAt = getUtoolsValue<number>(LOCAL_WRITE_KEY, 0)
-      const backupMeta = getUtoolsValue<BackupMeta | null>(BACKUP_META_KEY, null)
-      const backupAt = backupMeta?.lastBackupAt ?? 0
-      if (localWriteAt > 0 && backupAt < localWriteAt) {
-        log(`Skip restore: backupAt=${backupAt} localWriteAt=${localWriteAt}`)
-        hasRestoredFromUtools = true
-        setIsDataRestored(true)
-        return
-      }
-      hasRestoredFromUtools = true
-      try {
-        const getData = window.getUToolsUserData
-        const result = getData ? await Promise.resolve(getData()) : undefined
-        const data = result && result.length > 0 ? result : undefined
-        const hasData = Boolean(data)
-        if (hasData) {
-          log('Found uTools backup data, restoring...')
-          await window.importDatabase2UTools?.()
-          const restoredAt = backupAt > 0 ? backupAt : now()
-          setUtoolsValue(LOCAL_WRITE_KEY, Math.max(localWriteAt, restoredAt))
-          log('Data restored successfully')
-        } else {
-          log('No uTools backup data found, skipping restore')
-        }
-      } catch (e) {
-        log(`Data restore failed: ${e}`)
-      }
+      await restoreUserDataFromUTools(log)
       setIsDataRestored(true)
     }
     restoreData()
@@ -116,41 +63,12 @@ function Root() {
 
   useEffect(() => {
     if (!isDataRestored) return
-    if (!window.utools || !window.exportDatabase2UTools) return
-
-    let saving = false
-    const saveToUtools = async () => {
-      if (saving) return
-      saving = true
-      try {
-        await window.exportDatabase2UTools?.()
-      } finally {
-        saving = false
-      }
-    }
-
-    const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        void saveToUtools()
-      }
-    }
-
-    window.addEventListener('beforeunload', saveToUtools)
-    document.addEventListener('visibilitychange', handleVisibility)
-    const intervalId = window.setInterval(() => {
-      void saveToUtools()
-    }, 30000)
-
-    return () => {
-      window.removeEventListener('beforeunload', saveToUtools)
-      document.removeEventListener('visibilitychange', handleVisibility)
-      window.clearInterval(intervalId)
-    }
+    return setupAutoBackupToUTools()
   }, [isDataRestored])
 
   useEffect(() => {
     log('useEffect: registering mode change listener')
-    
+
     const handleModeChange = (e: Event) => {
       const action = (e as CustomEvent).detail
       const newMode = action?.code || action || 'typing'
@@ -158,14 +76,14 @@ function Root() {
       setMode(newMode)
       setIsModeReady(true)
     }
-    
+
     const initialMode = window.getMode?.()
     log(`useEffect: initialMode=${initialMode}`)
     if (initialMode) {
       setMode(initialMode)
       setIsModeReady(true)
     }
-    
+
     window.addEventListener('utools-mode-change', handleModeChange)
     return () => {
       log('useEffect: cleanup - removing listener')
@@ -221,15 +139,7 @@ function Root() {
           <Routes>
             <Route
               index
-              element={
-                isRepeatMode ? (
-                  <RepeatTypingPage />
-                ) : isConsolidateMode ? (
-                  <ConsolidateTypingPage />
-                ) : (
-                  <NormalTypingPage />
-                )
-              }
+              element={isRepeatMode ? <RepeatTypingPage /> : isConsolidateMode ? <ConsolidateTypingPage /> : <NormalTypingPage />}
             />
             <Route path="/repeat" element={<RepeatTypingPage />} />
             <Route path="/consolidate" element={<ConsolidateTypingPage />} />

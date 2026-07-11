@@ -1,28 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
 import './index.css'
-
-interface DictItem {
-  path: string
-  name: string
-}
+import { useMdxDicts } from '@/features/dictionary/presentation/hooks'
+import { useCallback, useRef } from 'react'
 
 export default function MdxManagePage() {
-  const [dicts, setDicts] = useState<DictItem[]>([])
+  const { dicts, setDicts, addDicts, saveOrder, removeDict } = useMdxDicts()
   const listRef = useRef<HTMLDivElement>(null)
   const prevPositions = useRef<Map<string, DOMRect>>(new Map())
-
-  const loadDicts = useCallback(() => {
-    try {
-      const config = window.getMdxDictConfig?.() || window.services?.getDictList?.() || []
-      setDicts(config)
-    } catch (e) {
-      console.error('getDictList error', e)
-    }
-  }, [])
-
-  useEffect(() => {
-    loadDicts()
-  }, [loadDicts])
 
   const recordPositions = useCallback(() => {
     if (!listRef.current) return
@@ -50,12 +33,12 @@ export default function MdxManagePage() {
       const deltaY = prevRect.top - currentRect.top
 
       if (deltaY !== 0) {
-        (item as HTMLElement).style.transform = `translateY(${deltaY}px)`;
-        (item as HTMLElement).style.transition = 'none';
+        ;(item as HTMLElement).style.transform = `translateY(${deltaY}px)`
+        ;(item as HTMLElement).style.transition = 'none'
 
         requestAnimationFrame(() => {
-          (item as HTMLElement).style.transition = 'transform 0.3s ease';
-          (item as HTMLElement).style.transform = 'translateY(0)';
+          ;(item as HTMLElement).style.transition = 'transform 0.3s ease'
+          ;(item as HTMLElement).style.transform = 'translateY(0)'
         })
       }
     })
@@ -64,61 +47,49 @@ export default function MdxManagePage() {
   }, [])
 
   const handleAddDict = useCallback(() => {
-    try {
-      const res = window.selectMdxFiles?.() || window.services?.selectDictFiles?.()
-      if (res) {
-        setDicts(res)
-      }
-    } catch (e) {
-      console.error('selectDictFiles error', e)
-    }
-  }, [])
+    addDicts()
+  }, [addDicts])
 
-  const saveOrder = useCallback((newDicts: DictItem[]) => {
-    try {
-      const res = window.updateMdxDictOrder?.(newDicts) || window.services?.updateDictOrder?.(newDicts)
-      if (res) setDicts(res)
-    } catch (e) {
-      console.error('updateDictOrder error', e)
-    }
-  }, [])
+  const moveUp = useCallback(
+    (index: number) => {
+      if (index <= 0) return
+      recordPositions()
+      const arr = [...dicts]
+      const tmp = arr[index - 1]
+      arr[index - 1] = arr[index]
+      arr[index] = tmp
+      setDicts(arr)
+      saveOrder(arr)
+      requestAnimationFrame(() => {
+        playFlipAnimation()
+      })
+    },
+    [dicts, saveOrder, recordPositions, playFlipAnimation],
+  )
 
-  const moveUp = useCallback((index: number) => {
-    if (index <= 0) return
-    recordPositions()
-    const arr = [...dicts]
-    const tmp = arr[index - 1]
-    arr[index - 1] = arr[index]
-    arr[index] = tmp
-    setDicts(arr)
-    saveOrder(arr)
-    requestAnimationFrame(() => {
-      playFlipAnimation()
-    })
-  }, [dicts, saveOrder, recordPositions, playFlipAnimation])
+  const moveDown = useCallback(
+    (index: number) => {
+      if (index >= dicts.length - 1) return
+      recordPositions()
+      const arr = [...dicts]
+      const tmp = arr[index + 1]
+      arr[index + 1] = arr[index]
+      arr[index] = tmp
+      setDicts(arr)
+      saveOrder(arr)
+      requestAnimationFrame(() => {
+        playFlipAnimation()
+      })
+    },
+    [dicts, saveOrder, recordPositions, playFlipAnimation],
+  )
 
-  const moveDown = useCallback((index: number) => {
-    if (index >= dicts.length - 1) return
-    recordPositions()
-    const arr = [...dicts]
-    const tmp = arr[index + 1]
-    arr[index + 1] = arr[index]
-    arr[index] = tmp
-    setDicts(arr)
-    saveOrder(arr)
-    requestAnimationFrame(() => {
-      playFlipAnimation()
-    })
-  }, [dicts, saveOrder, recordPositions, playFlipAnimation])
-
-  const handleRemove = useCallback((path: string) => {
-    try {
-      const res = window.removeMdxDict?.(path) || window.services?.removeDict?.(path)
-      if (res) setDicts(res)
-    } catch (e) {
-      console.error('removeDict error', e)
-    }
-  }, [])
+  const handleRemove = useCallback(
+    (path: string) => {
+      removeDict(path)
+    },
+    [removeDict],
+  )
 
   return (
     <div className="dict-manage">
@@ -152,27 +123,13 @@ export default function MdxManagePage() {
                 <div className="dict-path">{item.path}</div>
               </div>
               <div className="dict-actions">
-                <button
-                  className="action-btn"
-                  disabled={index === 0}
-                  onClick={() => moveUp(index)}
-                  title="上移"
-                >
+                <button className="action-btn" disabled={index === 0} onClick={() => moveUp(index)} title="上移">
                   ↑
                 </button>
-                <button
-                  className="action-btn"
-                  disabled={index === dicts.length - 1}
-                  onClick={() => moveDown(index)}
-                  title="下移"
-                >
+                <button className="action-btn" disabled={index === dicts.length - 1} onClick={() => moveDown(index)} title="下移">
                   ↓
                 </button>
-                <button
-                  className="action-btn danger"
-                  onClick={() => handleRemove(item.path)}
-                  title="删除"
-                >
+                <button className="action-btn danger" onClick={() => handleRemove(item.path)} title="删除">
                   ×
                 </button>
               </div>
