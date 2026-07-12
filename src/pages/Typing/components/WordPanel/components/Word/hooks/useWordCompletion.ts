@@ -1,24 +1,15 @@
 import type { WordState } from './useWordState'
-import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
-import type { Word } from '@/typings'
-import { useCallback, useContext, useEffect, useRef } from 'react'
+import { useWordPanelRuntime } from '../../../runtime'
+import type { WordWithIndex } from '@/typings'
+import { useEffect, useRef } from 'react'
 
 export function useWordCompletion(
-  word: Word,
+  word: WordWithIndex,
   wordState: WordState,
   onFinish: (params: { isCorrect: boolean; wrongCount: number }) => Promise<void> | void,
   isRepeatLearning = false,
 ) {
-  const typingContext = useContext(TypingContext)
-  const rawDispatch = typingContext?.dispatch
-  const dispatch = useCallback(
-    (action: Parameters<NonNullable<typeof rawDispatch>>[0]) => {
-      if (rawDispatch) {
-        rawDispatch(action)
-      }
-    },
-    [rawDispatch],
-  )
+  const { actions } = useWordPanelRuntime()
   const onFinishCalledRef = useRef(false)
 
   useEffect(() => {
@@ -34,7 +25,7 @@ export function useWordCompletion(
       onFinishCalledRef.current = true
 
       if (!wordState.hasMadeInputWrong) {
-        dispatch({ type: TypingStateActionType.REPORT_CORRECT_WORD, payload: word.index })
+        actions.reportCorrectWord(word.index)
       }
 
       const isCorrect = !wordState.hasMadeInputWrong
@@ -49,7 +40,8 @@ export function useWordCompletion(
     wordState.wordName,
     wordState.wrongCount,
     word.name,
-    dispatch,
+    word.index,
+    actions,
     onFinish,
     isRepeatLearning,
   ])

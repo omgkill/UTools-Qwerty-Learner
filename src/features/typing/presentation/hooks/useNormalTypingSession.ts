@@ -6,16 +6,9 @@ import {
   saveNormalTypingSession,
 } from '@/features/typing/application/use-cases'
 import type { LearningType, TypingSession, TypingWordKind } from '@/features/typing/domain'
-import { dexieDailyRecordRepository } from '@/infra/repositories/daily-record.repository.dexie'
-import { appLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository'
-import { dexieTypingStateRepository } from '@/infra/repositories/typing-state.repository.dexie'
-import { dexieWordProgressRepository } from '@/infra/repositories/word-progress.repository.dexie'
-import { currentDictIdAtom, currentWordBankAtom } from '@/store'
-import type { Word, WordWithIndex } from '@/typings'
-import { readLocalWordBank } from '@/features/word-bank/application'
-import { useAtomValue } from 'jotai'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import useSWR from 'swr'
+import { useNormalTypingSessionAdapter } from '@/features/typing/presentation/adapters/normal-typing-session.adapter'
+import type { WordWithIndex } from '@/typings'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export type UseNormalTypingSessionResult = {
   session: TypingSession | null
@@ -37,25 +30,12 @@ export type UseNormalTypingSessionResult = {
 }
 
 export function useNormalTypingSession(): UseNormalTypingSessionResult {
-  const currentWordBank = useAtomValue(currentWordBankAtom)
-  const currentDictId = useAtomValue(currentDictIdAtom)
-
   const [session, setSession] = useState<TypingSession | null>(null)
   const [loadVersion, setLoadVersion] = useState(0)
   const [isLoadingSession, setIsLoadingSession] = useState(false)
   const loadVersionRef = useRef(0)
-  const retryWordListRef = useRef<string | null>(null)
-
-  const isLocalWordBank = useMemo(() => {
-    return currentWordBank ? currentWordBank.id.startsWith('x-dict-') || currentWordBank.languageCategory === 'custom' : false
-  }, [currentWordBank])
-
-  const swrKey = useMemo(() => {
-    return currentWordBank ? (isLocalWordBank ? currentWordBank.id : currentWordBank.url) : null
-  }, [currentWordBank, isLocalWordBank])
-
-  const fetcher = isLocalWordBank ? localWordListFetcher : wordListFetcher
-  const { data: wordList, error, isLoading: isWordListLoading, mutate } = useSWR(swrKey, fetcher)
+  const { currentDictId, wordList, wordListError, isWordListLoading, repositories } = useNormalTypingSessionAdapter()
+  const { wordProgressRepository, dailyRecordRepository, typingStateRepository } = repositories
 
   const loadSession = useCallback(async () => {
     if (!currentDictId || !wordList) {
@@ -74,9 +54,9 @@ export function useNormalTypingSession(): UseNormalTypingSessionResult {
       const nextSession = await loadNormalTypingSession({
         dictId: currentDictId,
         wordList,
-        wordProgressRepository: dexieWordProgressRepository,
-        dailyRecordRepository: dexieDailyRecordRepository,
-        typingStateRepository: dexieTypingStateRepository,
+        wordProgressRepository,
+        dailyRecordRepository,
+        typingStateRepository,
       })
 
       if (currentVersion !== loadVersionRef.current) {
@@ -90,7 +70,7 @@ export function useNormalTypingSession(): UseNormalTypingSessionResult {
     } finally {
       setIsLoadingSession(false)
     }
-  }, [currentDictId, wordList, isLoadingSession])
+  }, [currentDictId, dailyRecordRepository, isLoadingSession, typingStateRepository, wordList, wordProgressRepository])
 
   const reloadSession = useCallback(() => {
     loadVersionRef.current += 1
@@ -108,25 +88,25 @@ export function useNormalTypingSession(): UseNormalTypingSessionResult {
         wordList,
         isCorrect: params.isCorrect,
         wrongCount: params.wrongCount,
-        wordProgressRepository: dexieWordProgressRepository,
-        dailyRecordRepository: dexieDailyRecordRepository,
+        wordProgressRepository,
+        dailyRecordRepository,
       })
 
       if (result.session.isFinished) {
         await clearNormalTypingSession({
           dictId: result.session.dictId,
-          typingStateRepository: dexieTypingStateRepository,
+          typingStateRepository,
         })
       } else {
         await saveNormalTypingSession({
           session: result.session,
-          typingStateRepository: dexieTypingStateRepository,
+          typingStateRepository,
         })
       }
 
       setSession(result.session)
     },
-    [session, wordList],
+    [dailyRecordRepository, session, typingStateRepository, wordList, wordProgressRepository],
   )
 
   const markSessionWordMastered = useCallback(async () => {
@@ -134,46 +114,31 @@ export function useNormalTypingSession(): UseNormalTypingSessionResult {
       return
     }
 
-      const result = await markCurrentWordMastered({
-        session,
-        wordList,
-      wordProgressRepository: dexieWordProgressRepository,
-        dailyRecordRepository: dexieDailyRecordRepository,
+    const result = await markCurrentWordMastered({
+      session,
+      wordList,
+      wordProgressRepository,
+      dailyRecordRepository,
+    })
+
+    if (result.session.isFinished) {
+      await clearNormalTypingSession({
+        dictId: result.session.dictId,
+        typingStateRepository,
       })
+    } else {
+      await saveNormalTypingSession({
+        session: result.session,
+        typingStateRepository,
+      })
+    }
 
-      if (result.session.isFinished) {
-        await clearNormalTypingSession({
-          dictId: result.session.dictId,
-          typingStateRepository: dexieTypingStateRepository,
-        })
-      } else {
-        await saveNormalTypingSession({
-          session: result.session,
-          typingStateRepository: dexieTypingStateRepository,
-        })
-      }
-
-      setSession(result.session)
-    }, [session, wordList])
+    setSession(result.session)
+  }, [dailyRecordRepository, session, typingStateRepository, wordList, wordProgressRepository])
 
   useEffect(() => {
     void loadSession()
   }, [loadSession, loadVersion])
-
-  useEffect(() => {
-    if (!currentWordBank) return
-    if (isWordListLoading) return
-    if (!wordList) return
-    if (wordList.length > 0) {
-      retryWordListRef.current = null
-      return
-    }
-    if (currentWordBank.length === 0) return
-    const retryKey = currentWordBank.id
-    if (retryWordListRef.current === retryKey) return
-    retryWordListRef.current = retryKey
-    void mutate()
-  }, [currentWordBank, isWordListLoading, wordList, mutate])
 
   return {
     session,
@@ -181,7 +146,7 @@ export function useNormalTypingSession(): UseNormalTypingSessionResult {
     currentIndex: session?.currentIndex ?? 0,
     currentWordKind: session?.currentWordKind,
     isLoading: isWordListLoading || isLoadingSession,
-    error,
+    error: wordListError,
     learningType: session?.learningType ?? 'complete',
     dueCount: session?.dueCount ?? 0,
     newCount: session?.newCount ?? 0,
@@ -193,26 +158,4 @@ export function useNormalTypingSession(): UseNormalTypingSessionResult {
     completeSessionWord,
     markSessionWordMastered,
   }
-}
-
-async function wordListFetcher(url: string): Promise<Word[]> {
-  let words: Word[] = []
-  try {
-    const response = await fetch('.' + url)
-    words = await response.json()
-  } catch (err) {
-    console.error('Failed to load word list:', err)
-  }
-
-  return words
-}
-
-async function localWordListFetcher(id: string): Promise<Word[]> {
-  let words: Word[] = []
-  try {
-    words = readLocalWordBank(appLocalWordBankRepository, id)
-  } catch (err) {
-    console.error('Failed to load word list:', err)
-  }
-  return words
 }

@@ -6,6 +6,12 @@ export {
 export { getConsolidateWords, type GetConsolidateWordsParams } from './get-consolidate-words'
 export { getNextReplacementWord, type GetNextReplacementWordParams } from './get-next-replacement-word'
 export {
+  loadConsolidateTypingSession,
+  type LegacyConsolidateProgress,
+  type LoadConsolidateTypingSessionParams,
+} from './load-consolidate-typing-session'
+export { loadRepeatTypingSession, type LoadRepeatTypingSessionParams } from './load-repeat-typing-session'
+export {
   clearNormalTypingSession,
   getSavedNormalTypingSession,
   loadNormalTypingSession,

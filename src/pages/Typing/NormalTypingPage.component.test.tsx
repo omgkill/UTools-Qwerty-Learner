@@ -146,18 +146,20 @@ function createState(): TypingState {
   }
 }
 
-function createSession(): TypingSession {
+function createSession(overrides: Partial<TypingSession> = {}): TypingSession {
+  const queueWords = [
+    { word: { name: 'alpha', index: 0, trans: [], usphone: '', ukphone: '' }, kind: 'new' as const },
+    { word: { name: 'beta', index: 1, trans: [], usphone: '', ukphone: '' }, kind: 'new' as const },
+    { word: { name: 'gamma', index: 2, trans: [], usphone: '', ukphone: '' }, kind: 'new' as const },
+  ]
+
   return {
     dictId: 'dict-a',
     mode: 'normal',
     learningType: 'new',
-    queueWords: [
-      { word: { name: 'alpha', index: 0, trans: [], usphone: '', ukphone: '' }, kind: 'new' },
-      { word: { name: 'beta', index: 1, trans: [], usphone: '', ukphone: '' }, kind: 'new' },
-      { word: { name: 'gamma', index: 2, trans: [], usphone: '', ukphone: '' }, kind: 'new' },
-    ],
+    queueWords,
     currentIndex: 1,
-    currentWord: { name: 'beta', index: 1, trans: [], usphone: '', ukphone: '' },
+    currentWord: queueWords[1]?.word,
     currentWordKind: 'new',
     todayCounts: {
       learned: 1,
@@ -169,6 +171,7 @@ function createSession(): TypingSession {
     newCount: 3,
     masteredCount: 0,
     isFinished: false,
+    ...overrides,
   }
 }
 
@@ -247,6 +250,104 @@ describe('NormalTypingAppInner', () => {
     await waitFor(() => {
       expect(completeSessionWord).toHaveBeenCalledWith({ isCorrect: true, wrongCount: 2 })
       expect(markSessionWordMastered).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('refreshes the displayed word when the session current index changes', async () => {
+    useNormalTypingSessionMock
+      .mockReturnValueOnce({
+        session: createSession({ currentIndex: 1, currentWord: createSession().queueWords[1]?.word }),
+        learningType: 'new',
+        dueCount: 0,
+        newCount: 3,
+        todayLearned: 1,
+        todayReviewed: 0,
+        todayMastered: 0,
+        completeSessionWord,
+        markSessionWordMastered,
+        isLoading: false,
+      })
+      .mockReturnValueOnce({
+        session: createSession({ currentIndex: 2, currentWord: createSession().queueWords[2]?.word }),
+        learningType: 'new',
+        dueCount: 0,
+        newCount: 3,
+        todayLearned: 2,
+        todayReviewed: 0,
+        todayMastered: 0,
+        completeSessionWord,
+        markSessionWordMastered,
+        isLoading: false,
+      })
+
+    const state = createState()
+    const dispatch = vi.fn()
+    const currentWordBank = {
+      id: 'dict-a',
+      name: 'Session Dict',
+      description: '',
+      category: 'custom',
+      tags: [],
+      url: '',
+      length: 3,
+      language: 'en' as const,
+      languageCategory: 'custom' as const,
+      chapterCount: 1,
+    }
+
+    const { rerender } = render(
+      <MemoryRouter>
+        <TypingContext.Provider value={{ state, dispatch }}>
+          <NormalTypingAppInner currentWordBank={currentWordBank} />
+        </TypingContext.Provider>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByTestId('word-panel')).toHaveAttribute('data-current-word', 'beta')
+
+    rerender(
+      <MemoryRouter>
+        <TypingContext.Provider value={{ state, dispatch }}>
+          <NormalTypingAppInner currentWordBank={currentWordBank} />
+        </TypingContext.Provider>
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('word-panel')).toHaveAttribute('data-current-word', 'gamma')
+      expect(screen.getByTestId('word-list')).toHaveAttribute('data-active-index', '2')
+    })
+  })
+
+  it('renders the restored session snapshot after refresh', async () => {
+    useNormalTypingSessionMock.mockReturnValue({
+      session: createSession({
+        currentIndex: 2,
+        currentWord: createSession().queueWords[2]?.word,
+        todayCounts: {
+          learned: 2,
+          reviewed: 1,
+          extraReviewed: 0,
+          mastered: 0,
+        },
+      }),
+      learningType: 'new',
+      dueCount: 1,
+      newCount: 2,
+      todayLearned: 2,
+      todayReviewed: 1,
+      todayMastered: 0,
+      completeSessionWord,
+      markSessionWordMastered,
+      isLoading: false,
+    })
+
+    renderInner()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('word-panel')).toHaveAttribute('data-current-word', 'gamma')
+      expect(screen.getByTestId('word-panel')).toHaveAttribute('data-prev-word', 'beta')
+      expect(screen.getByTestId('word-list')).toHaveAttribute('data-active-index', '2')
     })
   })
 })

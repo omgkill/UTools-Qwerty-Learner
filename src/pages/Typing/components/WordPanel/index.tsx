@@ -1,47 +1,62 @@
-import { TypingContext, TypingStateActionType, initialState } from '../../store'
+import type { TypingStateAction, WordInfo, WordInfoMap } from '../../store'
+import { TypingStateActionType } from '../../store'
 import PrevAndNextWord from '../PrevAndNextWord'
 import Phonetic from './components/Phonetic'
 import Translation from './components/Translation'
 import WordComponent from './components/Word'
+import { useAdjacentWordPrefetch } from './hooks/useAdjacentWordPrefetch'
+import { useTypingWordInfo } from './hooks/useTypingWordInfo'
+import { useWordNavigationHotkey } from './hooks/useWordNavigationHotkey'
+import { WordPanelRuntimeProvider } from './runtime'
 import Tooltip from '@/components/Tooltip'
-import { listMdxDicts, queryFirstMdxWord } from '@/features/dictionary/application/use-cases'
-import { parseMdxEntry } from '@/utils/mdxParser'
-import { usePrefetchPronunciationSound } from '@/hooks/usePronunciation'
-import { utoolsMdxDictionaryRepository } from '@/infra/repositories/dictionary.repository.utools'
 import { hotkeyConfigAtom, isShowPrevAndNextWordAtom, phoneticConfigAtom } from '@/store'
 import type { WordWithIndex } from '@/typings'
 import { useAtomValue } from 'jotai'
-import { useCallback, useContext, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useHotkeys } from 'react-hotkeys-hook'
+import { useCallback, useMemo } from 'react'
+import type { Dispatch } from 'react'
 
 type WordPanelProps = {
   onMastered?: () => void
   onWordFinished: (params: { isCorrect: boolean; wrongCount: number }) => Promise<void> | void
-  words?: WordWithIndex[]
-  currentIndex?: number
+  words: WordWithIndex[]
+  currentIndex: number
+  wordInfoMap: WordInfoMap
+  isTyping: boolean
+  isTransVisible: boolean
+  isImmersiveMode: boolean
+  isRepeatLearning?: boolean
+  timerTime: number
+  dispatch: Dispatch<TypingStateAction>
   disableWordJump?: boolean
 }
 
-export default function WordPanel({ onMastered, onWordFinished, words, currentIndex, disableWordJump = false }: WordPanelProps) {
+export default function WordPanel({
+  onMastered,
+  onWordFinished,
+  words,
+  currentIndex,
+  wordInfoMap,
+  isTyping,
+  isTransVisible,
+  isImmersiveMode,
+  isRepeatLearning = false,
+  timerTime,
+  dispatch,
+  disableWordJump = false,
+}: WordPanelProps) {
   const handleMastered = onMastered ?? (() => undefined)
-  const typingContext = useContext(TypingContext)
-  const state = typingContext?.state ?? initialState
-  const dispatch = typingContext?.dispatch
   const phoneticConfig = useAtomValue(phoneticConfigAtom)
   const isShowPrevAndNextWord = useAtomValue(isShowPrevAndNextWordAtom)
   const hotkeyConfig = useAtomValue(hotkeyConfigAtom)
-  const navigate = useNavigate()
-  const activeWords = words ?? state.wordListData.words
-  const activeIndex = currentIndex ?? state.wordListData.index
-  const currentWord = activeWords[activeIndex]
-  const prevWord = activeWords[activeIndex - 1]
-  const nextWord = activeWords[activeIndex + 1]
+  const currentWord = words[currentIndex]
+  const prevWord = words[currentIndex - 1]
+  const nextWord = words[currentIndex + 1]
 
-  usePrefetchPronunciationSound(currentWord?.name)
-  usePrefetchPronunciationSound(prevWord?.name)
-  usePrefetchPronunciationSound(nextWord?.name)
-  const queriedWordsRef = useRef(new Set<string>())
+  useAdjacentWordPrefetch({
+    currentWordName: currentWord?.name,
+    prevWordName: prevWord?.name,
+    nextWordName: nextWord?.name,
+  })
 
   const handleWordFinished = useCallback(
     async (params: { isCorrect: boolean; wrongCount: number }) => {
@@ -50,134 +65,111 @@ export default function WordPanel({ onMastered, onWordFinished, words, currentIn
     [onWordFinished],
   )
 
-  // 用 ref 持有最新的 wordInfoMap，避免将整个对象放入 useCallback 依赖
-  // 从而防止每次任意词更新都重建函数并触发 effect
-  const wordInfoMapRef = useRef(state.wordInfoMap)
-  wordInfoMapRef.current = state.wordInfoMap
-
-  const requestWordMeaning = useCallback(
-    async (targetWord: Word | undefined) => {
-      if (!targetWord) return
-      const dicts = listMdxDicts(utoolsMdxDictionaryRepository)
-      if (!dicts[0]) return
-      if (queriedWordsRef.current.has(targetWord.name)) return
-
-      // 通过 ref 读取最新 wordInfoMap，不将其加入依赖
-      const existingInfo = wordInfoMapRef.current[targetWord.name]
-      const hasTranslations = existingInfo?.trans && existingInfo.trans.length > 0
-      const hasPhonetics = Boolean(existingInfo?.ukphone)
-      if (hasTranslations && hasPhonetics) return
-
-      queriedWordsRef.current.add(targetWord.name)
-      try {
-        const result = await queryFirstMdxWord(utoolsMdxDictionaryRepository, targetWord.name)
-        if (!result || !result.ok || !result.content) return
-
-        const parsed = parseMdxEntry(result.content)
-        if (parsed.translations.length === 0 && !parsed.phonetics.uk && !parsed.tense) return
-
-        if (!dispatch) return
-        dispatch({
-          type: TypingStateActionType.UPDATE_WORD_INFO,
-          payload: {
-            wordName: targetWord.name,
-            data: {
-              trans: parsed.translations.length > 0 ? parsed.translations : undefined,
-              ukphone: parsed.phonetics.uk || undefined,
-              tense: parsed.tense || undefined,
-            },
-          },
-        })
-      } catch (e) {
-        console.error('Failed to query word meaning:', targetWord.name, e)
-      }
+  const updateWordInfo = useCallback(
+    (wordName: string, data: WordInfo) => {
+      dispatch({
+        type: TypingStateActionType.UPDATE_WORD_INFO,
+        payload: { wordName, data },
+      })
     },
     [dispatch],
   )
 
-  const handleViewDetail = useCallback(() => {
-    if (currentWord) {
-      navigate(`/query/${encodeURIComponent(currentWord.name)}`)
-    }
-  }, [currentWord, navigate])
+  const { wordWithInfo, displayTrans, displayTense } = useTypingWordInfo({
+    currentWord,
+    prevWord,
+    nextWord,
+    wordInfoMap,
+    updateWordInfo,
+  })
+  const { handleViewDetail } = useWordNavigationHotkey({
+    currentWord,
+    hotkey: hotkeyConfig.viewDetail,
+  })
 
-  useHotkeys(
-    hotkeyConfig.viewDetail,
-    () => {
-      handleViewDetail()
-    },
-    { preventDefault: true },
-    [handleViewDetail],
+  const runtimeValue = useMemo(
+    () => ({
+      words,
+      currentIndex,
+      isTyping,
+      isImmersiveMode,
+      isTransVisible,
+      isRepeatLearning,
+      timerTime,
+      wordInfoMap,
+      actions: {
+        updateWordInfo,
+        skipToIndex: (index: number) => {
+          dispatch({ type: TypingStateActionType.SKIP_2_WORD_INDEX, newIndex: index })
+        },
+        reportWrongWord: (index: number) => {
+          dispatch({ type: TypingStateActionType.REPORT_WRONG_WORD, payload: index })
+        },
+        reportCorrectWord: (index: number) => {
+          dispatch({ type: TypingStateActionType.REPORT_CORRECT_WORD, payload: index })
+        },
+        increaseCorrectCount: () => {
+          dispatch({ type: TypingStateActionType.INCREASE_CORRECT_COUNT })
+        },
+        increaseWrongCount: () => {
+          dispatch({ type: TypingStateActionType.INCREASE_WRONG_COUNT })
+        },
+      },
+    }),
+    [currentIndex, dispatch, isImmersiveMode, isRepeatLearning, isTransVisible, isTyping, timerTime, updateWordInfo, wordInfoMap, words],
   )
 
-  useEffect(() => {
-    void requestWordMeaning(prevWord)
-    void requestWordMeaning(currentWord)
-    void requestWordMeaning(nextWord)
-  }, [requestWordMeaning, prevWord, currentWord, nextWord])
-
-  const wordInfo = currentWord ? state.wordInfoMap[currentWord.name] : undefined
-  const displayTrans = wordInfo?.trans || currentWord?.trans || []
-  const displayUkphone = wordInfo?.ukphone || currentWord?.ukphone || ''
-  const displayTense = wordInfo?.tense || currentWord?.tense
-
-  const wordWithInfo = currentWord
-    ? { ...currentWord, trans: displayTrans, ukphone: displayUkphone, tense: displayTense }
-    : null
-
   return (
-    <div className="container flex w-full flex-col items-center justify-center">
-      {!state.isImmersiveMode && (
+    <WordPanelRuntimeProvider value={runtimeValue}>
+      <div className="container flex w-full flex-col items-center justify-center">
+        {!isImmersiveMode && (
           <div className="container flex h-24 w-full shrink-0 grow-0 justify-between px-12 pt-10">
-            {isShowPrevAndNextWord && state.uiState.isTyping && (
+            {isShowPrevAndNextWord && isTyping && (
               <>
                 <PrevAndNextWord type="prev" word={prevWord} disableFallbackNavigation={disableWordJump} />
                 <PrevAndNextWord type="next" word={nextWord} disableFallbackNavigation={disableWordJump} />
               </>
             )}
           </div>
-      )}
-      <div className="container flex flex-col items-center justify-center">
-        {currentWord && (
-          <div className="group relative flex w-full justify-center">
-            {!state.uiState.isTyping && (
-              <div className="absolute flex h-full w-full justify-center">
-                <div className="z-10 flex w-full items-center backdrop-blur-sm">
-                  <p className="w-full select-none text-center text-xl text-gray-600 dark:text-gray-50">
-                    按任意键{state.statsData.timerData.time ? '继续' : '开始'}
-                  </p>
+        )}
+        <div className="container flex flex-col items-center justify-center">
+          {currentWord && (
+            <div className="group relative flex w-full justify-center">
+              {!isTyping && (
+                <div className="absolute flex h-full w-full justify-center">
+                  <div className="z-10 flex w-full items-center backdrop-blur-sm">
+                    <p className="w-full select-none text-center text-xl text-gray-600 dark:text-gray-50">
+                      按任意键{timerTime ? '继续' : '开始'}
+                    </p>
+                  </div>
                 </div>
+              )}
+              <div className="relative">
+                <WordComponent word={currentWord} onFinish={handleWordFinished} isRepeatLearning={isRepeatLearning} />
+                {phoneticConfig.isOpen && <Phonetic word={wordWithInfo || currentWord} />}
+                {isTransVisible && <Translation trans={displayTrans} tense={displayTense} />}
+                {!isImmersiveMode && isTyping && (
+                  <div
+                    onClick={handleViewDetail}
+                    className="mt-3 cursor-pointer text-center text-xs text-gray-400 hover:text-indigo-400"
+                  >
+                    点击查看详细释义（{hotkeyConfig.viewDetail.toUpperCase()}）
+                  </div>
+                )}
               </div>
-            )}
-            <div className="relative">
-              <WordComponent
-                word={currentWord}
-                onFinish={handleWordFinished}
-                isRepeatLearning={state.uiState.isRepeatLearning}
-              />
-              {phoneticConfig.isOpen && <Phonetic word={wordWithInfo || currentWord} />}
-              {state.isTransVisible && <Translation trans={displayTrans} tense={displayTense} />}
-              {!state.isImmersiveMode && state.uiState.isTyping && (
-                <div
-                  onClick={handleViewDetail}
-                  className="mt-3 cursor-pointer text-center text-xs text-gray-400 hover:text-indigo-400"
-                >
-                  点击查看详细释义（{hotkeyConfig.viewDetail.toUpperCase()}）
+              {!isImmersiveMode && onMastered && (
+                <div className="absolute bottom-4 right-4 opacity-60 transition-opacity duration-200 ease-in-out hover:opacity-100">
+                  <Tooltip content="标记已掌握">
+                    <span className="cursor-pointer font-mono text-2xl font-normal text-gray-700 dark:text-gray-400" onClick={handleMastered}>
+                      掌握
+                    </span>
+                  </Tooltip>
                 </div>
               )}
             </div>
-            {!state.isImmersiveMode && onMastered && (
-              <div className="absolute bottom-4 right-4 opacity-60 transition-opacity duration-200 ease-in-out hover:opacity-100">
-                <Tooltip content="标记已掌握">
-                  <span className="cursor-pointer font-mono text-2xl font-normal text-gray-700 dark:text-gray-400" onClick={handleMastered}>
-                    掌握
-                  </span>
-                </Tooltip>
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </WordPanelRuntimeProvider>
   )
 }

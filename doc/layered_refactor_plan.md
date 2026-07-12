@@ -213,39 +213,39 @@ reducer 后续只保留纯 UI 状态，例如：
 4. 页面改为消费 session snapshot。
 5. 清理旧的分散推进逻辑和多处 effect 协调。
 
-## 2026-07-11 当前评审结论
+## 2026-07-12 当前状态
 
-当前代码已经完成了前两阶段的大部分工作，但还没有达到本文件的验收标准。
+本轮只处理 normal 背词主链路，repeat / consolidate、MDX 和备份链路不纳入本轮验收。
 
-已完成：
+当前已完成：
 
 1. `TypingSession`、`currentWordKind`、`startTypingSession`、`completeCurrentWord`、`markCurrentWordMastered` 已建立。
-2. 正常学习会话已经有独立的 snapshot 持久化与恢复逻辑。
-3. application 层已经补了一批事务测试，覆盖新词、复习词、掌握补位、20 词批次切换和刷新恢复。
+2. 正常学习会话已有独立的 snapshot 持久化与恢复逻辑。
+3. `NormalTypingPage` 已改成把当前词、前后词和词列表高亮直接从 session snapshot 派生。
+4. normal 主链路里 UI 已禁止直接修改业务游标，避免“显示词”和“提交词”分叉。
+5. 统计动作已改为显式携带词索引，不再依赖 reducer 当前索引反推当前词。
+6. normal 主链路里没有真实产出的历史语义已清理，避免 session 类型和事务实现分叉。
+7. normal 主链路组件和 hooks 已统一使用 `WordWithIndex`，`tsc --noEmit` 已通过。
+8. 页面边界测试已覆盖：
+   - 当前 session 展示正确
+   - 完成输入走统一事务入口
+   - session 更新后页面切到新的当前词
+   - 刷新恢复后展示词与 session snapshot 一致
 
-未完成：
+验证结果：
 
-1. `NormalTypingPage` 仍然把 session 的 `words/index` 同步到 reducer，再由 `WordPanel` 从 reducer 读取当前词。
-2. UI 仍然保留能直接修改当前索引的入口，导致“屏幕上显示的词”和“事务实际提交的词”可能分叉。
-3. 页面层还缺少明确的边界测试来验证“页面显示的当前词 = session 当前词 = 事务提交的当前词”。
+1. `npx tsc --noEmit` 通过。
+2. `./node_modules/.bin/vitest run src/pages/Typing/store/reducer.test.ts src/pages/Typing/NormalTypingPage.component.test.tsx src/features/typing/application/use-cases/typing-session-transaction.test.ts` 通过。
+3. `npm run build` 通过。
 
-## 2026-07-11 本次实施计划
+## 2026-07-12 本次开发计划
 
-本次修改只处理背单词 normal 主链路，目标是把它收敛到本文件原本定义的验收标准。
+1. 统一 normal 主链路组件与 hooks 的单词类型为 `WordWithIndex`。
+2. 修复 `WordPanel` 内部辅助逻辑的类型导入和引用错误。
+3. 扩充页面测试，确保页面边界满足本文件的执行标准。
+4. 重新运行类型检查、事务测试、页面测试和构建验证。
 
-实施步骤：
-
-1. 文档先对齐当前缺口、实施步骤和验收标准，避免代码继续在中间态漂移。
-2. `NormalTypingPage` 改成直接消费 `TypingSession`：
-   - 当前词
-   - 前后词
-   - 词列表高亮
-   - 完成与结束态
-3. `WordPanel`、`WordList`、相邻词提示不再依赖 reducer 的 `wordListData.index` 作为 normal 主链路真实游标。
-4. 清理 normal 主链路里 UI 直接跳词的能力，避免 reducer 和 session 分叉。
-5. 统计动作改为显式携带当前词索引，而不是在 reducer 中通过“当前 index”反推当前词。
-6. 清理 normal 主链路里没有真实产出的历史语义，避免 session 类型和实际事务分叉。
-7. 增加页面边界测试，验证显示词、提交词、session snapshot 三者一致。
+当前状态：以上四项均已完成。
 
 ## 验收标准
 

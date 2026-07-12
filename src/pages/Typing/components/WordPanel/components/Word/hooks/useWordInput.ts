@@ -1,20 +1,19 @@
 import type { WordUpdateAction } from '../../InputHandler'
 import type { WordState } from './useWordState'
 import { EXPLICIT_SPACE } from '@/constants'
-import { TypingContext, TypingStateActionType } from '@/pages/Typing/store'
+import { useWordPanelRuntime } from '../../../runtime'
 import { isIgnoreCaseAtom } from '@/store'
 import { getLocalTimeString } from '@/utils/timeService'
 import { now } from '@/utils/timeService'
 import { useAtomValue } from 'jotai'
-import { useCallback, useContext, useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 
 export function useWordInput(
   wordIndex: number,
   wordState: WordState,
   setWordState: (updater: (draft: WordState) => void) => void,
 ) {
-  const typingContext = useContext(TypingContext)
-  const dispatch = typingContext?.dispatch
+  const { actions } = useWordPanelRuntime()
   const isIgnoreCase = useAtomValue(isIgnoreCaseAtom)
 
   const updateInput = useCallback(
@@ -74,7 +73,6 @@ export function useWordInput(
     }
 
     if (isEqual) {
-      if (!dispatch) return
       setWordState((state) => {
         state.letterTimeArray.push(now())
         state.correctCount += 1
@@ -92,9 +90,8 @@ export function useWordInput(
         })
       }
 
-      dispatch({ type: TypingStateActionType.INCREASE_CORRECT_COUNT })
+      actions.increaseCorrectCount()
     } else {
-      if (!dispatch) return
       setWordState((state) => {
         state.letterStates[inputLength - 1] = 'wrong'
         state.hasWrong = true
@@ -108,10 +105,10 @@ export function useWordInput(
         }
       })
 
-      dispatch({ type: TypingStateActionType.INCREASE_WRONG_COUNT })
-      dispatch({ type: TypingStateActionType.REPORT_WRONG_WORD, payload: wordIndex })
+      actions.increaseWrongCount()
+      actions.reportWrongWord(wordIndex)
     }
-  }, [wordIndex, wordState.inputWord, wordState.hasWrong, wordState.displayWord, isIgnoreCase, setWordState, dispatch])
+  }, [actions, wordIndex, wordState.inputWord, wordState.hasWrong, wordState.displayWord, isIgnoreCase, setWordState])
 
   useEffect(() => {
     if (wordState.hasWrong) {

@@ -1,11 +1,10 @@
 import type { WordUpdateAction } from '../InputHandler'
-import { TypingContext, initialState } from '@/pages/Typing/store'
+import { useWordPanelRuntime } from '../../runtime'
 import { isChineseSymbol, isLegal } from '@/utils'
-import { useCallback, useContext, useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 
 export default function KeyEventHandler({ updateInput }: { updateInput: (updateObj: WordUpdateAction) => void }) {
-  const typingContext = useContext(TypingContext)
-  const state = typingContext?.state ?? initialState
+  const { isTyping } = useWordPanelRuntime()
 
   const onKeydown = useCallback(
     (e: KeyboardEvent) => {
@@ -24,13 +23,13 @@ export default function KeyEventHandler({ updateInput }: { updateInput: (updateO
   )
 
   useEffect(() => {
-    if (!state.uiState.isTyping) return
+    if (!isTyping) return
 
     window.addEventListener('keydown', onKeydown)
     return () => {
       window.removeEventListener('keydown', onKeydown)
     }
-  }, [onKeydown, state.uiState.isTyping])
+  }, [isTyping, onKeydown])
 
   return <></>
 }

@@ -1,24 +1,22 @@
-import { TypingContext, TypingStateActionType, initialState } from '../../store'
+import { useWordPanelRuntime } from '../WordPanel/runtime'
 import Tooltip from '@/components/Tooltip'
 import { wordDictationConfigAtom } from '@/store'
 import type { Word } from '@/typings'
 import { useAtomValue } from 'jotai'
-import { useCallback, useContext, useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import IconPrev from '~icons/tabler/arrow-narrow-left'
 import IconNext from '~icons/tabler/arrow-narrow-right'
 
 export default function PrevAndNextWord({ type, word: wordOverride, onSelect, disableFallbackNavigation = false }: LastAndNextWordProps) {
-  const typingContext = useContext(TypingContext)
-  const state = typingContext?.state ?? initialState
-  const dispatch = typingContext?.dispatch
+  const { words, currentIndex, wordInfoMap, isTransVisible, actions } = useWordPanelRuntime()
 
   const wordDictationConfig = useAtomValue(wordDictationConfigAtom)
-  const newIndex = useMemo(() => state.wordListData.index + (type === 'prev' ? -1 : 1), [state.wordListData.index, type])
-  const word = wordOverride ?? state.wordListData.words[newIndex]
+  const newIndex = useMemo(() => currentIndex + (type === 'prev' ? -1 : 1), [currentIndex, type])
+  const word = wordOverride ?? words[newIndex]
   const shortCutKey = useMemo(() => (type === 'prev' ? 'Ctrl + Shift + ArrowLeft' : 'Ctrl + Shift + ArrowRight'), [type])
 
-  const wordInfo = word ? state.wordInfoMap[word.name] : undefined
+  const wordInfo = word ? wordInfoMap[word.name] : undefined
   const displayTrans = wordInfo?.trans || word?.trans || []
 
   const onClickWord = useCallback(() => {
@@ -30,20 +28,17 @@ export default function PrevAndNextWord({ type, word: wordOverride, onSelect, di
     }
 
     if (disableFallbackNavigation) return
-
-    if (!dispatch) return
-    if (type === 'prev') dispatch({ type: TypingStateActionType.SKIP_2_WORD_INDEX, newIndex })
-    if (type === 'next') dispatch({ type: TypingStateActionType.SKIP_2_WORD_INDEX, newIndex })
-  }, [type, dispatch, disableFallbackNavigation, newIndex, onSelect, word])
+    actions.skipToIndex(newIndex)
+  }, [actions, disableFallbackNavigation, newIndex, onSelect, word])
 
   useHotkeys(
     shortCutKey,
     (e) => {
-      if (!onSelect && (disableFallbackNavigation || !dispatch)) return
+      if (!onSelect && disableFallbackNavigation) return
       e.preventDefault()
       onClickWord()
     },
-    { preventDefault: Boolean(onSelect || (!disableFallbackNavigation && dispatch)) },
+    { preventDefault: Boolean(onSelect || !disableFallbackNavigation) },
   )
 
   const headWord = useMemo(() => {
@@ -63,7 +58,7 @@ export default function PrevAndNextWord({ type, word: wordOverride, onSelect, di
           <div
             onClick={onClickWord}
             className={`flex max-w-xs select-none items-center text-gray-700 opacity-60 duration-200 ease-in-out dark:text-gray-400 ${
-              onSelect || (!disableFallbackNavigation && dispatch) ? 'cursor-pointer hover:opacity-100' : ''
+              onSelect || !disableFallbackNavigation ? 'cursor-pointer hover:opacity-100' : ''
             }`}
           >
             {type === 'prev' && <IconPrev className="mr-4 shrink-0 grow-0 text-2xl" />}
@@ -76,7 +71,7 @@ export default function PrevAndNextWord({ type, word: wordOverride, onSelect, di
               >
                 {headWord}
               </p>
-              {state.isTransVisible && displayTrans.length > 0 && (
+              {isTransVisible && displayTrans.length > 0 && (
                 <p className="line-clamp-1 max-w-full text-sm font-normal text-gray-600 dark:text-gray-500">{displayTrans.join('；')}</p>
               )}
             </div>

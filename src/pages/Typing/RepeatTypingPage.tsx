@@ -5,151 +5,64 @@ import StartButton from './components/StartButton'
 import Switcher from './components/Switcher'
 import WordList from './components/WordList'
 import WordPanel from './components/WordPanel'
-import { useConfetti } from './hooks/useConfetti'
-import { useKeyboardStartListener } from './hooks/useKeyboardStartListener'
-import { useLearningRecordSaver } from './hooks/useLearningRecordSaver'
-import { useQueuedTypingSession } from './hooks/useQueuedTypingSession'
-import { useTypingHotkeys } from './hooks/useTypingHotkeys'
 import { useTypingInitializer } from './hooks/useTypingInitializer'
-import { useTypingTimer } from './hooks/useTypingTimer'
-import { TypingContext, TypingStateActionType, initialState, typingReducer } from './store'
+import { useTypingPageShellEffects } from './hooks/useTypingPageShellEffects'
+import { TypingPageProvider, TypingStateActionType, useTypingContext } from './store'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
-import {
-  clearQueuedLearningState,
-  getRepeatLearningWords,
-  getSavedQueuedLearningState,
-  saveQueuedLearningState,
-} from '@/features/typing/application/use-cases'
-import { loadWordList as loadWordListUseCase } from '@/features/word-bank/application'
-import { appLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository'
-import { dexieWordProgressRepository } from '@/infra/repositories/word-progress.repository.dexie'
-import { getMode, onModeChange } from '@/platform/utools'
-import { currentDictIdAtom } from '@/store'
-import type { Word, WordBank, WordWithIndex } from '@/typings'
-import { useAtomValue } from 'jotai'
+import { useRepeatTypingSession } from '@/features/typing/presentation/hooks/useRepeatTypingSession'
+import type { SyncQueuedTypingSessionPayload } from '@/features/typing/presentation/hooks/useQueuedTypingSession'
+import type { WordBank } from '@/typings'
 import type React from 'react'
-import { useCallback, useContext, useEffect } from 'react'
+import { useCallback } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { useImmerReducer } from 'use-immer'
 
 interface RepeatTypingAppInnerProps {
   currentWordBank: WordBank
 }
 
-const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWordBank }) => {
+export const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWordBank }) => {
   const { state, dispatch } = useTypingContext()
-  const currentDictId = useAtomValue(currentDictIdAtom)
   const navigate = useNavigate()
   const stateIndex = state.wordListData.index
+  const syncSession = useCallback(
+    (payload: SyncQueuedTypingSessionPayload) => {
+      dispatch({
+        type: TypingStateActionType.SYNC_SESSION,
+        payload,
+      })
+    },
+    [dispatch],
+  )
+  const setRepeatLearning = useCallback(
+    (isRepeatLearning: boolean) => {
+      dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: isRepeatLearning })
+    },
+    [dispatch],
+  )
 
-  const loadRepeatWords = useCallback(async () => {
-    if (!currentDictId) {
-      return null
-    }
-
-    const savedState = await getSavedQueuedLearningState({
-      dictId: currentDictId,
-      sessionType: 'repeat',
-    })
-    if (savedState && savedState.learningWords.length > 0) {
-      return {
-        words: savedState.learningWords,
-        initialIndex: savedState.currentIndex,
-      }
-    }
-
-    const wordList = await loadWordList(currentWordBank)
-    if (!wordList || wordList.length === 0) {
-      return null
-    }
-
-    const words = await getRepeatLearningWords({
-      currentDictId,
-      wordList,
-      wordProgressRepository: dexieWordProgressRepository,
-    })
-
-    if (words.length === 0) {
-      return null
-    }
-
-    await saveQueuedLearningState({
-      dictId: currentDictId,
-      sessionType: 'repeat',
-      learningWords: words,
-      currentIndex: 0,
-    })
-
-    return {
-      words,
-      initialIndex: 0,
-    }
-  }, [currentDictId, currentWordBank])
-
-  const { words: repeatWords, currentIndex, isLoading, hasWords, advanceCurrentWord } = useQueuedTypingSession({
+  const { words: repeatWords, currentIndex, isLoading, hasWords, advanceCurrentWord, clearSession } = useRepeatTypingSession({
     stateIndex,
-    dispatch,
-    loadSession: loadRepeatWords,
-    persistIndex: currentDictId
-      ? (index) =>
-          saveQueuedLearningState({
-            dictId: currentDictId,
-            sessionType: 'repeat',
-            learningWords: state.wordListData.words,
-            currentIndex: index,
-          })
-      : undefined,
+    currentWordBank,
+    syncSession,
+    setRepeatLearning,
   })
 
-  const handleWordFinished = useCallback((_params: { isCorrect: boolean; wrongCount: number }) => {
+  const handleWordFinished = useCallback(() => {
     advanceCurrentWord()
   }, [advanceCurrentWord])
 
-  useLearningRecordSaver(state)
-  useTypingTimer(state.uiState.isTyping)
-  useKeyboardStartListener(state.uiState.isTyping, false)
-
-  useEffect(() => {
-    const handleModeChange = (mode: string) => {
-      if (mode === 'conceal' || mode === 'moyu') {
-        dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE, payload: true })
-      } else {
-        dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE, payload: false })
-      }
-    }
-
-    const windowMode = getMode()
-    handleModeChange(windowMode)
-
-    const cleanup = onModeChange(handleModeChange)
-    return cleanup
-  }, [dispatch])
-
-  useTypingHotkeys(state.isImmersiveMode)
-
-  useEffect(() => {
-    const onBlur = () => {
-      dispatch({ type: TypingStateActionType.SET_IS_TYPING, payload: false })
-    }
-    window.addEventListener('blur', onBlur)
-    return () => {
-      window.removeEventListener('blur', onBlur)
-    }
-  }, [dispatch])
+  useTypingPageShellEffects({
+    state,
+    dispatch,
+    confettiEnabled: false,
+  })
 
   const handleExitRepeatLearning = useCallback(() => {
-    dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: false })
-    if (currentDictId) {
-      void clearQueuedLearningState({
-        dictId: currentDictId,
-        sessionType: 'repeat',
-      })
-    }
+    setRepeatLearning(false)
+    void clearSession()
     navigate('/')
-  }, [currentDictId, dispatch, navigate])
-
-  useConfetti(false)
+  }, [clearSession, navigate, setRepeatLearning])
 
   if (isLoading) {
     return (
@@ -215,7 +128,18 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
         <div className="container mx-auto flex h-full flex-1 flex-col items-center justify-center pb-4">
           <div className="container relative mx-auto flex h-full flex-col items-center">
             <div className="container flex flex-grow items-center justify-center">
-              <WordPanel onWordFinished={handleWordFinished} />
+              <WordPanel
+                onWordFinished={handleWordFinished}
+                words={state.wordListData.words}
+                currentIndex={state.wordListData.index}
+                wordInfoMap={state.wordInfoMap}
+                isTyping={state.uiState.isTyping}
+                isTransVisible={state.isTransVisible}
+                isImmersiveMode={state.isImmersiveMode}
+                isRepeatLearning={state.uiState.isRepeatLearning}
+                timerTime={state.statsData.timerData.time}
+                dispatch={dispatch}
+              />
             </div>
             {!state.isImmersiveMode && <Speed />}
           </div>
@@ -228,7 +152,6 @@ const RepeatTypingAppInner: React.FC<RepeatTypingAppInnerProps> = ({ currentWord
 }
 
 const RepeatTypingPage: React.FC = () => {
-  const [state, dispatch] = useImmerReducer(typingReducer, structuredClone(initialState))
   const { isInitialized, currentWordBank } = useTypingInitializer()
 
   if (!isInitialized || !currentWordBank) {
@@ -245,22 +168,10 @@ const RepeatTypingPage: React.FC = () => {
   }
 
   return (
-    <TypingContext.Provider value={{ state, dispatch }}>
+    <TypingPageProvider>
       <RepeatTypingAppInner currentWordBank={currentWordBank} />
-    </TypingContext.Provider>
+    </TypingPageProvider>
   )
-}
-
-function useTypingContext() {
-  const context = useContext(TypingContext)
-  if (!context) {
-    throw new Error('TypingContext is not available')
-  }
-  return context
-}
-
-async function loadWordList(currentWordBank: WordBank): Promise<WordWithIndex[] | null> {
-  return loadWordListUseCase(appLocalWordBankRepository, currentWordBank)
 }
 
 export default RepeatTypingPage

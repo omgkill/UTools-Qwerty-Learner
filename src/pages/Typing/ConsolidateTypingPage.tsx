@@ -5,236 +5,63 @@ import StartButton from './components/StartButton'
 import Switcher from './components/Switcher'
 import WordList from './components/WordList'
 import WordPanel from './components/WordPanel'
-import { useConfetti } from './hooks/useConfetti'
-import { useKeyboardStartListener } from './hooks/useKeyboardStartListener'
-import { useLearningRecordSaver } from './hooks/useLearningRecordSaver'
-import { useQueuedTypingSession } from './hooks/useQueuedTypingSession'
-import { useTypingHotkeys } from './hooks/useTypingHotkeys'
 import { useTypingInitializer } from './hooks/useTypingInitializer'
-import { useTypingTimer } from './hooks/useTypingTimer'
-import { TypingContext, TypingStateActionType, initialState, typingReducer } from './store'
+import { useTypingPageShellEffects } from './hooks/useTypingPageShellEffects'
+import { TypingPageProvider, TypingStateActionType, useTypingContext } from './store'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
-import {
-  getConsolidateWords,
-  getSavedQueuedLearningState,
-  saveQueuedLearningState,
-} from '@/features/typing/application/use-cases'
-import { loadWordList as loadWordListUseCase } from '@/features/word-bank/application'
-import { appLocalWordBankRepository } from '@/infra/repositories/local-word-bank.repository'
-import { dexieWordProgressRepository } from '@/infra/repositories/word-progress.repository.dexie'
-import { getMode, onModeChange } from '@/platform/utools'
-import { currentDictIdAtom } from '@/store'
-import type { Word, WordBank, WordWithIndex } from '@/typings'
-import { getTodayStartTime } from '@/utils/timeService'
-import { useAtomValue } from 'jotai'
+import { useConsolidateTypingSession } from '@/features/typing/presentation/hooks/useConsolidateTypingSession'
+import type { SyncQueuedTypingSessionPayload } from '@/features/typing/presentation/hooks/useQueuedTypingSession'
+import type { WordBank } from '@/typings'
 import type React from 'react'
-import { useCallback, useContext, useEffect } from 'react'
+import { useCallback } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { useImmerReducer } from 'use-immer'
-
-const LEGACY_CONSOLIDATE_PROGRESS_KEY = 'consolidate-learning-progress'
-
-type LegacyConsolidateProgress = {
-  dictId: string
-  date: string
-  index: number
-  wordNames: string[]
-}
-
-function getTodayDate(): string {
-  return new Date(getTodayStartTime()).toISOString().split('T')[0]
-}
-
-function shuffleWithSeed<T>(array: T[], seed: string): T[] {
-  const result = [...array]
-  let hash = 0
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash << 5) - hash + seed.charCodeAt(i)
-    hash = hash & hash
-  }
-
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.abs((hash = (hash * 1103515245 + 12345) & 0x7fffffff)) % (i + 1)
-    ;[result[i], result[j]] = [result[j], result[i]]
-  }
-  return result
-}
-
-function loadLegacyConsolidateProgress(dictId: string): LegacyConsolidateProgress | null {
-  if (typeof window === 'undefined') {
-    return null
-  }
-
-  try {
-    const saved = localStorage.getItem(LEGACY_CONSOLIDATE_PROGRESS_KEY)
-    if (!saved) {
-      return null
-    }
-
-    const progress = JSON.parse(saved) as LegacyConsolidateProgress
-    if (progress.dictId !== dictId || progress.date !== getTodayDate()) {
-      return null
-    }
-
-    return progress
-  } catch {
-    return null
-  }
-}
-
-function clearLegacyConsolidateProgress() {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  try {
-    localStorage.removeItem(LEGACY_CONSOLIDATE_PROGRESS_KEY)
-  } catch {}
-}
 
 interface ConsolidateTypingAppInnerProps {
   currentWordBank: WordBank
 }
 
-const ConsolidateTypingAppInner: React.FC<ConsolidateTypingAppInnerProps> = ({ currentWordBank }) => {
+export const ConsolidateTypingAppInner: React.FC<ConsolidateTypingAppInnerProps> = ({ currentWordBank }) => {
   const { state, dispatch } = useTypingContext()
-  const currentDictId = useAtomValue(currentDictIdAtom)
   const navigate = useNavigate()
   const stateIndex = state.wordListData.index
+  const syncSession = useCallback(
+    (payload: SyncQueuedTypingSessionPayload) => {
+      dispatch({
+        type: TypingStateActionType.SYNC_SESSION,
+        payload,
+      })
+    },
+    [dispatch],
+  )
+  const setRepeatLearning = useCallback(
+    (isRepeatLearning: boolean) => {
+      dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: isRepeatLearning })
+    },
+    [dispatch],
+  )
 
-  const loadConsolidateWords = useCallback(async () => {
-    if (!currentDictId) {
-      return null
-    }
-
-    const wordList = await loadWordList(currentWordBank)
-    if (!wordList || wordList.length === 0) {
-      return null
-    }
-
-    const learnedWords = await getConsolidateWords({
-      dictId: currentDictId,
-      wordList,
-      wordProgressRepository: dexieWordProgressRepository,
-    })
-
-    if (learnedWords.length === 0) {
-      return null
-    }
-
-    const saved = await getSavedQueuedLearningState({
-      dictId: currentDictId,
-      sessionType: 'consolidate',
-      date: getTodayDate(),
-    })
-    const legacySaved = saved ? null : loadLegacyConsolidateProgress(currentDictId)
-    let finalWords: WordWithIndex[] = []
-    let finalIndex = 0
-
-    if (saved && saved.learningWords.length > 0) {
-      const savedNames = saved.learningWords.map((word) => word.name)
-      const savedSet = new Set(savedNames)
-      finalWords = learnedWords.filter((word) => savedSet.has(word.name))
-
-      const orderedNames = savedNames.filter((name) => finalWords.some((word) => word.name === name))
-      finalWords = orderedNames
-        .map((name) => finalWords.find((word) => word.name === name))
-        .filter((word): word is WordWithIndex => word !== undefined)
-      finalIndex = Math.min(saved.currentIndex, finalWords.length - 1)
-    } else if (legacySaved && legacySaved.wordNames.length > 0) {
-      const savedSet = new Set(legacySaved.wordNames)
-      finalWords = learnedWords.filter((word) => savedSet.has(word.name))
-
-      const orderedNames = legacySaved.wordNames.filter((name) => finalWords.some((word) => word.name === name))
-      finalWords = orderedNames
-        .map((name) => finalWords.find((word) => word.name === name))
-        .filter((word): word is WordWithIndex => word !== undefined)
-      finalIndex = Math.min(legacySaved.index, finalWords.length - 1)
-    } else {
-      const date = getTodayDate()
-      finalWords = shuffleWithSeed(learnedWords, `${currentDictId}-${date}`)
-    }
-
-    if (finalWords.length === 0) {
-      return null
-    }
-
-    await saveQueuedLearningState({
-      dictId: currentDictId,
-      sessionType: 'consolidate',
-      learningWords: finalWords,
-      currentIndex: finalIndex,
-      date: getTodayDate(),
-    })
-    if (legacySaved) {
-      clearLegacyConsolidateProgress()
-    }
-
-    return {
-      words: finalWords,
-      initialIndex: finalIndex,
-    }
-  }, [currentDictId, currentWordBank])
-
-  const { words: consolidateWords, currentIndex, isLoading, hasWords, advanceCurrentWord } = useQueuedTypingSession({
+  const { words: consolidateWords, currentIndex, isLoading, hasWords, advanceCurrentWord } = useConsolidateTypingSession({
     stateIndex,
-    dispatch,
-    loadSession: loadConsolidateWords,
-    persistIndex: currentDictId
-      ? (index) =>
-          saveQueuedLearningState({
-            dictId: currentDictId,
-            sessionType: 'consolidate',
-            learningWords: state.wordListData.words,
-            currentIndex: index,
-            date: getTodayDate(),
-          })
-      : undefined,
+    currentWordBank,
+    syncSession,
+    setRepeatLearning,
   })
 
-  const handleWordFinished = useCallback((_params: { isCorrect: boolean; wrongCount: number }) => {
+  const handleWordFinished = useCallback(() => {
     advanceCurrentWord()
   }, [advanceCurrentWord])
 
-  useLearningRecordSaver(state)
-  useTypingTimer(state.uiState.isTyping)
-  useKeyboardStartListener(state.uiState.isTyping, false)
-
-  useEffect(() => {
-    const handleModeChange = (mode: string) => {
-      if (mode === 'conceal' || mode === 'moyu') {
-        dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE, payload: true })
-      } else {
-        dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE, payload: false })
-      }
-    }
-
-    const windowMode = getMode()
-    handleModeChange(windowMode)
-
-    const cleanup = onModeChange(handleModeChange)
-    return cleanup
-  }, [dispatch])
-
-  useTypingHotkeys(state.isImmersiveMode)
-
-  useEffect(() => {
-    const onBlur = () => {
-      dispatch({ type: TypingStateActionType.SET_IS_TYPING, payload: false })
-    }
-    window.addEventListener('blur', onBlur)
-    return () => {
-      window.removeEventListener('blur', onBlur)
-    }
-  }, [dispatch])
+  useTypingPageShellEffects({
+    state,
+    dispatch,
+    confettiEnabled: false,
+  })
 
   const handleExitConsolidateLearning = useCallback(() => {
-    dispatch({ type: TypingStateActionType.SET_IS_REPEAT_LEARNING, payload: false })
+    setRepeatLearning(false)
     navigate('/')
-  }, [dispatch, navigate])
-
-  useConfetti(false)
+  }, [navigate, setRepeatLearning])
 
   if (isLoading) {
     return (
@@ -300,7 +127,18 @@ const ConsolidateTypingAppInner: React.FC<ConsolidateTypingAppInnerProps> = ({ c
         <div className="container mx-auto flex h-full flex-1 flex-col items-center justify-center pb-4">
           <div className="container relative mx-auto flex h-full flex-col items-center">
             <div className="container flex flex-grow items-center justify-center">
-              <WordPanel onWordFinished={handleWordFinished} />
+              <WordPanel
+                onWordFinished={handleWordFinished}
+                words={state.wordListData.words}
+                currentIndex={state.wordListData.index}
+                wordInfoMap={state.wordInfoMap}
+                isTyping={state.uiState.isTyping}
+                isTransVisible={state.isTransVisible}
+                isImmersiveMode={state.isImmersiveMode}
+                isRepeatLearning={state.uiState.isRepeatLearning}
+                timerTime={state.statsData.timerData.time}
+                dispatch={dispatch}
+              />
             </div>
             {!state.isImmersiveMode && <Speed />}
           </div>
@@ -313,7 +151,6 @@ const ConsolidateTypingAppInner: React.FC<ConsolidateTypingAppInnerProps> = ({ c
 }
 
 const ConsolidateTypingPage: React.FC = () => {
-  const [state, dispatch] = useImmerReducer(typingReducer, structuredClone(initialState))
   const { isInitialized, currentWordBank } = useTypingInitializer()
 
   if (!isInitialized || !currentWordBank) {
@@ -330,22 +167,10 @@ const ConsolidateTypingPage: React.FC = () => {
   }
 
   return (
-    <TypingContext.Provider value={{ state, dispatch }}>
+    <TypingPageProvider>
       <ConsolidateTypingAppInner currentWordBank={currentWordBank} />
-    </TypingContext.Provider>
+    </TypingPageProvider>
   )
-}
-
-function useTypingContext() {
-  const context = useContext(TypingContext)
-  if (!context) {
-    throw new Error('TypingContext is not available')
-  }
-  return context
-}
-
-async function loadWordList(currentWordBank: WordBank): Promise<WordWithIndex[] | null> {
-  return loadWordListUseCase(appLocalWordBankRepository, currentWordBank)
 }
 
 export default ConsolidateTypingPage

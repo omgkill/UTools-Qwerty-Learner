@@ -5,23 +5,17 @@ import StartButton from './components/StartButton'
 import Switcher from './components/Switcher'
 import WordList from './components/WordList'
 import WordPanel from './components/WordPanel'
-import { useConfetti } from './hooks/useConfetti'
-import { useKeyboardStartListener } from './hooks/useKeyboardStartListener'
-import { useLearningRecordSaver } from './hooks/useLearningRecordSaver'
-import { useTypingHotkeys } from './hooks/useTypingHotkeys'
 import { useTypingInitializer } from './hooks/useTypingInitializer'
-import { useTypingTimer } from './hooks/useTypingTimer'
-import { TypingContext, TypingStateActionType, initialState, typingReducer } from './store'
+import { useTypingPageShellEffects } from './hooks/useTypingPageShellEffects'
+import { TypingPageProvider, TypingStateActionType, useTypingContext } from './store'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
 import type { LearningType } from '@/features/typing/domain'
 import { useNormalTypingSession } from '@/features/typing/presentation/hooks/useNormalTypingSession'
-import { getMode, onModeChange } from '@/platform/utools'
 import type { WordBank } from '@/typings'
 import type React from 'react'
-import { useCallback, useContext, useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
-import { useImmerReducer } from 'use-immer'
 
 const LEARNING_TYPE_LABELS: Record<LearningType, { icon: string; label: string }> = {
   review: { icon: '🔄', label: '复习' },
@@ -52,10 +46,11 @@ export const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ curr
   const sessionWords = session?.queueWords.map((entry) => entry.word) ?? []
   const sessionIndex = session?.currentIndex ?? 0
 
-  useLearningRecordSaver(state)
-
-  useTypingTimer(state.uiState.isTyping)
-  useKeyboardStartListener(state.uiState.isTyping, false)
+  useTypingPageShellEffects({
+    state,
+    dispatch,
+    confettiEnabled: Boolean(session?.isFinished) && !state.isImmersiveMode,
+  })
 
   useEffect(() => {
     if (!session) return
@@ -69,23 +64,6 @@ export const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ curr
     })
   }, [session, dispatch])
 
-  useEffect(() => {
-    const handleModeChange = (mode: string) => {
-      if (mode === 'conceal' || mode === 'moyu') {
-        dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE, payload: true })
-      } else {
-        dispatch({ type: TypingStateActionType.TOGGLE_IMMERSIVE_MODE, payload: false })
-      }
-    }
-
-    const windowMode = getMode()
-    handleModeChange(windowMode)
-
-    const cleanup = onModeChange(handleModeChange)
-
-    return cleanup
-  }, [dispatch])
-
   const handleMastered = useCallback(async () => {
     await markSessionWordMastered()
   }, [markSessionWordMastered])
@@ -96,21 +74,6 @@ export const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ curr
     },
     [completeSessionWord],
   )
-
-  useTypingHotkeys(state.isImmersiveMode)
-
-  useEffect(() => {
-    const onBlur = () => {
-      dispatch({ type: TypingStateActionType.SET_IS_TYPING, payload: false })
-    }
-    window.addEventListener('blur', onBlur)
-
-    return () => {
-      window.removeEventListener('blur', onBlur)
-    }
-  }, [dispatch])
-
-  useConfetti(Boolean(session?.isFinished) && !state.isImmersiveMode)
 
   const typeInfo = LEARNING_TYPE_LABELS[learningType]
 
@@ -165,6 +128,13 @@ export const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ curr
                   onWordFinished={handleWordFinished}
                   words={sessionWords}
                   currentIndex={sessionIndex}
+                  wordInfoMap={state.wordInfoMap}
+                  isTyping={state.uiState.isTyping}
+                  isTransVisible={state.isTransVisible}
+                  isImmersiveMode={state.isImmersiveMode}
+                  isRepeatLearning={state.uiState.isRepeatLearning}
+                  timerTime={state.statsData.timerData.time}
+                  dispatch={dispatch}
                   disableWordJump
                 />
               )}
@@ -180,7 +150,6 @@ export const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ curr
 }
 
 const NormalTypingPage: React.FC = () => {
-  const [state, dispatch] = useImmerReducer(typingReducer, structuredClone(initialState))
   const { isInitialized, currentWordBank } = useTypingInitializer()
 
   if (!isInitialized || !currentWordBank) {
@@ -197,18 +166,10 @@ const NormalTypingPage: React.FC = () => {
   }
 
   return (
-    <TypingContext.Provider value={{ state, dispatch }}>
+    <TypingPageProvider>
       <NormalTypingAppInner currentWordBank={currentWordBank} />
-    </TypingContext.Provider>
+    </TypingPageProvider>
   )
-}
-
-function useTypingContext() {
-  const context = useContext(TypingContext)
-  if (!context) {
-    throw new Error('TypingContext is not available')
-  }
-  return context
 }
 
 export default NormalTypingPage

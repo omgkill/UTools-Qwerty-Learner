@@ -11,7 +11,7 @@ import {
   pronunciationIsOpenAtom,
   wordDictationConfigAtom,
 } from '@/store'
-import type { Word } from '@/typings'
+import type { WordWithIndex } from '@/typings'
 import { useAtomValue } from 'jotai'
 import { useCallback, useState } from 'react'
 import { useWordCompletion, useWordInput, useWordState } from './hooks'
@@ -24,7 +24,7 @@ export default function WordComponent({
   onFinish,
   isRepeatLearning = false,
 }: {
-  word: Word
+  word: WordWithIndex
   onFinish: (params: { isCorrect: boolean; wrongCount: number }) => Promise<void> | void
   isRepeatLearning?: boolean
 }) {
