@@ -34,6 +34,7 @@ export function useNormalTypingSession(): UseNormalTypingSessionResult {
   const [loadVersion, setLoadVersion] = useState(0)
   const [isLoadingSession, setIsLoadingSession] = useState(false)
   const loadVersionRef = useRef(0)
+  const lastLoadVersionRef = useRef(0)
   const { currentDictId, wordList, wordListError, isWordListLoading, repositories } = useNormalTypingSessionAdapter()
   const { wordProgressRepository, dailyRecordRepository, typingStateRepository } = repositories
 
@@ -135,10 +136,15 @@ export function useNormalTypingSession(): UseNormalTypingSessionResult {
 
     setSession(result.session)
   }, [dailyRecordRepository, session, typingStateRepository, wordList, wordProgressRepository])
-
   useEffect(() => {
-    void loadSession()
-  }, [loadSession, loadVersion])
+    // 只有在 session 为空或 loadVersion 变化时才重新加载
+    const shouldLoad = session === null || lastLoadVersionRef.current !== loadVersion
+    lastLoadVersionRef.current = loadVersion
+
+    if (shouldLoad) {
+      void loadSession()
+    }
+  }, [loadSession, loadVersion, session])
 
   return {
     session,

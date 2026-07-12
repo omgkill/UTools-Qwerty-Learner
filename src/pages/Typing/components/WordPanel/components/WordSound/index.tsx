@@ -50,13 +50,13 @@ const WordSound = ({ word, inputWord, ...rest }: WordSoundProps) => {
       hasPlayedRef.current = false
       return
     }
-    
+
     if (inputWord.length === 0 && !hasPlayedRef.current) {
       hasPlayedRef.current = true
       stopRef.current()
       playRef.current()
     }
-  }, [inputWord, isTyping, word])
+  }, [inputWord, isTyping])
 
   const handleClickSoundIcon = useCallback(() => {
     stop()
