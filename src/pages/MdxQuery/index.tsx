@@ -69,6 +69,33 @@ export default function MdxQueryPage() {
 
       console.group('[MdxQuery] result-content styled nodes')
       console.log(styledNodes)
+      console.table(styledNodes)
+      console.log('[MdxQuery] result-content styled nodes JSON:', JSON.stringify(styledNodes, null, 2))
+      console.groupEnd()
+
+      const contentNodes = nodes
+        .map((node) => {
+          const computed = window.getComputedStyle(node)
+          const rect = node.getBoundingClientRect()
+          return {
+            tag: node.tagName.toLowerCase(),
+            className: String(node.className || ''),
+            id: node.id,
+            display: computed.display,
+            color: computed.color,
+            backgroundColor: computed.backgroundColor,
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+            inlineStyle: node.getAttribute('style') || '',
+            text: (node.textContent || '').trim().slice(0, 60),
+          }
+        })
+        .filter((item) => item.className || item.id || item.inlineStyle)
+        .slice(0, 160)
+
+      console.group('[MdxQuery] result-content class nodes')
+      console.table(contentNodes)
+      console.log('[MdxQuery] result-content class nodes JSON:', JSON.stringify(contentNodes, null, 2))
       console.groupEnd()
     }, 0)
 
