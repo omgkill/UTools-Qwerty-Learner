@@ -106,8 +106,9 @@
   color: #e0e0e0;
 }
 
-.result-content * {
-  background-color: transparent !important;
+.result-content [style*="background"],
+.result-content [bgcolor] {
+  background-color: #1f2937 !important;
 }
 
 .result-content a {
