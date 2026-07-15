@@ -238,6 +238,37 @@ if (typeof utools !== 'undefined') {
     }
   }
 
+  function getResourceSize(buffer) {
+    if (!buffer) return 0;
+    if (typeof buffer === 'string') return buffer.length;
+    if (typeof buffer.byteLength === 'number') return buffer.byteLength;
+    if (typeof buffer.length === 'number') return buffer.length;
+    return 0;
+  }
+
+  function getMddResourceCandidates(resourcePath) {
+    let decoded = resourcePath;
+    try {
+      decoded = decodeURIComponent(resourcePath);
+    } catch (e) {
+      decoded = resourcePath;
+    }
+
+    const normalized = decoded.replace(/\\/g, '/');
+    const stripped = normalized.replace(/^\.?\//, '');
+    const windowsPath = stripped.replace(/\//g, '\\');
+
+    return [...new Set([
+      resourcePath,
+      decoded,
+      normalized,
+      stripped,
+      `/${stripped}`,
+      windowsPath,
+      `\\${windowsPath}`,
+    ].filter(Boolean))];
+  }
+
   // 替换 HTML 中的资源为 base64
   async function replaceResources(html, mddLookup) {
     if (!html || !mddLookup) return html;
@@ -261,14 +292,33 @@ if (typeof utools !== 'undefined') {
       }
       
       try {
-        const buffer = await mddLookup(val);
-        if (buffer) {
-          const base64 = Buffer.from(buffer).toString('base64');
+        let resourceBuffer = null;
+        let resourceKey = val;
+
+        const candidates = getMddResourceCandidates(val);
+        for (const candidate of candidates) {
+          try {
+            const buffer = await mddLookup(candidate);
+            if (getResourceSize(buffer) > 0) {
+              resourceBuffer = buffer;
+              resourceKey = candidate;
+              break;
+            }
+          } catch (e) {
+            // Keep trying common MDD path variants.
+          }
+        }
+
+        if (resourceBuffer) {
+          const base64 = Buffer.from(resourceBuffer).toString('base64');
           const mime = getMimeType(val);
+          console.log('[MDX] resource replaced', { original: val, resolved: resourceKey, mime, size: getResourceSize(resourceBuffer) });
           replacements.set(val, `data:${mime};base64,${base64}`);
+        } else {
+          console.warn('[MDX] resource not found or empty', { original: val, candidates });
         }
       } catch (e) {
-        // 资源未找到是正常的，忽略错误
+        console.warn('[MDX] resource lookup failed', { original: val, error: String(e) });
       }
     }));
     
