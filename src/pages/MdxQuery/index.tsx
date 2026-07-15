@@ -39,6 +39,42 @@ export default function MdxQueryPage() {
     }
   }, [loading])
 
+  useEffect(() => {
+    if (loading || results.length === 0) return
+
+    const timer = window.setTimeout(() => {
+      const nodes = Array.from(document.querySelectorAll<HTMLElement>('.result-content *'))
+      const styledNodes = nodes
+        .map((node) => {
+          const computed = window.getComputedStyle(node)
+          return {
+            tag: node.tagName.toLowerCase(),
+            className: node.className,
+            id: node.id,
+            inlineStyle: node.getAttribute('style') || '',
+            bgcolor: node.getAttribute('bgcolor') || '',
+            color: computed.color,
+            backgroundColor: computed.backgroundColor,
+            text: (node.textContent || '').trim().slice(0, 80),
+            html: node.outerHTML.slice(0, 300),
+          }
+        })
+        .filter(
+          (item) =>
+            item.inlineStyle ||
+            item.bgcolor ||
+            (item.backgroundColor && item.backgroundColor !== 'rgba(0, 0, 0, 0)' && item.backgroundColor !== 'transparent'),
+        )
+        .slice(0, 80)
+
+      console.group('[MdxQuery] result-content styled nodes')
+      console.log(styledNodes)
+      console.groupEnd()
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [loading, results])
+
   useHotkeys(
     hotkeyConfig.goBack,
     () => {

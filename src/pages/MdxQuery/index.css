@@ -106,21 +106,6 @@
   color: #e0e0e0;
 }
 
-.result-content [style*="background"],
-.result-content [bgcolor] {
-  background-color: #1f2937 !important;
-}
-
-.result-content [style*="color: black"],
-.result-content [style*="color:#000"],
-.result-content [style*="color: #000"],
-.result-content [style*="color: rgb(0, 0, 0)"],
-.result-content font[color="black"],
-.result-content font[color="#000"],
-.result-content font[color="#000000"] {
-  color: #e0e0e0 !important;
-}
-
 .result-content a {
   color: #818cf8;
   text-decoration: none;
