@@ -122,7 +122,7 @@ describe('Word Completion Integration Tests', () => {
       expect(result.dueCount).toBe(30)  // 保留完整数量，告知用户还有多少待复习
     })
 
-    it('should return ALL due words even when reviewedCount + learnedCount >= DAILY_LIMIT', () => {
+    it('should return complete when reviewedCount + learnedCount >= DAILY_LIMIT', () => {
       const dueWords = createWordWithIndexList(25)
 
       const result = determineLearningType({
@@ -134,8 +134,9 @@ describe('Word Completion Integration Tests', () => {
         wordList: dueWords,
       })
 
-      expect(result.learningType).toBe('review')
-      expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个，不超过上限
+      expect(result.learningType).toBe('complete')
+      expect(result.learningWords.length).toBe(0)
+      expect(result.dueCount).toBe(25)
     })
 
     it('should return ALL due words when there are 50 due words', () => {

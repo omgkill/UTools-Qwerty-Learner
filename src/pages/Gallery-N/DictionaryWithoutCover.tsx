@@ -28,7 +28,7 @@ export default function DictionaryComponent({ wordBank, onClick }: Props) {
   const divRef = useRef<HTMLDivElement>(null)
   const entry = useIntersectionObserver(divRef, {})
   const isVisible = !!entry?.isIntersecting
-  const dictStats = useDictStats(wordBank.id, isVisible)
+  const dictStats = useDictStats(wordBank.id, isVisible, wordBank.length)
   const isSelected = currentWordBankID === wordBank.id
 
   const masteryProgress = dictStats?.totalProgress ?? 0
@@ -84,9 +84,9 @@ export default function DictionaryComponent({ wordBank, onClick }: Props) {
               <span className={`${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
                 ✅ 已掌握 {dictStats.masteredWords}
               </span>
-              {dictStats.dueWords > 0 && (
+              {dictStats.pendingLearnWords > 0 && (
                 <span className={`${isSelected ? 'text-orange-200' : 'text-orange-500'}`}>
-                  🔄 待复习 {dictStats.dueWords}
+                  🔄 待学习 {dictStats.pendingLearnWords}
                 </span>
               )}
             </div>

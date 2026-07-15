@@ -3,22 +3,23 @@ import type { DetermineLearningTypeParams, DetermineLearningTypeResult, TypingWo
 
 export function determineLearningType(params: DetermineLearningTypeParams): DetermineLearningTypeResult {
   const { dueWords, newWords, reviewedCount, learnedCount } = params
+  const remaining = Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
 
   if (dueWords.length > 0) {
-    if (dueWords.length > LEARNING_CONFIG.DAILY_LIMIT) {
+    if (remaining === 0) {
       return {
-        learningType: 'review',
-        learningWords: dueWords.slice(0, LEARNING_CONFIG.DAILY_LIMIT),  // 只返回前20个，确保不超过上限
+        learningType: 'complete',
+        learningWords: [],
         dueCount: dueWords.length,
-        newCount: 0,  // 复习词超过20个时，没有新词配额
+        newCount: 0,
       }
     }
 
-    const remaining = Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
-    const newWordQuota = Math.max(0, remaining - dueWords.length)
+    const reviewWords = dueWords.slice(0, remaining)
+    const newWordQuota = dueWords.length <= remaining ? Math.max(0, remaining - dueWords.length) : 0
     const actualNewWords = Math.min(newWordQuota, newWords.length)  // 实际可学习的新词数量
 
-    const wordsToReturn = [...dueWords, ...newWords.slice(0, actualNewWords)]
+    const wordsToReturn = [...reviewWords, ...newWords.slice(0, actualNewWords)]
 
     return {
       learningType: 'review',
@@ -27,8 +28,6 @@ export function determineLearningType(params: DetermineLearningTypeParams): Dete
       newCount: actualNewWords,  // 返回当日可学习的新词数量
     }
   }
-
-  const remaining = Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
 
   if (remaining > 0 && newWords.length > 0) {
     const wordsToLearn = newWords.slice(0, remaining)

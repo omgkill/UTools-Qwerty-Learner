@@ -65,7 +65,7 @@ describe('determineLearningType', () => {
       expect(result.dueCount).toBe(30)  // 保留完整数量
     })
 
-    it('should return ALL due words even when reviewedCount + learnedCount >= DAILY_LIMIT', () => {
+    it('should return complete when reviewedCount + learnedCount >= DAILY_LIMIT', () => {
       const dueWords = Array.from({ length: 25 }, (_, i) => createWordWithIndex(`word${i}`, i))
       const result = determineLearningType({
         dueWords,
@@ -76,8 +76,25 @@ describe('determineLearningType', () => {
         wordList,
       })
 
+      expect(result.learningType).toBe('complete')
+      expect(result.learningWords.length).toBe(0)
+      expect(result.dueCount).toBe(25)
+    })
+
+    it('should limit due words by remaining daily quota', () => {
+      const dueWords = Array.from({ length: 25 }, (_, i) => createWordWithIndex(`word${i}`, i))
+      const result = determineLearningType({
+        dueWords,
+        newWords: [],
+        reviewedCount: 8,
+        learnedCount: 2,
+        allProgress: [],
+        wordList,
+      })
+
       expect(result.learningType).toBe('review')
-      expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个
+      expect(result.learningWords.length).toBe(10)
+      expect(result.dueCount).toBe(25)
     })
 
     it('should prioritize review over new words', () => {
@@ -439,7 +456,7 @@ describe('Due Words > DAILY_LIMIT scenarios', () => {
     expect(result.dueCount).toBe(30)  // 保留完整数量
   })
 
-  it('should return all 50 due words even when already learned 20 today', () => {
+  it('should return complete when already learned 20 today', () => {
     const dueWords = Array.from({ length: 50 }, (_, i) => createWordWithIndex(`word${i}`, i))
     const result = determineLearningType({
       dueWords,
@@ -450,8 +467,9 @@ describe('Due Words > DAILY_LIMIT scenarios', () => {
       wordList,
     })
 
-    expect(result.learningType).toBe('review')
-    expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个
+    expect(result.learningType).toBe('complete')
+    expect(result.learningWords.length).toBe(0)
+    expect(result.dueCount).toBe(50)
   })
 
   it('should return all 100 due words', () => {
