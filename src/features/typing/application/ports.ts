@@ -1,4 +1,4 @@
-import type { TypingDailyRecord, TypingStateSessionType, TypingStateSnapshot, TypingWordProgress } from '../domain'
+import type { TypingDailyRecord, TypingDailyWordDetail, TypingStateSessionType, TypingStateSnapshot, TypingWordProgress } from '../domain'
 import type { Word, WordWithIndex } from '@/typings'
 
 export interface WordProgressRepository {
@@ -25,6 +25,7 @@ export interface DailyRecordRepository {
   incrementReviewed(dictId: string, isExtra?: boolean): Promise<TypingDailyRecord>
   incrementLearned(dictId: string): Promise<TypingDailyRecord>
   incrementMastered(dictId: string): Promise<TypingDailyRecord>
+  recordWordDetail(dictId: string, detail: TypingDailyWordDetail): Promise<TypingDailyRecord>
   getRecord(dictId: string, date: string): Promise<TypingDailyRecord | undefined>
   getRecordsInRange(dictId: string, startDate: string, endDate: string): Promise<TypingDailyRecord[]>
 }

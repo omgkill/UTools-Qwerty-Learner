@@ -56,7 +56,7 @@ const WordSound = ({ word, inputWord, ...rest }: WordSoundProps) => {
       stopRef.current()
       playRef.current()
     }
-  }, [inputWord, isTyping])
+  }, [inputWord, isTyping, word])
 
   const handleClickSoundIcon = useCallback(() => {
     stop()

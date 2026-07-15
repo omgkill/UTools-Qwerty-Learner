@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { DailyRecordRepository, TypingStateRepository, WordProgressRepository } from '../ports'
 import { completeCurrentWord, loadNormalTypingSession, markCurrentWordMastered, saveNormalTypingSession, startTypingSession } from '.'
-import type { TypingDailyRecord, TypingStateSnapshot, TypingWordProgress } from '../../domain'
+import type { TypingDailyRecord, TypingDailyWordDetail, TypingStateSnapshot, TypingWordProgress } from '../../domain'
 import type { Word, WordWithIndex } from '@/typings'
 import type { MasteryLevel } from '@/utils/db/progress'
 import { DailyRecord, MASTERY_LEVELS, WordProgress, getNextReviewTime, getTodayDate, updateMasteryLevel } from '@/utils/db/progress'
@@ -139,6 +139,24 @@ class InMemoryDailyRecordRepository implements DailyRecordRepository {
 
   async incrementMastered(): Promise<TypingDailyRecord> {
     this.record.masteredCount += 1
+    return this.record
+  }
+
+  async recordWordDetail(_dictId: string, detail: TypingDailyWordDetail): Promise<TypingDailyRecord> {
+    const wordDetails = [...(this.record.wordDetails ?? [])]
+    const existingIndex = wordDetails.findIndex((item) => item.word === detail.word)
+
+    if (existingIndex === -1) {
+      wordDetails.push(detail)
+    } else {
+      wordDetails[existingIndex] = detail
+    }
+
+    this.record = {
+      ...this.record,
+      wordDetails,
+    }
+
     return this.record
   }
 

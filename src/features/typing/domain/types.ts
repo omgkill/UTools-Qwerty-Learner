@@ -46,6 +46,13 @@ export type TypingWordProgress = {
   reps: number
 }
 
+export type TypingDailyWordDetail = {
+  word: string
+  timeStamp: number
+  wrongCount: number
+  type: 'new' | 'review' | 'mastered'
+}
+
 export type TypingDailyRecord = {
   id?: number
   dict: string
@@ -55,6 +62,7 @@ export type TypingDailyRecord = {
   extraReviewedCount: number
   masteredCount: number
   lastUpdateTime: number
+  wordDetails?: TypingDailyWordDetail[]
 }
 
 export type LearningState = {

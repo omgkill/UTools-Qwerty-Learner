@@ -44,24 +44,28 @@ export const initialWordState: WordState = {
   letterMistake: {},
 }
 
+function createWordState(wordName: string): WordState {
+  let headword = wordName.replace(new RegExp(' ', 'g'), EXPLICIT_SPACE)
+  headword = headword.replace(new RegExp('…', 'g'), '..')
+
+  return {
+    ...structuredClone(initialWordState),
+    wordName,
+    displayWord: headword,
+    letterStates: new Array(headword.length).fill('normal'),
+    startTime: getLocalTimeString(),
+  }
+}
+
 export function useWordState(wordName: string) {
-  const [wordState, setWordState] = useImmer<WordState>(structuredClone(initialWordState))
+  const [wordState, setWordState] = useImmer<WordState>(createWordState(wordName))
   const lastWordNameRef = useRef<string | null>(null)
 
   useEffect(() => {
     const prevWord = lastWordNameRef.current
     if (prevWord === wordName) return
     lastWordNameRef.current = wordName
-
-    let headword = wordName.replace(new RegExp(' ', 'g'), EXPLICIT_SPACE)
-    headword = headword.replace(new RegExp('…', 'g'), '..')
-
-    const newWordState = structuredClone(initialWordState)
-    newWordState.wordName = wordName
-    newWordState.displayWord = headword
-    newWordState.letterStates = new Array(headword.length).fill('normal')
-    newWordState.startTime = getLocalTimeString()
-    setWordState(newWordState)
+    setWordState(createWordState(wordName))
   }, [wordName, setWordState])
 
   return { wordState, setWordState }

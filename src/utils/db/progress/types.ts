@@ -24,6 +24,13 @@ export interface IDictProgress {
   currentChapter: number
 }
 
+export interface IDailyWordDetail {
+  word: string
+  timeStamp: number
+  wrongCount: number
+  type: 'new' | 'review' | 'mastered'
+}
+
 export interface IDailyRecord {
   id?: number
   dict: string
@@ -33,6 +40,7 @@ export interface IDailyRecord {
   extraReviewedCount: number
   masteredCount: number
   lastUpdateTime: number
+  wordDetails?: IDailyWordDetail[]
   totalToday: number
   totalReviewed: number
   getNewWordQuota: () => number

@@ -4,6 +4,7 @@ import { getNextReplacementWord } from './get-next-replacement-word'
 import { startTypingSession } from './start-typing-session'
 import { advanceQueueSession } from './typing-session'
 import type { Word } from '@/typings'
+import { now } from '@/utils/timeService'
 
 export type MarkCurrentWordMasteredParams = {
   session: TypingSession
@@ -27,7 +28,13 @@ export async function markCurrentWordMastered(
   }
 
   await wordProgressRepository.markAsMastered(session.dictId, currentEntry.word.name)
-  const todayRecord = await dailyRecordRepository.incrementMastered(session.dictId)
+  await dailyRecordRepository.incrementMastered(session.dictId)
+  const todayRecord = await dailyRecordRepository.recordWordDetail(session.dictId, {
+    word: currentEntry.word.name,
+    wrongCount: 0,
+    type: 'mastered',
+    timeStamp: now(),
+  })
 
   const replacementWord = await getNextReplacementWord({
     dictId: session.dictId,

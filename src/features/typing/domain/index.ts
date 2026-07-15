@@ -9,6 +9,7 @@ export type {
   TypingSessionQueueItem,
   TypingSessionTodayCounts,
   TypingDailyRecord,
+  TypingDailyWordDetail,
   TypingWordKind,
   TypingWordProgress,
   TypingStateSnapshot,

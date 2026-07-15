@@ -1,5 +1,5 @@
 import { LEARNING_CONFIG, MASTERY_LEVELS } from './constants'
-import type { IDailyRecord, IDictProgress, IWordProgress, MasteryLevel } from './types'
+import type { IDailyRecord, IDailyWordDetail, IDictProgress, IWordProgress, MasteryLevel } from './types'
 import { now } from '@/utils/timeService'
 
 export class WordProgress implements IWordProgress {
@@ -79,6 +79,7 @@ export class DailyRecord implements IDailyRecord {
   extraReviewedCount: number
   masteredCount: number
   lastUpdateTime: number
+  wordDetails: IDailyWordDetail[]
 
   constructor(dict: string, date: string) {
     this.dict = dict
@@ -88,6 +89,7 @@ export class DailyRecord implements IDailyRecord {
     this.extraReviewedCount = 0
     this.masteredCount = 0
     this.lastUpdateTime = now()
+    this.wordDetails = []
   }
 
   get totalToday(): number {

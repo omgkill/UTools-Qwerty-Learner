@@ -57,7 +57,15 @@ export function buildDayStats(dailyRecords: AnalysisDailyRecord[]): DayStats[] {
     .sort((a, b) => b.date.localeCompare(a.date))
 }
 
-export function buildWordDetails(wordProgressList: AnalysisWordProgress[], date: string): WordDetail[] {
+export function buildWordDetails(
+  dailyRecord: AnalysisDailyRecord | undefined,
+  wordProgressList: AnalysisWordProgress[],
+  date: string,
+): WordDetail[] {
+  if (dailyRecord?.wordDetails?.length) {
+    return [...dailyRecord.wordDetails].sort((a, b) => a.word.localeCompare(b.word))
+  }
+
   const startOfDay = dayjs(date).startOf('day').valueOf()
   const endOfDay = dayjs(date).endOf('day').valueOf()
   const detailsByWord = new Map<string, WordDetail>()

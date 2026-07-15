@@ -3,6 +3,7 @@ import type { DailyRecordRepository, WordProgressRepository } from '../ports'
 import { startTypingSession } from './start-typing-session'
 import { advanceQueueSession } from './typing-session'
 import type { Word } from '@/typings'
+import { now } from '@/utils/timeService'
 
 export type CompleteCurrentWordParams = {
   session: TypingSession
@@ -37,9 +38,21 @@ export async function completeCurrentWord(params: CompleteCurrentWordParams): Pr
       case 'new':
       case 'replacement':
         todayRecord = await dailyRecordRepository.incrementLearned(session.dictId)
+        todayRecord = await dailyRecordRepository.recordWordDetail(session.dictId, {
+          word: currentEntry.word.name,
+          wrongCount,
+          type: 'new',
+          timeStamp: now(),
+        })
         break
       case 'review':
         todayRecord = await dailyRecordRepository.incrementReviewed(session.dictId, false)
+        todayRecord = await dailyRecordRepository.recordWordDetail(session.dictId, {
+          word: currentEntry.word.name,
+          wrongCount,
+          type: 'review',
+          timeStamp: now(),
+        })
         break
     }
   }
