@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { Word, WordWithIndex } from '@/typings'
+import type { Word } from '@/typings'
 import { db } from '@/utils/db'
-import { DailyRecordService, WordProgressService, loadTypingSession } from '@/services'
-import { now as getNow, advanceDays } from '@/utils/timeService'
+import { DailyRecordService, WordProgressService } from '@/services'
+import { completeCurrentWord, startTypingSession } from '.'
+import { setDailyLimit } from '../../domain'
+import { advanceDays, now as getNow, resetTimeDiff, setTimeTo } from '@/utils/timeService'
 import 'fake-indexeddb/auto'
 
 type LevelName = 'NEW' | 'LEARNED' | 'FAMILIAR' | 'KNOWN' | 'PROFICIENT' | 'ADVANCED' | 'EXPERT' | 'MASTERED'
@@ -25,12 +27,14 @@ describe('100个单词30天真实流程模拟', () => {
   const dictId = 'test-dict-real-flow'
   const TOTAL_WORDS = 100
   const DAILY_LIMIT = 20
-  const DAY_MS = 24 * 60 * 60 * 1000
 
   let wordProgressService: WordProgressService
   let dailyRecordService: DailyRecordService
 
   beforeEach(async () => {
+    resetTimeDiff()
+    setTimeTo('2026-07-15T09:00:00.000Z')
+    setDailyLimit(DAILY_LIMIT)
     await db.wordProgress.clear()
     await db.dailyRecords.clear()
     wordProgressService = new WordProgressService(db)
@@ -40,6 +44,8 @@ describe('100个单词30天真实流程模拟', () => {
   afterEach(async () => {
     await db.wordProgress.clear()
     await db.dailyRecords.clear()
+    resetTimeDiff()
+    setDailyLimit(DAILY_LIMIT)
   })
 
   it('调用真实Repository和Application层，模拟100个单词30天的完整学习流程', async () => {
@@ -57,8 +63,12 @@ describe('100个单词30天真实流程模拟', () => {
       dueCount: number
       newCount: number
       learnedWords: number
+      learnedCount: number
+      reviewedCount: number
       learningType: string
       description: string
+      newWordsList: string[]
+      reviewWordsList: string[]
     }> = []
 
     log('\n========== 100个单词 × 30天真实流程模拟 ==========\n')
@@ -72,61 +82,75 @@ describe('100个单词30天真实流程模拟', () => {
       const currentDay = new Date(getNow()).toISOString().split('T')[0]
       log(`时间: ${currentDay}`)
 
-      // 获取今日记录
-      const record = await dailyRecordService.getTodayRecord(dictId)
+      const dailyWordList = shuffleWithSeed(wordList, `100-words-30-days-${day}`)
 
-      // 调用真实的 loadTypingSession (Application层)
-      const session = await loadTypingSession({
-        wordList,
-        reviewedCount: record.reviewedCount,
-        learnedCount: record.learnedCount,
-        getAllProgress: () => wordProgressService.getAllProgress(dictId),
-        getWordProgress: (word) => wordProgressService.getProgress(dictId, word),
+      let session = await startTypingSession({
+        dictId,
+        wordList: dailyWordList,
+        wordProgressRepository: wordProgressService,
+        dailyRecordRepository: dailyRecordService,
       })
+      const initialDueCount = session.dueCount
+      const initialNewCount = session.newCount
+      const initialLearningType = session.learningType
+      const initialQueueWords = session.queueWords
+      const reviewWordsList = initialQueueWords.filter((entry) => entry.kind === 'review').map((entry) => entry.word.name)
+      const newWordsList = initialQueueWords.filter((entry) => entry.kind === 'new' || entry.kind === 'replacement').map((entry) => entry.word.name)
 
-      log(`到期单词数: ${session.dueCount}`)
-      log(`新单词数: ${session.newCount}`)
-      log(`学习类型: ${session.learningType}`)
-      log(`实际学习: ${session.learningWords.length}个单词`)
-      log(`  学习列表（前10个）: ${session.learningWords.slice(0, 10).map((w) => w.name).join(', ')}${session.learningWords.length > 10 ? '...' : ''}`)
+      log(`到期单词数: ${initialDueCount}`)
+      log(`新单词数: ${initialNewCount}`)
+      log(`学习类型: ${initialLearningType}`)
+      log(`计划学习: ${initialQueueWords.length}个单词`)
+      log(`  学习列表（前10个）: ${initialQueueWords.slice(0, 10).map((entry) => entry.word.name).join(', ')}${initialQueueWords.length > 10 ? '...' : ''}`)
+      log(`  复习词: ${formatWordList(reviewWordsList)}`)
+      log(`  新词: ${formatWordList(newWordsList)}`)
 
-      // 模拟学习所有单词（假设全部答对）
-      for (const word of session.learningWords) {
-        // 使用真实的 updateProgress 方法（参数：isCorrect=true, wrongCount=0）
-        await wordProgressService.updateProgress(dictId, word.name, true, 0)
-
-        // 注意：在真实应用中，学习完成后会自动更新今日记录
-        // 这里为了测试简化，跳过dailyRecordService的更新
+      while (!session.isFinished) {
+        const result = await completeCurrentWord({
+          session,
+          wordList: dailyWordList,
+          isCorrect: true,
+          wrongCount: 0,
+          wordProgressRepository: wordProgressService,
+          dailyRecordRepository: dailyRecordService,
+        })
+        session = result.session
       }
+
+      const record = await dailyRecordService.getTodayRecord(dictId)
+      const learnedWords = record.learnedCount + record.reviewedCount
 
       // 统计
       let description = ''
-      if (session.learningWords.length === 0) {
+      if (learnedWords === 0) {
         description = '无单词到期，无新词可学'
       }
-      else if (session.dueCount > 0 && session.dueCount <= DAILY_LIMIT) {
-        if (session.newCount > 0 && session.dueCount < DAILY_LIMIT) {
-          const newWordCount = session.learningWords.length - session.dueCount
-          description = `复习${session.dueCount}个 + 新词${newWordCount}个`
+      else if (record.reviewedCount > 0 && record.learnedCount > 0) {
+        description = `复习${record.reviewedCount}个 + 新词${record.learnedCount}个`
+      }
+      else if (record.reviewedCount > 0) {
+        if (initialDueCount > DAILY_LIMIT) {
+          description = `复习前20个（剩余${initialDueCount - DAILY_LIMIT}个排队）`
         }
         else {
-          description = `复习${session.dueCount}个`
+          description = `复习${record.reviewedCount}个`
         }
       }
-      else if (session.dueCount > DAILY_LIMIT) {
-        description = `复习前20个（剩余${session.dueCount - DAILY_LIMIT}个排队）`
-      }
       else {
-        description = `学习${session.learningWords.length}个新词`
+        description = `学习${record.learnedCount}个新词`
       }
 
       stats.push({
         day,
-        dueCount: session.dueCount,
-        newCount: session.newCount,
-        learnedWords: session.learningWords.length,
-        learningType: session.learningType,
+        dueCount: initialDueCount,
+        newCount: initialNewCount,
+        learnedWords,
+        learnedCount: record.learnedCount,
+        reviewedCount: record.reviewedCount,
+        learningType: initialLearningType,
         description,
+        newWordsList,
+        reviewWordsList,
       })
 
       log('')
@@ -141,6 +165,13 @@ describe('100个单词30天真实流程模拟', () => {
 
     stats.forEach((s) => {
       log(`| Day ${s.day} | ${s.dueCount}个 | ${s.newCount}个 | ${s.learnedWords}个 | ${s.learningType} | ${s.description} |`)
+    })
+
+    log('\n========== 30天学习明细 ==========\n')
+    log('| 天数 | 复习词 | 新词 |')
+    log('|------|--------|------|')
+    stats.forEach((s) => {
+      log(`| Day ${s.day} | ${formatWordList(s.reviewWordsList)} | ${formatWordList(s.newWordsList)} |`)
     })
 
     // 统计最终级别分布
@@ -189,6 +220,7 @@ describe('100个单词30天真实流程模拟', () => {
     // 验证每日学习不超过20个
     stats.forEach((s) => {
       expect(s.learnedWords).toBeLessThanOrEqual(DAILY_LIMIT)
+      expect(s.learnedCount + s.reviewedCount).toBe(s.learnedWords)
     })
 
     // 验证所有100个单词都被学习过
@@ -204,4 +236,37 @@ describe('100个单词30天真实流程模拟', () => {
 function getInterval(level: number): number {
   const intervals = [0, 1, 2, 4, 7, 15, 21, 30]
   return intervals[level] || 0
+}
+
+function formatWordList(words: string[]): string {
+  return words.length > 0 ? words.join(', ') : '-'
+}
+
+function shuffleWithSeed<T>(array: T[], seed: string): T[] {
+  const result = [...array]
+  const random = createSeededRandom(seed)
+
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1))
+    const value = result[index]
+    result[index] = result[swapIndex]
+    result[swapIndex] = value
+  }
+
+  return result
+}
+
+function createSeededRandom(seed: string): () => number {
+  let state = 0
+  for (let index = 0; index < seed.length; index += 1) {
+    state = (Math.imul(31, state) + seed.charCodeAt(index)) | 0
+  }
+
+  return () => {
+    state += 0x6D2B79F5
+    let value = state
+    value = Math.imul(value ^ (value >>> 15), value | 1)
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61)
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296
+  }
 }
