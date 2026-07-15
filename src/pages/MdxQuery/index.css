@@ -118,18 +118,6 @@
   text-decoration: underline;
 }
 
-.result-content .C1_item_number,
-.result-content .C1_item_number a {
-  background: transparent !important;
-  color: #818cf8 !important;
-}
-
-.result-content .C1_item_number a {
-  border: 0 !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-}
-
 .result-content b,
 .result-content strong {
   font-weight: 600;

@@ -43,6 +43,19 @@ export default function MdxQueryPage() {
     if (loading || results.length === 0) return
 
     const timer = window.setTimeout(() => {
+      const rawResults = results.map((item) => ({
+        dictPath: item.dictPath,
+        dictName: item.dictName,
+        ok: item.ok,
+        error: item.error || '',
+        content: item.content || '',
+      }))
+
+      console.group('[MdxQuery] raw result HTML')
+      console.log(rawResults)
+      console.log('[MdxQuery] raw result HTML JSON:', JSON.stringify(rawResults, null, 2))
+      console.groupEnd()
+
       const nodes = Array.from(document.querySelectorAll<HTMLElement>('.result-content *'))
       const styledNodes = nodes
         .map((node) => {
