@@ -149,7 +149,6 @@ export default function WordPanel({
                   key={`${currentWord.index}-${currentWord.name}`}
                   word={currentWord}
                   onFinish={handleWordFinished}
-                  isRepeatLearning={isRepeatLearning}
                 />
                 {phoneticConfig.isOpen && <Phonetic word={wordWithInfo || currentWord} />}
                 {isTransVisible && <Translation trans={displayTrans} tense={displayTense} />}

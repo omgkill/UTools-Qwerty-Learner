@@ -22,11 +22,9 @@ export type { WordState } from './hooks'
 export default function WordComponent({
   word,
   onFinish,
-  isRepeatLearning = false,
 }: {
   word: WordWithIndex
   onFinish: (params: { isCorrect: boolean; wrongCount: number }) => Promise<void> | void
-  isRepeatLearning?: boolean
 }) {
   const { wordState, setWordState } = useWordState(word.name)
 
@@ -38,7 +36,7 @@ export default function WordComponent({
   const currentLanguage = useAtomValue(currentDictInfoAtom)?.language ?? 'en'
 
   const { updateInput } = useWordInput(word.index, wordState, setWordState)
-  useWordCompletion(word, wordState, onFinish, isRepeatLearning)
+  useWordCompletion(word, wordState, onFinish)
 
   const handleHoverWord = useCallback((checked: boolean) => {
     setIsHoveringWord(checked)

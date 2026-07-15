@@ -294,6 +294,13 @@ describe('typing session transactions', () => {
     expect(result.session.todayCounts.learned).toBe(1)
     expect(result.session.todayCounts.reviewed).toBe(0)
     expect(result.session.currentWord?.name).toBe('word2')
+    expect((await dailyRecordRepository.getTodayRecord(dictId)).wordDetails).toEqual([
+      expect.objectContaining({
+        word: 'word1',
+        wrongCount: 3,
+        type: 'new',
+      }),
+    ])
   })
 
   it('marks current word mastered, appends a replacement word, and moves to the replacement', async () => {

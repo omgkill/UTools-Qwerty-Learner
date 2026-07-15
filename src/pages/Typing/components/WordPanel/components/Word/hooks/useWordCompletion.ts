@@ -7,7 +7,6 @@ export function useWordCompletion(
   word: WordWithIndex,
   wordState: WordState,
   onFinish: (params: { isCorrect: boolean; wrongCount: number }) => Promise<void> | void,
-  isRepeatLearning = false,
 ) {
   const { actions } = useWordPanelRuntime()
   const onFinishCalledRef = useRef(false)
@@ -28,9 +27,8 @@ export function useWordCompletion(
         actions.reportCorrectWord(word.index)
       }
 
-      const isCorrect = !wordState.hasMadeInputWrong
       void onFinish({
-        isCorrect: isRepeatLearning ? true : isCorrect,
+        isCorrect: true,
         wrongCount: wordState.wrongCount,
       })
     }
@@ -43,6 +41,5 @@ export function useWordCompletion(
     word.index,
     actions,
     onFinish,
-    isRepeatLearning,
   ])
 }
