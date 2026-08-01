@@ -1,6 +1,5 @@
 import type { Word, WordWithIndex } from '@/typings'
 
-export type LearningType = 'review' | 'new' | 'complete'
 export type TypingStateSessionType = 'normal' | 'repeat' | 'consolidate'
 export type QueuedLearningSessionType = 'repeat' | 'consolidate'
 
@@ -21,7 +20,6 @@ export type TypingSessionTodayCounts = {
 export type TypingSession = {
   dictId: string
   mode: 'normal'
-  learningType: LearningType
   queueWords: TypingSessionQueueItem[]
   currentIndex: number
   currentWord?: WordWithIndex
@@ -86,8 +84,9 @@ export type DetermineLearningTypeParams = {
 }
 
 export type DetermineLearningTypeResult = {
-  learningType: LearningType
   learningWords: WordWithIndex[]
+  reviewWords: WordWithIndex[]
+  newWords: WordWithIndex[]
   dueCount: number
   newCount: number
 }
@@ -102,7 +101,6 @@ export interface TypingStateSnapshot {
   currentIndex: number
   queueWords?: TypingSessionQueueItem[]
   currentWordKind?: TypingWordKind
-  learningType?: LearningType
   todayCounts?: TypingSessionTodayCounts
   dueCount?: number
   newCount?: number

@@ -2,7 +2,6 @@ export type {
   DetermineLearningTypeParams,
   DetermineLearningTypeResult,
   LearningState,
-  LearningType,
   QueuedLearningSessionType,
   TypingStateSessionType,
   TypingSession,

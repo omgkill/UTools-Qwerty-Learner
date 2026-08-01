@@ -47,7 +47,6 @@ describe('30个单词20天学习模拟', () => {
       dueWords: string[]
       newWords: string[]
       learningWords: string[]
-      learningType: string
       dueCount: number
       newCount: number
     }> = []
@@ -86,7 +85,6 @@ describe('30个单词20天学习模拟', () => {
 
       log(`到期单词数: ${result.dueCount}`)
       log(`新单词数: ${result.newCount}`)
-      log(`学习类型: ${result.learningType}`)
       log(`学习单词: ${result.learningWords.map((w) => w.name).join(', ')}`)
 
       results.push({
@@ -94,7 +92,6 @@ describe('30个单词20天学习模拟', () => {
         dueWords: dueProgress.map((p) => p.word),
         newWords: newWordsList.map((w) => w.name),
         learningWords: result.learningWords.map((w) => w.name),
-        learningType: result.learningType,
         dueCount: result.dueCount,
         newCount: result.newCount,
       })
@@ -123,7 +120,7 @@ describe('30个单词20天学习模拟', () => {
     // 验证结果
     log('\n========== 学习总结 ==========')
     results.forEach((r) => {
-      log(`Day ${r.day}: 学习类型=${r.learningType}, 到期=${r.dueCount}, 新词=${r.newCount}, 学习=${r.learningWords.length}个`)
+      log(`Day ${r.day}: 到期=${r.dueCount}, 新词=${r.newCount}, 学习=${r.learningWords.length}个`)
       log(`  学习单词: ${r.learningWords.slice(0, 10).join(', ')}${r.learningWords.length > 10 ? '...' : ''}`)
     })
 
@@ -131,7 +128,6 @@ describe('30个单词20天学习模拟', () => {
     log('\n========== 详细学习记录 ==========')
     results.forEach((r, index) => {
       log(`\nDay ${r.day}:`)
-      log(`  学习类型: ${r.learningType}`)
       log(`  到期单词: ${r.dueCount}个`)
       log(`  新单词: ${r.newCount}个`)
       log(`  实际学习: ${r.learningWords.length}个`)
@@ -148,7 +144,6 @@ describe('30个单词20天学习模拟', () => {
     // })
 
     // Day 1: 应该学习20个新词
-    expect(results[0].learningType).toBe('new')
     expect(results[0].learningWords.length).toBe(20)
 
     // Day 2: 应该有20个到期单词

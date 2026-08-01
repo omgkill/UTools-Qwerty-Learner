@@ -1,4 +1,4 @@
-import type { LearningType, TypingSession, TypingSessionQueueItem, TypingStateSnapshot } from '../../domain'
+import type { TypingSession, TypingSessionQueueItem, TypingStateSnapshot } from '../../domain'
 import type { DailyRecordRepository, TypingStateRepository, WordProgressRepository } from '../ports'
 import { recordDataWrite } from '@/features/backup/application'
 import { dexieTypingStateRepository } from '@/infra/repositories/typing-state.repository.dexie'
@@ -9,7 +9,6 @@ import { startTypingSession } from './start-typing-session'
 export type SavedNormalTypingSession = TypingStateSnapshot & {
   sessionType: 'normal'
   queueWords: TypingSessionQueueItem[]
-  learningType: LearningType
   todayCounts: TypingSession['todayCounts']
   dueCount: number
   newCount: number
@@ -114,7 +113,6 @@ export async function saveNormalTypingSession(params: {
     queueWords: session.queueWords,
     currentIndex: session.currentIndex,
     currentWordKind: session.currentWordKind,
-    learningType: session.learningType,
     todayCounts: session.todayCounts,
     dueCount: session.dueCount,
     newCount: session.newCount,
@@ -181,7 +179,7 @@ function normalizeNormalState(state: TypingStateSnapshot): SavedNormalTypingSess
     return null
   }
 
-  if (!state.queueWords || !state.learningType || !state.todayCounts) {
+  if (!state.queueWords || !state.todayCounts) {
     return null
   }
 
@@ -189,7 +187,6 @@ function normalizeNormalState(state: TypingStateSnapshot): SavedNormalTypingSess
     ...state,
     sessionType: 'normal',
     queueWords: state.queueWords,
-    learningType: state.learningType,
     todayCounts: state.todayCounts,
     dueCount: state.dueCount ?? 0,
     newCount: state.newCount ?? 0,
@@ -205,7 +202,6 @@ function toTypingSession(snapshot: SavedNormalTypingSession): TypingSession {
   return {
     dictId: snapshot.dict,
     mode: 'normal',
-    learningType: snapshot.learningType,
     queueWords: snapshot.queueWords,
     currentIndex: safeIndex,
     currentWord: currentEntry?.word,

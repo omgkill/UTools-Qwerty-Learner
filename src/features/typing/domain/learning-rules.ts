@@ -5,43 +5,45 @@ export function determineLearningType(params: DetermineLearningTypeParams): Dete
   const { dueWords, newWords, reviewedCount, learnedCount } = params
   const remaining = Math.max(0, LEARNING_CONFIG.DAILY_LIMIT - reviewedCount - learnedCount)
 
-  if (dueWords.length > 0) {
-    if (remaining === 0) {
-      return {
-        learningType: 'complete',
-        learningWords: [],
-        dueCount: dueWords.length,
-        newCount: 0,
-      }
-    }
-
-    const reviewWords = dueWords.slice(0, remaining)
-    const newWordQuota = dueWords.length <= remaining ? Math.max(0, remaining - dueWords.length) : 0
-    const actualNewWords = Math.min(newWordQuota, newWords.length)  // 实际可学习的新词数量
-
-    const wordsToReturn = [...reviewWords, ...newWords.slice(0, actualNewWords)]
-
+  if (remaining === 0) {
     return {
-      learningType: 'review',
-      learningWords: wordsToReturn,
+      learningWords: [],
+      reviewWords: [],
+      newWords: [],
       dueCount: dueWords.length,
-      newCount: actualNewWords,  // 返回当日可学习的新词数量
+      newCount: 0,
     }
   }
 
-  if (remaining > 0 && newWords.length > 0) {
-    const wordsToLearn = newWords.slice(0, remaining)
+  if (dueWords.length > 0) {
+    const reviewWords = dueWords.slice(0, remaining)
+    const newWordQuota = Math.max(0, remaining - reviewWords.length)
+    const newWordsToLearn = newWords.slice(0, newWordQuota)
+
     return {
-      learningType: 'new',
-      learningWords: wordsToLearn,
+      learningWords: [...reviewWords, ...newWordsToLearn],
+      reviewWords,
+      newWords: newWordsToLearn,
+      dueCount: dueWords.length,
+      newCount: newWordsToLearn.length,
+    }
+  }
+
+  if (newWords.length > 0) {
+    const newWordsToLearn = newWords.slice(0, remaining)
+    return {
+      learningWords: newWordsToLearn,
+      reviewWords: [],
+      newWords: newWordsToLearn,
       dueCount: 0,
-      newCount: Math.min(remaining, newWords.length),  // 返回当日可学习的新词数量
+      newCount: newWordsToLearn.length,
     }
   }
 
   return {
-    learningType: 'complete',
     learningWords: [],
+    reviewWords: [],
+    newWords: [],
     dueCount: 0,
     newCount: 0,
   }

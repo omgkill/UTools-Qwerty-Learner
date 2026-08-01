@@ -21,7 +21,6 @@ export function createEmptyTypingSession(dictId: string): TypingSession {
   return {
     dictId,
     mode: 'normal',
-    learningType: 'complete',
     queueWords: [],
     currentIndex: 0,
     currentWord: undefined,
@@ -68,7 +67,6 @@ export function buildTypingSession(params: BuildTypingSessionParams): TypingSess
   return {
     dictId,
     mode: 'normal',
-    learningType: result.learningType,
     queueWords,
     currentIndex: 0,
     currentWord: currentEntry?.word,

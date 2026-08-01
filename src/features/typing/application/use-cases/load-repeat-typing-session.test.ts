@@ -106,7 +106,7 @@ describe('loadRepeatTypingSession', () => {
     typingStateRepository.seed({
       id: 1,
       dict: 'dict-1',
-      date: '2026-07-12',
+      date: getTodayDate(),
       sessionType: 'repeat',
       isRepeatLearning: true,
       learningWords: [createWord('saved-alpha', 3), createWord('saved-beta', 9)],

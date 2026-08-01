@@ -98,7 +98,6 @@ describe('100个单词30天随机学习模拟', () => {
         wordList,
       })
 
-      log(`学习类型: ${result.learningType}`)
       log(`实际学习: ${result.learningWords.length}个单词`)
       log(`  学习列表（前10个）: ${result.learningWords.slice(0, 10).map((w) => w.name).join(', ')}${result.learningWords.length > 10 ? '...' : ''}`)
 

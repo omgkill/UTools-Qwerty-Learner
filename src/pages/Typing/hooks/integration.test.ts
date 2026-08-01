@@ -117,7 +117,6 @@ describe('Word Completion Integration Tests', () => {
         wordList: dueWords,
       })
 
-      expect(result.learningType).toBe('review')
       expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个，不超过上限
       expect(result.dueCount).toBe(30)  // 保留完整数量，告知用户还有多少待复习
     })
@@ -134,7 +133,6 @@ describe('Word Completion Integration Tests', () => {
         wordList: dueWords,
       })
 
-      expect(result.learningType).toBe('complete')
       expect(result.learningWords.length).toBe(0)
       expect(result.dueCount).toBe(25)
     })
@@ -151,7 +149,6 @@ describe('Word Completion Integration Tests', () => {
         wordList: dueWords,
       })
 
-      expect(result.learningType).toBe('review')
       expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个，不超过上限
     })
   })

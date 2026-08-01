@@ -10,17 +10,17 @@ import { useTypingPageShellEffects } from './hooks/useTypingPageShellEffects'
 import { TypingPageProvider, TypingStateActionType, useTypingContext } from './store'
 import Header from '@/components/Header'
 import Tooltip from '@/components/Tooltip'
-import type { LearningType } from '@/features/typing/domain'
+import type { TypingWordKind } from '@/features/typing/domain'
 import { useNormalTypingSession } from '@/features/typing/presentation/hooks/useNormalTypingSession'
 import type { WordBank } from '@/typings'
 import type React from 'react'
 import { useCallback, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 
-const LEARNING_TYPE_LABELS: Record<LearningType, { icon: string; label: string }> = {
-  review: { icon: '🔄', label: '复习' },
+const WORD_KIND_LABELS: Record<TypingWordKind, { icon: string; label: string }> = {
   new: { icon: '📚', label: '新词' },
-  complete: { icon: '✅', label: '完成' },
+  review: { icon: '🔄', label: '复习' },
+  replacement: { icon: '🔄', label: '复习' },
 }
 
 interface NormalTypingAppInnerProps {
@@ -32,7 +32,8 @@ export const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ curr
 
   const {
     session,
-    learningType,
+    currentWordKind,
+    isFinished,
     dueCount,
     newCount,
     todayLearned,
@@ -75,7 +76,7 @@ export const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ curr
     [completeSessionWord],
   )
 
-  const typeInfo = LEARNING_TYPE_LABELS[learningType]
+  const kindInfo = currentWordKind ? WORD_KIND_LABELS[currentWordKind] : null
 
   return (
     <>
@@ -91,15 +92,19 @@ export const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ curr
               </NavLink>
             </Tooltip>
             <div className="flex items-center gap-2 text-sm text-white/80">
-              <span className="rounded bg-white/20 px-2 py-0.5">
-                {typeInfo.icon} {typeInfo.label}
-              </span>
+              {isFinished ? (
+                <span className="rounded bg-white/20 px-2 py-0.5">✅ 完成</span>
+              ) : kindInfo ? (
+                <span className="rounded bg-white/20 px-2 py-0.5">
+                  {kindInfo.icon} {kindInfo.label}
+                </span>
+              ) : null}
               {(todayLearned > 0 || todayReviewed > 0) && (
                 <span className="rounded bg-white/20 px-2 py-0.5">今日 {todayLearned + todayReviewed} 词</span>
               )}
               {todayMastered > 0 && <span className="rounded bg-purple-500/30 px-2 py-0.5 text-purple-200">✓ 已掌握 {todayMastered}</span>}
               {dueCount > 0 && <span className="rounded bg-orange-500/30 px-2 py-0.5 text-orange-200">待复习 {dueCount}</span>}
-              {newCount > 0 && learningType === 'new' && (
+              {newCount > 0 && currentWordKind === 'new' && (
                 <span className="rounded bg-green-500/30 px-2 py-0.5 text-green-200">新词 {newCount}</span>
               )}
             </div>
@@ -111,7 +116,7 @@ export const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ curr
         <div className="container mx-auto flex h-full flex-1 flex-col items-center justify-center pb-4">
           <div className="container relative mx-auto flex h-full flex-col items-center">
             <div className="container flex flex-grow items-center justify-center">
-              {learningType === 'complete' ? (
+              {isFinished ? (
                 <div className="flex flex-col items-center justify-center space-y-6">
                   <div className="text-6xl">🎉</div>
                   <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">✓ 学习完成</h2>

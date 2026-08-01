@@ -335,7 +335,7 @@ describe('typing session transactions', () => {
     expect(result.session.queueWords.map((entry) => entry.word.name)).toEqual(['word1', 'word2'])
   })
 
-  it('rebuilds the next batch after 20 due words without repeating completed words', async () => {
+  it('marks session as finished after 20 due words (daily limit reached)', async () => {
     const wordList = createWordList(25)
     wordList.forEach((word) => {
       wordProgressRepository.seedDueWord(word.name)
@@ -364,13 +364,13 @@ describe('typing session transactions', () => {
       session = result.session
     }
 
-    expect(session.queueWords.map((entry) => entry.word.name)).toEqual(['word21', 'word22', 'word23', 'word24', 'word25'])
-    expect(session.currentIndex).toBe(0)
-    expect(session.currentWord?.name).toBe('word21')
+    // 每日限制 20 个，完成后 session 应该结束
+    expect(session.isFinished).toBe(true)
+    expect(session.queueWords.length).toBe(0)
     expect(session.todayCounts.reviewed).toBe(20)
   })
 
-  it('continues rolling due-word batches when more than 20 reviews are pending', async () => {
+  it('marks session as finished when daily limit reached with many due words', async () => {
     const wordList = createWordList(45)
     wordList.forEach((word) => {
       wordProgressRepository.seedDueWord(word.name)
@@ -395,29 +395,9 @@ describe('typing session transactions', () => {
       session = result.session
     }
 
-    expect(session.queueWords.map((entry) => entry.word.name)).toEqual([
-      'word21',
-      'word22',
-      'word23',
-      'word24',
-      'word25',
-      'word26',
-      'word27',
-      'word28',
-      'word29',
-      'word30',
-      'word31',
-      'word32',
-      'word33',
-      'word34',
-      'word35',
-      'word36',
-      'word37',
-      'word38',
-      'word39',
-      'word40',
-    ])
-    expect(session.currentIndex).toBe(0)
+    // 每日限制 20 个，完成后 session 应该结束
+    expect(session.isFinished).toBe(true)
+    expect(session.queueWords.length).toBe(0)
     expect(session.todayCounts.reviewed).toBe(20)
   })
 

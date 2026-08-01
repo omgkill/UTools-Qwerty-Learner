@@ -144,11 +144,8 @@ function simulateDay(
     const batchSize = Math.min(learningResult.learningWords.length, remainingSlots)
     if (batchSize <= 0) break
 
-    if (learningResult.learningType === 'new') {
-      learnedCount += batchSize
-    } else {
-      reviewedCount += batchSize
-    }
+    learnedCount += learningResult.newWords.length
+    reviewedCount += learningResult.reviewWords.length
 
     for (let i = 0; i < batchSize; i++) {
       const learningWord = learningResult.learningWords[i]
@@ -220,7 +217,6 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
 
       expect(result.dueWordsCount).toBe(0)
       expect(result.newWordsQuota).toBe(20)
-      expect(result.learningType).toBe('new')
       expect(result.newWordsLearned).toBe(20)
       expect(result.wordsReviewed).toBe(0)
       expect(result.totalToday).toBe(20)
@@ -244,7 +240,6 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
 
       expect(result.dueWordsCount).toBe(20)
       expect(result.newWordsQuota).toBe(0)
-      expect(result.learningType).toBe('review')
       expect(result.newWordsLearned).toBe(0)
       expect(result.wordsReviewed).toBe(20)
       expect(result.totalToday).toBe(20)
@@ -267,7 +262,6 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
       const { result, updatedWords } = simulateDay(day2.updatedWords)
 
       expect(result.dueWordsCount).toBe(0)
-      expect(result.learningType).toBe('new')
       expect(result.newWordsLearned).toBe(20)
       expect(result.wordsReviewed).toBe(0)
       expect(result.totalToday).toBe(20)
@@ -390,7 +384,6 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
       }
 
       results.forEach((result) => {
-        expect(result.learningType).toBe('complete')
         expect(result.dueWordsCount).toBe(0)
         expect(result.newWordsLearned).toBe(0)
         expect(result.wordsReviewed).toBe(0)
@@ -470,7 +463,6 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
 
       expect(result.dueWordsCount).toBe(35)
       expect(result.newWordsQuota).toBe(0)
-      expect(result.learningType).toBe('review')
       expect(result.wordsReviewed).toBe(20)
 
       const remainingDueWords = updatedWords.filter((w) => {
@@ -498,7 +490,6 @@ describe('Fixed Limit Model - Learning Simulation (学习模拟案例验证)', (
 
       expect(result.dueWordsCount).toBe(15)
       expect(result.newWordsQuota).toBe(5)
-      expect(result.learningType).toBe('review')
       expect(result.wordsReviewed).toBe(15)
       expect(result.totalToday).toBe(15)
     })

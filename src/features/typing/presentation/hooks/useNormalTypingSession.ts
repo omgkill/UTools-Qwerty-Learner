@@ -5,7 +5,7 @@ import {
   markCurrentWordMastered,
   saveNormalTypingSession,
 } from '@/features/typing/application/use-cases'
-import type { LearningType, TypingSession, TypingWordKind } from '@/features/typing/domain'
+import type { TypingSession, TypingWordKind } from '@/features/typing/domain'
 import { useNormalTypingSessionAdapter } from '@/features/typing/presentation/adapters/normal-typing-session.adapter'
 import type { WordWithIndex } from '@/typings'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -17,7 +17,7 @@ export type UseNormalTypingSessionResult = {
   currentWordKind: TypingWordKind | undefined
   isLoading: boolean
   error: Error | undefined
-  learningType: LearningType
+  isFinished: boolean
   dueCount: number
   newCount: number
   masteredCount: number
@@ -153,7 +153,7 @@ export function useNormalTypingSession(): UseNormalTypingSessionResult {
     currentWordKind: session?.currentWordKind,
     isLoading: isWordListLoading || isLoadingSession,
     error: wordListError,
-    learningType: session?.learningType ?? 'complete',
+    isFinished: session?.isFinished ?? true,
     dueCount: session?.dueCount ?? 0,
     newCount: session?.newCount ?? 0,
     masteredCount: session?.masteredCount ?? 0,

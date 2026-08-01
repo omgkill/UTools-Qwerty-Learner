@@ -45,7 +45,7 @@ describe('determineLearningType', () => {
         wordList,
       })
 
-      expect(result.learningType).toBe('review')
+
       expect(result.learningWords).toEqual(dueWords)
     })
 
@@ -60,7 +60,7 @@ describe('determineLearningType', () => {
         wordList,
       })
 
-      expect(result.learningType).toBe('review')
+
       expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个，不超过上限
       expect(result.dueCount).toBe(30)  // 保留完整数量
     })
@@ -76,7 +76,7 @@ describe('determineLearningType', () => {
         wordList,
       })
 
-      expect(result.learningType).toBe('complete')
+
       expect(result.learningWords.length).toBe(0)
       expect(result.dueCount).toBe(25)
     })
@@ -92,7 +92,7 @@ describe('determineLearningType', () => {
         wordList,
       })
 
-      expect(result.learningType).toBe('review')
+
       expect(result.learningWords.length).toBe(10)
       expect(result.dueCount).toBe(25)
     })
@@ -109,7 +109,7 @@ describe('determineLearningType', () => {
         wordList,
       })
 
-      expect(result.learningType).toBe('review')
+
     })
 
     it('should add new words to fill quota when due words < DAILY_LIMIT', () => {
@@ -124,7 +124,7 @@ describe('determineLearningType', () => {
         wordList,
       })
 
-      expect(result.learningType).toBe('review')
+
       expect(result.learningWords.length).toBe(4)
       expect(result.learningWords[0].name).toBe('apple')
       expect(result.learningWords[1].name).toBe('banana')
@@ -143,7 +143,7 @@ describe('determineLearningType', () => {
         wordList,
       })
 
-      expect(result.learningType).toBe('review')
+
       expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个，不包含新词
       expect(result.learningWords.every(w => w.name.startsWith('word'))).toBe(true)
     })
@@ -161,7 +161,7 @@ describe('determineLearningType', () => {
         wordList,
       })
 
-      expect(result.learningType).toBe('new')
+
       expect(result.learningWords.length).toBe(2)
     })
 
@@ -176,7 +176,7 @@ describe('determineLearningType', () => {
         wordList,
       })
 
-      expect(result.learningType).toBe('new')
+
       expect(result.learningWords.length).toBe(20)
     })
 
@@ -191,7 +191,7 @@ describe('determineLearningType', () => {
         wordList,
       })
 
-      expect(result.learningType).toBe('complete')
+
     })
 
     it('should calculate quota correctly: DAILY_LIMIT - reviewedCount - learnedCount', () => {
@@ -205,7 +205,7 @@ describe('determineLearningType', () => {
         wordList,
       })
 
-      expect(result.learningType).toBe('new')
+
       expect(result.learningWords.length).toBe(12)
     })
   })
@@ -221,7 +221,7 @@ describe('determineLearningType', () => {
         wordList,
       })
 
-      expect(result.learningType).toBe('complete')
+
       expect(result.learningWords).toEqual([])
     })
 
@@ -235,7 +235,7 @@ describe('determineLearningType', () => {
         wordList,
       })
 
-      expect(result.learningType).toBe('complete')
+
     })
   })
 
@@ -254,7 +254,7 @@ describe('determineLearningType', () => {
         wordList: wordListWithProgress,
       })
 
-      expect(result.learningType).toBe('complete')
+
       expect(result.learningWords).toEqual([])
     })
 
@@ -279,7 +279,7 @@ describe('determineLearningType', () => {
         wordList: wordListWithProgress,
       })
 
-      expect(result.learningType).toBe('complete')
+
       expect(result.learningWords).toEqual([])
     })
   })
@@ -343,7 +343,7 @@ describe('规则不变式', () => {
       wordList,
     })
 
-    expect(result.learningType).toBe('review')
+
     expect(result.learningWords.length).toBe(4)
     expect(result.learningWords[0].name).toBe('apple')
     expect(result.learningWords[1].name).toBe('banana')
@@ -361,7 +361,7 @@ describe('规则不变式', () => {
       wordList,
     })
 
-    expect(result.learningType).toBe('review')
+
     expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个
   })
 
@@ -375,7 +375,7 @@ describe('规则不变式', () => {
       wordList,
     })
 
-    expect(result.learningType).toBe('complete')
+
     expect(result.learningWords).toEqual([])
   })
 
@@ -390,7 +390,7 @@ describe('规则不变式', () => {
       wordList,
     })
 
-    expect(result.learningType).toBe('new')
+
     expect(result.learningWords.length).toBe(5)
   })
 
@@ -451,7 +451,7 @@ describe('Due Words > DAILY_LIMIT scenarios', () => {
       wordList,
     })
 
-    expect(result.learningType).toBe('review')
+
     expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个
     expect(result.dueCount).toBe(30)  // 保留完整数量
   })
@@ -467,7 +467,7 @@ describe('Due Words > DAILY_LIMIT scenarios', () => {
       wordList,
     })
 
-    expect(result.learningType).toBe('complete')
+
     expect(result.learningWords.length).toBe(0)
     expect(result.dueCount).toBe(50)
   })
@@ -483,7 +483,7 @@ describe('Due Words > DAILY_LIMIT scenarios', () => {
       wordList,
     })
 
-    expect(result.learningType).toBe('review')
+
     expect(result.learningWords.length).toBe(20)  // 新逻辑：只返回前20个
   })
 })

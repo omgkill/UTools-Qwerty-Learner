@@ -156,7 +156,6 @@ function createSession(overrides: Partial<TypingSession> = {}): TypingSession {
   return {
     dictId: 'dict-a',
     mode: 'normal',
-    learningType: 'new',
     queueWords,
     currentIndex: 1,
     currentWord: queueWords[1]?.word,
@@ -208,7 +207,6 @@ describe('NormalTypingAppInner', () => {
     useNormalTypingSessionMock.mockReset()
     useNormalTypingSessionMock.mockReturnValue({
       session: createSession(),
-      learningType: 'new',
       dueCount: 0,
       newCount: 3,
       todayLearned: 1,
@@ -257,7 +255,6 @@ describe('NormalTypingAppInner', () => {
     useNormalTypingSessionMock
       .mockReturnValueOnce({
         session: createSession({ currentIndex: 1, currentWord: createSession().queueWords[1]?.word }),
-        learningType: 'new',
         dueCount: 0,
         newCount: 3,
         todayLearned: 1,
@@ -269,7 +266,6 @@ describe('NormalTypingAppInner', () => {
       })
       .mockReturnValueOnce({
         session: createSession({ currentIndex: 2, currentWord: createSession().queueWords[2]?.word }),
-        learningType: 'new',
         dueCount: 0,
         newCount: 3,
         todayLearned: 2,
@@ -331,7 +327,6 @@ describe('NormalTypingAppInner', () => {
           mastered: 0,
         },
       }),
-      learningType: 'new',
       dueCount: 1,
       newCount: 2,
       todayLearned: 2,

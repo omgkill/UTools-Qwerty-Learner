@@ -1,6 +1,5 @@
 import type { TypingWordProgress } from '@/features/typing/domain'
 import { determineLearningType } from '@/features/typing/domain'
-import type { LearningType } from '@/features/typing/domain'
 import { DexieDailyRecordRepository } from '@/infra/repositories/daily-record.repository.dexie'
 import { DexieWordProgressRepository } from '@/infra/repositories/word-progress.repository.dexie'
 import type { Word, WordWithIndex } from '@/typings'
@@ -19,8 +18,9 @@ export type TypingSessionParams = {
 }
 
 export type TypingSessionResult = {
-  learningType: LearningType
   learningWords: WordWithIndex[]
+  reviewWords: WordWithIndex[]
+  newWords: WordWithIndex[]
   dueCount: number
   newCount: number
   masteredCount: number
@@ -87,8 +87,9 @@ export async function loadTypingSession(params: TypingSessionParams): Promise<Ty
   })
 
   return {
-    learningType: result.learningType,
     learningWords: result.learningWords,
+    reviewWords: result.reviewWords,
+    newWords: result.newWords,
     dueCount: result.dueCount,
     newCount: result.newCount,
     masteredCount: mastered,
