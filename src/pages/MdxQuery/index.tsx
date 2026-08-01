@@ -22,9 +22,11 @@ const parseRgb = (value: string): [number, number, number] | null => {
   return [Number(match[1]), Number(match[2]), Number(match[3])]
 }
 
+// 亮度 ≥120（约 #777 及更亮）都算浅色背景，统一改深灰，避免漏掉浅灰白底
 const isLightBackground = (rgb: [number, number, number] | null): boolean => {
   if (!rgb) return false
-  return rgb[0] >= 200 && rgb[1] >= 200 && rgb[2] >= 200
+  const [r, g, b] = rgb
+  return 0.299 * r + 0.587 * g + 0.114 * b >= 120
 }
 
 const adaptDictContentToDark = (root: HTMLElement | null) => {
@@ -33,7 +35,8 @@ const adaptDictContentToDark = (root: HTMLElement | null) => {
   for (const el of elements) {
     const computed = window.getComputedStyle(el)
     if (isLightBackground(parseRgb(computed.backgroundColor))) {
-      el.style.backgroundColor = '#1f2937'
+      // 用 !important 内联样式，压过词典内嵌样式里可能存在的 !important
+      el.style.setProperty('background-color', '#1f2937', 'important')
     }
     el.style.color = '#ffffff'
   }
