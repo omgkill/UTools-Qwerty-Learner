@@ -1,7 +1,10 @@
 import Loading from './components/Loading'
 import './index.css'
 import { restoreUserDataFromUTools, setupAutoBackupToUTools } from '@/features/backup/application'
+import { simulatedDateAtom } from '@/store'
+import { resetTimeDiff, setSimulatedDate } from '@/utils/timeService'
 import { VIP_STATE_KEY, setConcealFeature, setUtoolsValue } from '@/utils/utools'
+import { useAtom } from 'jotai'
 import React, { Suspense, lazy, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
@@ -46,6 +49,16 @@ function Root() {
   const [mode, setMode] = useState<string | null>(null)
   const [isModeReady, setIsModeReady] = useState(false)
   const [isDataRestored, setIsDataRestored] = useState(false)
+  const [simulatedDate] = useAtom(simulatedDateAtom)
+
+  // 应用模拟日期：启动时从存储恢复，修改时立即生效；'' 表示使用真实时间
+  useEffect(() => {
+    if (simulatedDate) {
+      setSimulatedDate(simulatedDate)
+    } else {
+      resetTimeDiff()
+    }
+  }, [simulatedDate])
 
   useEffect(() => {
     async function restoreData() {

@@ -100,3 +100,6 @@ export const hotkeyConfigAtom = atomForConfig('hotkeyConfig', {
   viewDetail: 'ctrl+1',
   goBack: 'ctrl+2',
 })
+
+// 模拟日期（测试用）：'' = 真实时间，'YYYY-MM-DD' = 模拟「今天是这一天」
+export const simulatedDateAtom = atomWithStorage('simulatedDate', '', createAppJSONStorage<string>())

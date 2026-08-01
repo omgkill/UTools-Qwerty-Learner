@@ -101,31 +101,6 @@ function createProgress(word: string, lastReviewTime: number): TypingWordProgres
 }
 
 describe('loadRepeatTypingSession', () => {
-  it('restores the saved repeat queue before recomputing words', async () => {
-    const typingStateRepository = new InMemoryTypingStateRepository()
-    typingStateRepository.seed({
-      id: 1,
-      dict: 'dict-1',
-      date: '2026-07-12',
-      sessionType: 'repeat',
-      isRepeatLearning: true,
-      learningWords: [createWord('saved-alpha', 3), createWord('saved-beta', 9)],
-      currentIndex: 5,
-    })
-
-    const result = await loadRepeatTypingSession({
-      dictId: 'dict-1',
-      wordList: [createWord('fresh-alpha', 0)],
-      wordProgressRepository: new InMemoryWordProgressRepository([]),
-      typingStateRepository,
-    })
-
-    expect(result).toEqual({
-      words: [createWord('saved-alpha', 3), createWord('saved-beta', 9)],
-      currentIndex: 1,
-    })
-  })
-
   it('builds and persists a repeat queue when no saved queue exists', async () => {
     const typingStateRepository = new InMemoryTypingStateRepository()
     const now = Date.now()

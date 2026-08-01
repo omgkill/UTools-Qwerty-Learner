@@ -1,14 +1,33 @@
 import styles from './index.module.css'
-import { dailyLimitConfigAtom, hotkeyConfigAtom, isIgnoreCaseAtom, isShowAnswerOnHoverAtom, isShowPrevAndNextWordAtom, isTextSelectableAtom, randomConfigAtom } from '@/store'
+import { dailyLimitConfigAtom, hotkeyConfigAtom, isIgnoreCaseAtom, isShowAnswerOnHoverAtom, isShowPrevAndNextWordAtom, isTextSelectableAtom, randomConfigAtom, simulatedDateAtom } from '@/store'
 import { setDailyLimit } from '@/features/typing/domain'
 import { clearAllData, restartPlugin } from '@/platform/utools'
+import { setSimulatedDate as applySimulatedDate, getTodayString, resetTimeDiff } from '@/utils/timeService'
 import { Switch } from '@headlessui/react'
 import * as ScrollArea from '@radix-ui/react-scroll-area'
 import { useAtom } from 'jotai'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 
-export default function AdvancedSetting() {
+function formatDate(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function addDays(dateStr: string, days: number): string {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  date.setDate(date.getDate() + days)
+  return formatDate(date)
+}
+
+interface AdvancedSettingProps {
+  onReloadSession?: () => void
+}
+
+export default function AdvancedSetting({ onReloadSession }: AdvancedSettingProps) {
   const [randomConfig, setRandomConfig] = useAtom(randomConfigAtom)
   const [isShowPrevAndNextWord, setIsShowPrevAndNextWord] = useAtom(isShowPrevAndNextWordAtom)
   const [isIgnoreCase, setIsIgnoreCase] = useAtom(isIgnoreCaseAtom)
@@ -16,6 +35,7 @@ export default function AdvancedSetting() {
   const [isShowAnswerOnHover, setIsShowAnswerOnHover] = useAtom(isShowAnswerOnHoverAtom)
   const [dailyLimitConfig, setDailyLimitConfig] = useAtom(dailyLimitConfigAtom)
   const [hotkeyConfig, setHotkeyConfig] = useAtom(hotkeyConfigAtom)
+  const [simulatedDate, setSimulatedDate] = useAtom(simulatedDateAtom)
   const [showConfirm, setShowConfirm] = useState(false)
 
   useEffect(() => {
@@ -92,6 +112,26 @@ export default function AdvancedSetting() {
     },
     [setHotkeyConfig],
   )
+
+  const handleSimulatedDateChange = useCallback(
+    (dateStr: string) => {
+      setSimulatedDate(dateStr)
+      if (dateStr) {
+        applySimulatedDate(dateStr)
+        toast.success(`已切换到模拟日期 ${dateStr}，正在重新加载学习会话...`)
+      } else {
+        resetTimeDiff()
+        toast.success('已恢复真实时间，正在重新加载学习会话...')
+      }
+      onReloadSession?.()
+    },
+    [onReloadSession, setSimulatedDate],
+  )
+
+  const handleAdvanceOneDay = useCallback(() => {
+    const base = simulatedDate || formatDate(new Date())
+    handleSimulatedDateChange(addDays(base, 1))
+  }, [handleSimulatedDateChange, simulatedDate])
 
   return (
     <ScrollArea.Root className="flex-1 select-none overflow-y-auto ">
@@ -201,6 +241,36 @@ export default function AdvancedSetting() {
                   placeholder="ctrl+2"
                 />
               </div>
+            </div>
+          </div>
+          <div className={styles.section}>
+            <span className={styles.sectionLabel}>模拟日期（测试用）</span>
+            <span className={styles.sectionDescription}>
+              用于测试间隔重复学习流程：学完一天后将日期切换到下一天，程序会按新日期重新获取到期复习和新词。当前生效日期：{getTodayString()}
+              {simulatedDate && `（真实日期：${formatDate(new Date())}）`}
+            </span>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <input
+                type="date"
+                value={simulatedDate}
+                onChange={(e) => handleSimulatedDateChange(e.target.value)}
+                className="h-8 rounded border border-gray-300 bg-white px-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+              />
+              <button
+                type="button"
+                className="rounded-lg border border-indigo-300 px-3 py-1.5 text-sm font-medium text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-300 dark:hover:bg-indigo-900"
+                onClick={handleAdvanceOneDay}
+              >
+                +1天
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                onClick={() => handleSimulatedDateChange('')}
+                disabled={!simulatedDate}
+              >
+                恢复真实时间
+              </button>
             </div>
           </div>
           <div className={styles.section}>
