@@ -2,7 +2,7 @@ import './index.css'
 import { useMdxDicts, useMdxQuery } from '@/features/dictionary/presentation/hooks'
 import { hotkeyConfigAtom } from '@/store'
 import { useAtomValue } from 'jotai'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { useHotkeys } from 'react-hotkeys-hook'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -11,6 +11,39 @@ const log = (msg: string) => {
   const line = `[${timestamp}] [MdxQuery] ${msg}`
   console.log(line)
   ;(window as unknown as { debugLog?: (message: string) => void }).debugLog?.(`[MdxQuery] ${msg}`)
+}
+
+// 词典 HTML 按白纸设计：浅色背景 + 深色文字。渲染后统一适配深色主题：
+// 浅背景 → 深灰 #1f2937，深文字 → 浅色 #e0e0e0，成对处理保证可读性。
+const parseRgb = (value: string): [number, number, number] | null => {
+  const match = value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)
+  if (!match) return null
+  return [Number(match[1]), Number(match[2]), Number(match[3])]
+}
+
+const isLightBackground = (rgb: [number, number, number] | null): boolean => {
+  if (!rgb) return false
+  return rgb[0] >= 200 && rgb[1] >= 200 && rgb[2] >= 200
+}
+
+const isDarkText = (rgb: [number, number, number] | null): boolean => {
+  if (!rgb) return false
+  const [r, g, b] = rgb
+  return 0.299 * r + 0.587 * g + 0.114 * b <= 90
+}
+
+const adaptDictContentToDark = (root: HTMLElement | null) => {
+  if (!root) return
+  const elements = Array.from(root.querySelectorAll<HTMLElement>('.result-content *'))
+  for (const el of elements) {
+    const computed = window.getComputedStyle(el)
+    if (isLightBackground(parseRgb(computed.backgroundColor))) {
+      el.style.backgroundColor = '#1f2937'
+    }
+    if (isDarkText(parseRgb(computed.color))) {
+      el.style.color = '#e0e0e0'
+    }
+  }
 }
 
 export default function MdxQueryPage() {
@@ -38,6 +71,11 @@ export default function MdxQueryPage() {
       pageRef.current.focus()
     }
   }, [loading])
+
+  // 在绘制前适配词典内容，避免白块闪烁；结果或展开状态变化时重新适配
+  useLayoutEffect(() => {
+    adaptDictContentToDark(pageRef.current)
+  }, [results, expanded])
 
   useHotkeys(
     hotkeyConfig.goBack,

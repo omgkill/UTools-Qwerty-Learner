@@ -118,12 +118,6 @@
   text-decoration: underline;
 }
 
-/* 词典 HTML 内联样式/属性自带的白色背景，改成深灰底适配深色主题（不用透明，避免内容不可见） */
-.result-content [style*='background'],
-.result-content [bgcolor] {
-  background-color: #1f2937 !important;
-}
-
 .result-content .C1_item_number a {
   color: #818cf8 !important;
 }
