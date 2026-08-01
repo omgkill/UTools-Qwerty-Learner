@@ -118,10 +118,10 @@
   text-decoration: underline;
 }
 
-/* 词典 HTML 自带白色背景元素（如 C1 词典的 .C1_item_number），统一压成透明适配深色主题。
-   只清 background-color，保留 background-image 不影响词典图片。 */
-.result-content * {
-  background-color: transparent !important;
+/* 词典 HTML 内联样式/属性自带的白色背景，改成深灰底适配深色主题（不用透明，避免内容不可见） */
+.result-content [style*='background'],
+.result-content [bgcolor] {
+  background-color: #1f2937 !important;
 }
 
 .result-content .C1_item_number a {
