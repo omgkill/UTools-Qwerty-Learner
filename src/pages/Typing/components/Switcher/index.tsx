@@ -8,7 +8,11 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import IconLanguage from '~icons/tabler/language'
 import IconLanguageOff from '~icons/tabler/language-off'
 
-export default function Switcher() {
+interface SwitcherProps {
+  onReloadSession?: () => void
+}
+
+export default function Switcher({ onReloadSession }: SwitcherProps) {
   const { state, dispatch } = useContext(TypingContext) ?? {}
 
   const changeTransVisibleState = () => {
@@ -50,7 +54,7 @@ export default function Switcher() {
       </Tooltip>
 
       <Tooltip content="设置">
-        <Setting />
+        <Setting onReloadSession={onReloadSession} />
       </Tooltip>
     </div>
   )

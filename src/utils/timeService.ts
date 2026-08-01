@@ -35,6 +35,13 @@ export function setTimeTo(date: Date | string | number): void {
   timeDiff = targetTime - Date.now()
 }
 
+export function setSimulatedDate(dateStr: string): void {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  if (!year || !month || !day) return
+  // 必须用本地零点：new Date('YYYY-MM-DD') 按 UTC 解析，负时区会差一天
+  setTimeTo(new Date(year, month - 1, day).getTime())
+}
+
 export function advanceTime(ms: number): void {
   timeDiff += ms
 }

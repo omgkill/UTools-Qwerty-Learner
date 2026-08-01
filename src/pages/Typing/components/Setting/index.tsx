@@ -10,7 +10,11 @@ import IconAdjustmentsHorizontal from '~icons/tabler/adjustments-horizontal'
 import IconEar from '~icons/tabler/ear'
 import IconX from '~icons/tabler/x'
 
-export default function Setting() {
+interface SettingProps {
+  onReloadSession?: () => void
+}
+
+export default function Setting({ onReloadSession }: SettingProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { dispatch } = useContext(TypingContext) ?? {}
 
@@ -114,7 +118,7 @@ export default function Setting() {
                           <SoundSetting />
                         </Tab.Panel>
                         <Tab.Panel className="flex h-full focus:outline-none">
-                          <AdvancedSetting />
+                          <AdvancedSetting onReloadSession={onReloadSession} />
                         </Tab.Panel>
                         <Tab.Panel className="flex h-full focus:outline-none">
                           <DataSetting />

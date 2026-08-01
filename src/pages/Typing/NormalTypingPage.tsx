@@ -42,6 +42,7 @@ export const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ curr
     completeSessionWord,
     markSessionWordMastered,
     isLoading,
+    reloadSession,
   } = useNormalTypingSession()
 
   const sessionWords = session?.queueWords.map((entry) => entry.word) ?? []
@@ -109,7 +110,7 @@ export const NormalTypingAppInner: React.FC<NormalTypingAppInnerProps> = ({ curr
               )}
             </div>
             <PronunciationSwitcher />
-            <Switcher />
+            <Switcher onReloadSession={reloadSession} />
             <StartButton isLoading={isLoading} />
           </Header>
         )}
