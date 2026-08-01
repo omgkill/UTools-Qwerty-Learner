@@ -85,7 +85,7 @@
     "@types/echarts": "^4.9.18",
     "@types/file-saver": "^2.0.5",
     "@types/howler": "^2.2.3",
-    "@types/node": "18.14.6",
+    "@types/node": "^22.12.0",
     "@types/pako": "^2.0.0",
     "@types/react": "^18.0.28",
     "@types/react-dom": "^18.0.11",
