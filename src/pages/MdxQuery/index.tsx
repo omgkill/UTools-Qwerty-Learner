@@ -73,6 +73,15 @@ export default function MdxQueryPage() {
     adaptDictContentToDark(pageRef.current)
   }, [results, expanded])
 
+  // 连续查询时组件不会卸载，.mdict-page / .result-list 作为滚动容器会被 React 复用，
+  // 上次查询的滚动位置会残留 —— 新查询开始或新结果渲染前重置回顶部
+  useLayoutEffect(() => {
+    const page = pageRef.current
+    if (!page) return
+    page.scrollTo(0, 0)
+    page.querySelector<HTMLElement>('.result-list')?.scrollTo(0, 0)
+  }, [loading, results])
+
   useHotkeys(
     hotkeyConfig.goBack,
     () => {
